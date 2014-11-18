@@ -69,8 +69,8 @@ except:
    logging.debug('ErrorGPIO')
 
 #-----temp sensors-----
-sensorInID = '28-00042d4367ff'
-sensorOutID = '28-00042c648eff'
+sensorOutID = '28-00042d4367ff'
+sensorInID = '28-00042c648eff'
 os.system('modprobe w1-gpio')
 os.system('modprobe w1-therm')
 
