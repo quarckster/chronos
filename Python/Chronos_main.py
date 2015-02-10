@@ -1,9 +1,9 @@
 #!/usr/bin/python
-#version 1.3
+#version 2.0
 
 import time
 time.sleep(15)
-print "Initializing Chronos v1.3... Please stand by."
+print "Initializing Chronos v2.0... Please stand by."
 # -----|| one-time stuff ||-----
 import logging
 LOG_FILENAME = '/home/pi/Desktop/Chronos/log_Chronos.out'
