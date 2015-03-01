@@ -80,6 +80,20 @@ except:
    print "SystemCheckError"
    logging.debug(datetime)
    logging.debug('SystemCheckError')
+
+try:
+   output = commands.getoutput("ps aux | grep /home/pi/Desktop/Chronos/led_trial2.py")
+   if 'python' in output:
+       error=0
+   else:
+       error=1
+       os.system("sudo python /home/pi/Desktop/Chronos/led_trial2.py")
+   
+except:
+   print "SystemCheckError"
+   logging.debug(datetime)
+   logging.debug('SystemCheckError')
+   
 try:
     if (count > 2) :
        os.system("sudo python /home/pi/Desktop/Chronos/Chronos_starter.py")

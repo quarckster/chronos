@@ -1,5 +1,6 @@
 #!/usr/bin/python
 #version 2.0
+#UID CHRON001
 
 import time
 time.sleep(15)
@@ -47,26 +48,41 @@ freeSD = 0
 freeDB = 0
 mode = 0
 powerMode = 0
+temp_thresh = 80.00
+led_breather = 22
+breather_count = 0
 
 # -----Set GPIO pins-----
-boilerPin = 12
-chiller1Pin = 15
-chiller2Pin = 11
+boilerPin = 20
+chiller1Pin = 26
+chiller2Pin = 16
+led_red = 22
+led_green = 23
+led_blue = 24
 try:
-   GPIO.setwarnings(False)
-   GPIO.cleanup()
-   GPIO.setmode(GPIO.BOARD)
-   GPIO.setup(boilerPin, GPIO.OUT)
-   GPIO.setup(chiller1Pin, GPIO.OUT)
-   GPIO.setup(chiller2Pin, GPIO.OUT)
-   GPIO.output(boilerPin, False)
-   GPIO.output(chiller1Pin, False)
-   GPIO.output(chiller2Pin, False)
+    GPIO.setwarnings(False)
+    GPIO.cleanup()
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(boilerPin, GPIO.OUT)
+    GPIO.setup(chiller1Pin, GPIO.OUT)
+    GPIO.setup(chiller2Pin, GPIO.OUT)
+    GPIO.output(boilerPin, False)
+    GPIO.output(chiller1Pin, False)
+    GPIO.output(chiller2Pin, False)
+    GPIO.setup(led_red, GPIO.OUT)  
+    GPIO.setup(led_green, GPIO.OUT)
+    GPIO.setup(led_blue, GPIO.OUT)
+    GPIO.output(led_red, False)
+    GPIO.output(led_green, False)
+    GPIO.output(led_blue, False)
 except:
-   error_GPIO = 1
-   print "ErrorGPIO"
-   logging.debug(timeStamp)
-   logging.debug('ErrorGPIO')
+    error_GPIO = 1
+    print "ErrorGPIO"
+    GPIO.output(led_red,True)
+    time.sleep(0.7)
+    GPIO.output(led_red,False)
+    logging.debug(timeStamp)
+    logging.debug('ErrorGPIO')
 
 #-----temp sensors-----
 sensorOutID = '28-00042d4367ff'
@@ -79,6 +95,9 @@ try:
    os.system("sudo kill $(ps aux | grep firmwareUpgrade.py | awk '{print $2 }')")
 except:
    print "killError"
+   GPIO.output(led_red,True)
+   time.sleep(0.7)
+   GPIO.output(led_red,False)
    logging.debug(timeStamp)
    logging.debug('killError')
 
@@ -86,6 +105,9 @@ try:
    os.system("sudo kill $(ps aux | grep Chronos_starter.py | awk '{print $2 }')")
 except:
    print "killError2"
+   GPIO.output(led_red,True)
+   time.sleep(0.7)
+   GPIO.output(led_red,False)
    logging.debug(timeStamp)
    logging.debug('killError2')
 
@@ -101,6 +123,9 @@ except:
    print 'Error while resetting DB values'
    logging.debug(timeStamp)
    logging.debug('Error while resetting DB values')
+   GPIO.output(led_red,True)
+   time.sleep(0.7)
+   GPIO.output(led_red,False)
    conn.rollback()
 
 try:
@@ -114,6 +139,9 @@ except:
    print 'Error resetting DB values'
    logging.debug(timeStamp)
    logging.debug('Error resetting DB values')
+   GPIO.output(led_red,True)
+   time.sleep(0.7)
+   GPIO.output(led_red,False)
    conn.rollback()
 # -----|| one-time stuff ||-----
 
@@ -145,6 +173,9 @@ while 1:
       error_DB = 0
    else:
       error_DB = 1
+      GPIO.output(led_red,True)
+      time.sleep(0.7)
+      GPIO.output(led_red,False)
 
       
 #---Here lies the code to determine free space in SD card and DB (not used)---      
@@ -218,10 +249,30 @@ while 1:
       print "Temp sensor error"
       logging.debug(timeStamp)
       logging.debug('Temp sensor error')
+      GPIO.output(led_red,True)
+      time.sleep(0.7)
+      GPIO.output(led_red,False)
 
 
    # Read values from DB
    try:
+       if (waterOutTemp > temp_thresh):
+          led_breather = led_red
+       else :
+          led_breather = led_blue 
+       if(breather_count==0):     
+          GPIO.output(led_breather,True)
+          time.sleep(0.1)
+          GPIO.output(led_breather,False)
+          time.sleep(0.1)
+          GPIO.output(led_breather,True)
+          time.sleep(0.1)
+          GPIO.output(led_breather,False)
+          time.sleep(0.1)
+          breather_count = breather_count + 1
+       else:
+           breather_count = 0
+           
        conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
        cur = conn.cursor()
        sql = "SELECT * FROM mainTable ORDER BY LID DESC LIMIT 1"
@@ -249,6 +300,9 @@ while 1:
        print "Error fetching data from DB"
        logging.debug(timeStamp)
        logging.debug('Error fetching data from DB')
+       GPIO.output(led_red,True)
+       time.sleep(0.7)
+       GPIO.output(led_red,False)
 
    #Parsing windChill from wx.thomaslivestock.com
    error_Web = 0
@@ -268,6 +322,9 @@ while 1:
        logging.debug(timeStamp)
        logging.debug('Unable to get data from website. Reading previous value from DB.')
        error_Web = 1
+       GPIO.output(led_red,True)
+       time.sleep(0.7)
+       GPIO.output(led_red,False)
        try:
            conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
            cur = conn.cursor()

@@ -38,7 +38,7 @@
 		{
 			$("#updateSetpointThree").load("index.php #insideThree");
 		}
-    $(function () { 
+   $(function () { 
     $("[data-toggle='tooltip']").tooltip(); 
     });
 	</script>	
@@ -47,7 +47,7 @@
 		<script type="text/javascript">
           <?php
 						include('SetConnect.php');
-						$sql="SELECT returnTemp from mainTable order by LID desc limit 20";
+						$sql="SELECT returnTemp from mainTable order by LID desc limit 40";
 						$result=mysql_query($sql,$con);
 						if($result){
 							while($row=mysql_fetch_array($result)){
@@ -57,7 +57,7 @@
 					?>;
      <?php
 						include('SetConnect.php');
-						$sql="SELECT logdatetime from mainTable order by LID desc limit 20";
+						$sql="SELECT logdatetime from mainTable order by LID desc limit 40";
 						$result=mysql_query($sql,$con);
 						if($result){
 							while($row=mysql_fetch_array($result)){
@@ -65,6 +65,16 @@
 							}
 						}
                
+					?>;
+     <?php
+						include('SetConnect.php');
+						$sql="SELECT waterOutTemp from mainTable order by LID desc limit 40";
+						$result=mysql_query($sql,$con);
+						if($result){
+							while($row=mysql_fetch_array($result)){
+							$arr1[] = $row['waterOutTemp']; 
+							}
+						}
 					?>;
 
     
@@ -89,10 +99,19 @@
 						{
 							"bullet": "round",
 							"id": "AmGraph-1",
-							"title": "graph 1",
+							"title": "Water Inlet",
 							"valueField": "column-1"
+						},
+            {
+							"bullet": "square",
+							"id": "AmGraph-2",
+							"title": "Water Outlet",
+							"valueField": "column-2"
 						}
 					],
+          "legend": {
+						"useGraphSettings": true
+					},
 					"guides": [],
 					"valueAxes": [
 						{
@@ -107,87 +126,207 @@
 						{
 							"id": "Title-1",
 							"size": 14,
-							"text": "Chart - Water Inlet"
+							"text": "Inlet/Outlet Temperature History"
 						}
 					],
             "dataProvider": [
             {
+              "column-2": <?php echo $arr1[39];?>,
+							"column-1": <?php echo $arr[39];?>,
+							"date": "<?php echo substr($arrDate[39],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[38];?>,
+							"column-1": <?php echo $arr[38];?>,
+							"date": "<?php echo substr($arrDate[38],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[37];?>,
+							"column-1": <?php echo $arr[37];?>,
+							"date": "<?php echo substr($arrDate[36],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[36];?>,
+							"column-1": <?php echo $arr[36];?>,
+							"date": "<?php echo substr($arrDate[36],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[35];?>,
+							"column-1": <?php echo $arr[35];?>,
+							"date": "<?php echo substr($arrDate[35],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[34];?>,
+							"column-1": <?php echo $arr[34];?>,
+							"date": "<?php echo substr($arrDate[34],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[33];?>,
+							"column-1": <?php echo $arr[33];?>,
+							"date": "<?php echo substr($arrDate[33],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[32];?>,
+							"column-1": <?php echo $arr[32];?>,
+							"date": "<?php echo substr($arrDate[32],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[31];?>,
+							"column-1": <?php echo $arr[31];?>,
+							"date": "<?php echo substr($arrDate[31],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[30];?>,
+							"column-1": <?php echo $arr[30];?>,
+							"date": "<?php echo substr($arrDate[30],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[29];?>,
+							"column-1": <?php echo $arr[29];?>,
+							"date": "<?php echo substr($arrDate[29],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[28];?>,
+							"column-1": <?php echo $arr[28];?>,
+							"date": "<?php echo substr($arrDate[28],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[27];?>,
+							"column-1": <?php echo $arr[27];?>,
+							"date": "<?php echo substr($arrDate[27],0,16);?>"
+						},
+            {
+              "column-2": <?php echo $arr1[26];?>,
+							"column-1": <?php echo $arr[26];?>,
+							"date": "<?php echo substr($arrDate[26],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[25];?>,
+							"column-1": <?php echo $arr[25];?>,
+							"date": "<?php echo substr($arrDate[25],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[24];?>,
+							"column-1": <?php echo $arr[24];?>,
+							"date": "<?php echo substr($arrDate[24],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[23];?>,
+							"column-1": <?php echo $arr[23];?>,
+							"date": "<?php echo substr($arrDate[23],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[22];?>,
+							"column-1": <?php echo $arr[22];?>,
+							"date": "<?php echo substr($arrDate[22],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[21];?>,
+							"column-1": <?php echo $arr[21];?>,
+							"date": "<?php echo substr($arrDate[21],0,16);?>"
+						},
+						{
+              "column-2": <?php echo $arr1[20];?>,
+							"column-1": <?php echo $arr[20];?>,
+							"date": "<?php echo substr($arrDate[20],0,16);?>"
+						},
+            {
+              "column-2": <?php echo $arr1[19];?>,
 							"column-1": <?php echo $arr[19];?>,
 							"date": "<?php echo substr($arrDate[19],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[18];?>,
 							"column-1": <?php echo $arr[18];?>,
 							"date": "<?php echo substr($arrDate[18],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[17];?>,
 							"column-1": <?php echo $arr[17];?>,
 							"date": "<?php echo substr($arrDate[17],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[16];?>,
 							"column-1": <?php echo $arr[16];?>,
 							"date": "<?php echo substr($arrDate[16],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[15];?>,
 							"column-1": <?php echo $arr[15];?>,
 							"date": "<?php echo substr($arrDate[15],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[14];?>,
 							"column-1": <?php echo $arr[14];?>,
 							"date": "<?php echo substr($arrDate[14],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[13];?>,
 							"column-1": <?php echo $arr[13];?>,
 							"date": "<?php echo substr($arrDate[13],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[12];?>,
 							"column-1": <?php echo $arr[12];?>,
 							"date": "<?php echo substr($arrDate[12],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[11];?>,
 							"column-1": <?php echo $arr[11];?>,
 							"date": "<?php echo substr($arrDate[11],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[10];?>,
 							"column-1": <?php echo $arr[10];?>,
 							"date": "<?php echo substr($arrDate[10],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[9];?>,
 							"column-1": <?php echo $arr[9];?>,
 							"date": "<?php echo substr($arrDate[9],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[8];?>,
 							"column-1": <?php echo $arr[8];?>,
 							"date": "<?php echo substr($arrDate[8],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[7];?>,
 							"column-1": <?php echo $arr[7];?>,
 							"date": "<?php echo substr($arrDate[7],0,16);?>"
 						},
             {
+              "column-2": <?php echo $arr1[6];?>,
 							"column-1": <?php echo $arr[6];?>,
 							"date": "<?php echo substr($arrDate[6],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[5];?>,
 							"column-1": <?php echo $arr[5];?>,
 							"date": "<?php echo substr($arrDate[5],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[4];?>,
 							"column-1": <?php echo $arr[4];?>,
 							"date": "<?php echo substr($arrDate[4],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[3];?>,
 							"column-1": <?php echo $arr[3];?>,
 							"date": "<?php echo substr($arrDate[3],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[2];?>,
 							"column-1": <?php echo $arr[2];?>,
 							"date": "<?php echo substr($arrDate[2],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[1];?>,
 							"column-1": <?php echo $arr[1];?>,
 							"date": "<?php echo substr($arrDate[1],0,16);?>"
 						},
 						{
+              "column-2": <?php echo $arr1[0];?>,
 							"column-1": <?php echo $arr[0];?>,
 							"date": "<?php echo substr($arrDate[0],0,16);?>"
 						}
@@ -196,168 +335,6 @@
 				}
 			);
 		</script>
-
-		<script type="text/javascript">
-          <?php
-						include('SetConnect.php');
-						$sql="SELECT waterOutTemp from mainTable order by LID desc limit 20";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							$arr1[] = $row['waterOutTemp']; 
-							}
-						}
-					?>;
-     <?php
-						include('SetConnect.php');
-						$sql="SELECT logdatetime from mainTable order by LID desc limit 20";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							$arrDate1[] = $row['logdatetime']; 
-							}
-						}
-               
-					?>;
-
-    
-		var d1 = new Date();
-		var n1 = d1.getMinutes();
-		AmCharts.makeChart("chartdiv1",
-				{
-					"type": "serial",
-					"pathToImages": "http://cdn.amcharts.com/lib/3/images/",
-					"categoryField": "date",
-					"dataDateFormat": "YYYY-MM-DD HH:NN",
-					"categoryAxis": {
-						"minPeriod": "mm",
-						"parseDates": true
-					},
-					"chartCursor": {
-						"categoryBalloonDateFormat": "JJ:NN"
-					},
-					"chartScrollbar": {},
-					"trendLines": [],
-					"graphs": [
-						{
-							"bullet": "round",
-							"id": "AmGraph-1",
-							"title": "graph 1",
-							"valueField": "column-1"
-						}
-					],
-					"guides": [],
-					"valueAxes": [
-						{
-							"id": "ValueAxis-1",
-							"title": "Temperature"
-						}
-					],
-					"allLabels": [],
-					"balloon": {},
-					
-					"titles": [
-						{
-							"id": "Title-1",
-							"size": 14,
-							"text": "Chart - Water Outlet"
-						}
-					],
-            "dataProvider": [
-            {
-							"column-1": <?php echo $arr1[19];?>,
-							"date": "<?php echo substr($arrDate1[19],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[18];?>,
-							"date": "<?php echo substr($arrDate1[18],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[17];?>,
-							"date": "<?php echo substr($arrDate1[17],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[16];?>,
-							"date": "<?php echo substr($arrDate1[16],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[15];?>,
-							"date": "<?php echo substr($arrDate1[15],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[14];?>,
-							"date": "<?php echo substr($arrDate1[14],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[13];?>,
-							"date": "<?php echo substr($arrDate1[13],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[12];?>,
-							"date": "<?php echo substr($arrDate1[12],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[11];?>,
-							"date": "<?php echo substr($arrDate1[11],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[10];?>,
-							"date": "<?php echo substr($arrDate1[10],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[9];?>,
-							"date": "<?php echo substr($arrDate1[9],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[8];?>,
-							"date": "<?php echo substr($arrDate1[8],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[7];?>,
-							"date": "<?php echo substr($arrDate1[7],0,16);?>"
-						},
-            {
-							"column-1": <?php echo $arr1[6];?>,
-							"date": "<?php echo substr($arrDate1[6],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[5];?>,
-							"date": "<?php echo substr($arrDate1[5],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[4];?>,
-							"date": "<?php echo substr($arrDate1[4],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[3];?>,
-							"date": "<?php echo substr($arrDate1[3],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[2];?>,
-							"date": "<?php echo substr($arrDate1[2],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[1];?>,
-							"date": "<?php echo substr($arrDate1[1],0,16);?>"
-						},
-						{
-							"column-1": <?php echo $arr1[0];?>,
-							"date": "<?php echo substr($arrDate1[0],0,16);?>"
-						}
-   
-					]
-				}
-			);
-		</script>
- 
-	<!--Water Outlet-->
-
-	<script type="text/javascript">
-		
-	</script>
-
-
-
 
 	<link href="css/style.css" rel="stylesheet">
 	<link href="css/bootstrap.min.css" rel="stylesheet">
@@ -824,9 +801,9 @@
 				
 					fclose($myFileTin);
 				?> </small></h6>
-					<div style="height:5px;"></div>			
+					<div style="height:5px;"></div>
 					<h5 style="font-size:15px;">Effective Setpoint</h5>
-					<h6 id="OutsideTemp"><?php
+					<h6 id="OutsideTemp" style="width:100%;"><?php
 						include('SetConnect.php');
 						$sql="SELECT mode from mainTable order by LID desc limit 1";
 						$result=mysql_query($sql,$con);
@@ -862,7 +839,7 @@
 						else{
 							echo ($b + $d);
 						}
-					?> &deg;F</h6>		<!--Dynamic Content-->
+					?> &deg;F</h6>	<!--Dynamic Content-->
 				</div>
 			    </div>
 					
@@ -935,7 +912,7 @@
 		<div class="back">
 			<!-- back content -->
       
-			  <h6 style="font-size:14px;">Tolerance Parameters</h6>
+			  <h6 style="font-size:14px;">Threshold Parameters</h6>
 					
       <table border=0 align=center>
 					
@@ -1389,21 +1366,18 @@
 		<div class="container-fluid" style="background-color:#FFFFFF;">
 		<div class="container jumbotron" style="background-color:#FFFFFF; margin-bottom:0; padding-bottom:0; padding-top:5px;">
 			<div class="row" >
-				<div class="col-md-6" style="text-align:center; color:#3D7073; ">
+				
+        <div class="col-md-6" style="text-align:center; color:#3D7073; width:100%">
               <div id="chartdiv" style="width:100%; height: 450px;"></div>
         </div>
-			
-				<div class="col-md-6" style="text-align:center; color:#3D7073; ">				
-						 <div id="chartdiv1" style="width:100%; height: 450px;"></div>        
-				</div>
 			</div>
 		</div>
 	</div>
  <br/>
 	<hr/>
- <br/>
- <br/>
-	<div class="container-fluid" style="background-color:#FFFFFF;">
+<br/>
+<br/>
+  <div class="container-fluid" style="background-color:#FFFFFF;">
 		<div class="container jumbotron" style="background-color:#FFFFFF; margin-bottom:0; padding-bottom:0; padding-top:5px;">
 			<div class="row" >
 				<div class="col-md-5" style="text-align:center; color:#FFFFFF; background-color:#3d7073; min-height:100px; width:45%">
@@ -1414,7 +1388,7 @@
 						</form>
 					</div>
 				</div>
-				<div class="col-md-2" style="text-align:center; color:#FFFFFF;  width:10%">
+				<div class="col-md-2" style="text-align:center; color:#FFFFFF; width:10%">
 					
 				</div>
 				
