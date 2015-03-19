@@ -24,64 +24,39 @@ import sre
 from time import strftime
 timeStamp = (time.strftime("%Y-%m-%d ") + time.strftime("%H:%M:00"))
 logging.debug('Starting script')
-
 # -----variables-----
-waterOutTemp = 00.00    #Temp sensor values. Also, the values that they...
-returnTemp = 00.00      #    ...fall back to if sensors are not available
-boilerStatus = 0        #ON = 1, OFF = 0
-valveStatus = 0
-valveFlag = 0
-
-MO_B = 0                #Manual overrides. AUTO = 0, ON = 1, OFF = 2
+waterOutTemp = 00.00
+returnTemp = 00.00
+boilerStatus = 0
+chiller1Status = 0
+chiller2Status = 0
+MO_B = 0
+MO_C1 = 0
+MO_C2 = 0
 GPIO_change = 0
 a=0
 b=0
 c=0
-t1 = 0                  #Threshold parameters
+t1 = 0
 t2 = 0
 t3 = 0
-error_T1 = 0            #Error flags
+error_T1 = 0
 error_T2 = 0
 error_GPIO = 0
 error_Web = 0
 error_DB = 0
-mode = 0                #Winter/Summer mode selector (0 -> Winter, 1 -> Summer)
+freeSD = 0
+freeDB = 0
+mode = 0
 powerMode = 0
-temp_thresh = 80.00     #Threshold for breather LED color selection
+temp_thresh = 80.00
 led_breather = 22
 breather_count = 0
-CCT = 5                 #Chiller Cascade Time
-nCon = 0
-nCmax = 0
-prev_eff_sp = 0
-cur_eff_sp = 0
-setPoint2 = 00.00
-startTime = time.time()
-ctime = (time.strftime("%Y-%m-%d "), time.strftime("%H:%M:%S"))
-cstatus = 0
-windSpeed = 0.00
 
-# --------Arrays---------
-p = [i for i in xrange(4)]
-chillerStatus = [0 for i in xrange(4)]
-MO_C = [0 for i in xrange(4)]
-b = [0 for i in xrange(4)]
-chillerChange = [0 for i in xrange(4)]
-chillerPin = [0 for i in xrange(4)]
-cTime = [(time.strftime("%Y-%m-%d "), time.strftime("%H:%M:%S")) for i in xrange(4)]
-cStatus = [0 for i in xrange(4)]
-sortTime = [0 for i in xrange(4)]
-sortGap = [0 for i in xrange(4)]
-
-       
 # -----Set GPIO pins-----
 boilerPin = 20
-chillerPin[0] = 26
-chillerPin[1] = 16
-chillerPin[2] = 19
-chillerPin[3] = 5
-valve1Pin = 6
-valve2Pin = 12
+chiller1Pin = 26
+chiller2Pin = 16
 led_red = 22
 led_green = 23
 led_blue = 24
@@ -90,19 +65,11 @@ try:
     GPIO.cleanup()
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(boilerPin, GPIO.OUT)
-    GPIO.setup(chillerPin[0], GPIO.OUT)
-    GPIO.setup(chillerPin[1], GPIO.OUT)
-    GPIO.setup(chillerPin[2], GPIO.OUT)
-    GPIO.setup(chillerPin[3], GPIO.OUT)
-    GPIO.setup(valve1Pin, GPIO.OUT)
-    GPIO.setup(valve2Pin, GPIO.OUT)
+    GPIO.setup(chiller1Pin, GPIO.OUT)
+    GPIO.setup(chiller2Pin, GPIO.OUT)
     GPIO.output(boilerPin, False)
-    GPIO.output(chillerPin[0], False)
-    GPIO.output(chillerPin[1], False)
-    GPIO.output(chillerPin[2], False)
-    GPIO.output(chillerPin[3], False)
-    GPIO.output(valve1Pin, False)
-    GPIO.output(valve2Pin, False)
+    GPIO.output(chiller1Pin, False)
+    GPIO.output(chiller2Pin, False)
     GPIO.setup(led_red, GPIO.OUT)  
     GPIO.setup(led_green, GPIO.OUT)
     GPIO.setup(led_blue, GPIO.OUT)
@@ -149,7 +116,7 @@ except:
 try:
    conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
    cur = conn.cursor()
-   cmd_main = ("UPDATE mainTable SET boilerStatus=%s, chiller1Status=%s, chiller2Status=%s, chiller3Status=%s, chiller4Status=%s, MO_B=%s, MO_C1=%s, MO_C2=%s, MO_C3=%s, MO_C4=%s, powerMode=%s ORDER BY LID DESC LIMIT 1", (boilerStatus, chillerStatus[0], chillerStatus[1], chillerStatus[2], chillerStatus[3], MO_B, MO_C[0], MO_C[1], MO_C[2], MO_C[3], powerMode))
+   cmd_main = ("UPDATE mainTable SET boilerStatus=%s, chiller1Status=%s, chiller2Status=%s, MO_B=%s, MO_C1=%s, MO_C2=%s, powerMode=%s ORDER BY LID DESC LIMIT 1", (boilerStatus, chiller1Status, chiller2Status, MO_B, MO_C1, MO_C2, powerMode))
    cur.execute(*cmd_main)
    conn.commit()
    conn.close()
@@ -161,7 +128,6 @@ except:
    time.sleep(0.7)
    GPIO.output(led_red,False)
    conn.rollback()
-   conn.close()
 
 try:
    conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
@@ -178,7 +144,6 @@ except:
    time.sleep(0.7)
    GPIO.output(led_red,False)
    conn.rollback()
-   conn.close()
 # -----|| one-time stuff ||-----
 
 
@@ -212,6 +177,26 @@ while 1:
       GPIO.output(led_red,True)
       time.sleep(0.7)
       GPIO.output(led_red,False)
+
+      
+#---Here lies the code to determine free space in SD card and DB (not used)---      
+#   p=os.popen("df /")
+#   line = p.readline()
+#   line = p.readline()
+#   a = line.split()[1:4]
+#   freeSD = ((float(a[1])/float(a[0]))*100)
+
+#   conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
+#   cur = conn.cursor()
+#   sql = "SELECT SUM(data_length + index_length)/1024/1024, SUM(data_free)/1024/1024 FROM information_schema.TABLES WHERE table_schema = 'Chronos'"
+#   cur.execute(sql)
+#   results = cur.fetchall()
+#   for row in results:
+#      DBSize = row[0]
+#      DBFree = row[1]
+#   freeDB = ((float(DBSize)/float(DBFree))*100)
+
+
 
    # Read Temperature Sensors
    try:
@@ -268,13 +253,6 @@ while 1:
       GPIO.output(led_red,True)
       time.sleep(0.7)
       GPIO.output(led_red,False)
-      conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-      cur = conn.cursor()
-      sql = "SELECT returnTemp FROM mainTable ORDER BY LID DESC LIMIT 1"
-      cur.execute(sql)
-      results = cur.fetchall()
-      returnTemp = results[0][0]           
-      conn.close()
 
 
    # Read values from DB
@@ -303,21 +281,20 @@ while 1:
        results = cur.fetchall()
        for row in results:
            boilerStatus = row[5]
-           chillerStatus[0] = row[6]
-           chillerStatus[1] = row[7]
-           chillerStatus[2] = row[8]
-           chillerStatus[3] = row[9]
-           setPoint2 = row[10]
-           parameterX = row[11]
-           t1 = row[12]
-           MO_B = row[13]
-           MO_C[0] = row[14]
-           MO_C[1] = row[15]
-           MO_C[2] = row[16]
-           MO_C[3] = row[17]
-           mode = row[18]
-           powerMode = row[19]
-           CCT = row[20]
+           chiller1Status = row[6]
+           chiller2Status = row[7]
+           setPoint2 = row[9]
+           parameterX = row[10]
+           parameterY = row[11]
+           parameterZ = row[12]
+           t1 = row[13]
+           t2 = row[14]
+           t3 = row[15]
+           MO_B = row[16]
+           MO_C1 = row[17]
+           MO_C2 = row[18]
+           mode = row[19]
+           powerMode = row[20]
            
        conn.close()       
    except:
@@ -327,11 +304,8 @@ while 1:
        GPIO.output(led_red,True)
        time.sleep(0.7)
        GPIO.output(led_red,False)
-       conn.close()
 
-   CCT = CCT*60
-
-   #Parsing windChill and windSpeed from wx.thomaslivestock.com
+   #Parsing windChill from wx.thomaslivestock.com
    error_Web = 0
    try:
        website = urllib2.urlopen('http://wx.thomaslivestock.com')
@@ -368,34 +342,6 @@ while 1:
            logging.debug('Unable to get value from DB. Reverting to default value of 65 deg F...')
            outsideTemp = 65.00
            conn.close()
-   try:
-       website = urllib2.urlopen('http://wx.thomaslivestock.com')
-       website_html = website.read()
-       matches = sre.findall('[\d\.-]+ mph', website_html)
-       windSpeed = matches[0]
-       windSpeed = windSpeed[:windSpeed.find(' ')]
-       windSpeed = float(windSpeed)
-   except:
-       print 'Unable to get wind speed from website'
-       print 'Reading previous value from DB'
-       logging.debug(timeStamp)
-       logging.debug('Unable to get wind speed from website. Reading previous value from DB.')
-       try:
-           conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-           cur = conn.cursor()
-           sql = "SELECT windSpeed FROM mainTable ORDER BY LID DESC LIMIT 1"
-           cur.execute(sql)
-           results = cur.fetchall()
-           windSpeed = results[0][0]           
-           conn.close()
-             
-       except:
-           print 'Unable to get wind speed from DB'
-           print 'Reverting to default value of 0 mph...'
-           logging.debug(timeStamp)
-           logging.debug('Unable to get wind speed from DB. Reverting to default value of 0 mph...')
-           windSpeed = 0.00
-           conn.close()
 
 
    # Calculate setpoint from windChill
@@ -410,7 +356,7 @@ while 1:
        logging.debug(timeStamp)
        logging.debug('Unable to open file to read')
    if(windChill < 11):
-      setPoint2 = 100
+      setpoint2 = 100
    else:
       try:
          conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
@@ -418,7 +364,7 @@ while 1:
          sql = ("SELECT setPoint FROM SetpointLookup WHERE windChill = %s", (windChill))
          cur.execute(*sql)
          results = cur.fetchall()
-         setPoint2 = results[0][0]
+         setpoint2 = results[0][0]
 
       except:
          try:
@@ -427,7 +373,7 @@ while 1:
             sql = ("SELECT setPoint FROM SetpointLookup WHERE windChill = %s", (windChill))
             cur.execute(*sql)
             results = cur.fetchall()
-            setPoint2 = results[0][0]
+            setpoint2 = results[0][0]
 
          except:
             print "setpoint error"
@@ -457,15 +403,8 @@ while 1:
             print "Set point error"
             logging.debug(timeStamp)
             logging.debug('Set point error')
-   setPoint2 = setPoint2 - setpointOffset
-   if (mode == 0):
-       valveFlag = 0
-   else:
-        valveFlag = 1
-   cur_eff_sp = setPoint2 + parameterX
-   if (cur_eff_sp!=prev_eff_sp):
-       os.system("sudo python /home/pi/Desktop/Chronos/write_sp.py")
-   prev_eff_sp = cur_eff_sp
+   setPoint2 = setpoint2 - setpointOffset
+          
    # Conditions Check
    if MO_B == 0 :
       if ((mode==0) & (returnTemp <= (setPoint2 + parameterX - t1))) :
@@ -479,73 +418,46 @@ while 1:
    elif MO_B == 2 :
        a = 0
 
-   for chiller in range(0,4):
-       nowTime = time.time()
-       timeGap = nowTime-startTime
-       if MO_C[chiller] == 0:
-           if ((mode==1) & ((setPoint2 + parameterX + t1) <= returnTemp)):
-              
-               if ((nCon==p[chiller]) & (timeGap>=CCT)):
-                   b[chiller] = 1                 
-                   nCon = nCon + 1
-                   nCmax = nCmax + 1
-                   startTime = time.time()
-           elif ((mode==1) & ((setPoint2 + parameterX - t1) > returnTemp)):
-               if (((nCmax-nCon)==p[chiller]) & (timeGap>CCT)):
-                   b[chiller] = 0
-                   nCon = nCon - 1
-                   startTime = time.time()
-           elif (mode==0):
-               b[chiller]=0
-       elif MO_C[chiller] == 1:
-           b[chiller] = 1
-       elif MO_C[chiller] == 2:
-           b[chiller] = 0
-           
-   if (valveFlag!=valveStatus):
-     if(valveFlag == 0):
-       GPIO.output(valve1Pin, True)
-       GPIO.output(valve2Pin, False)
-     elif(valveFlag == 1):
-       GPIO.output(valve2Pin, True)
-       GPIO.output(valve1Pin, False)
-     valveStatus = valveFlag
-     time.sleep(120)
+   if MO_C1 == 0 :
+      if ((mode==1) & ((setPoint2 + parameterY + t2) <= returnTemp)) :
+         b = 1
+      elif ((mode==1) & ((setPoint2 + parameterY - t2) > returnTemp)) :
+         b = 0
+      elif (mode==0):
+         b = 0
+   elif MO_C1 == 1 :
+       b = 1
+   elif MO_C1 == 2 :
+       b = 0
        
+   if MO_C2 == 0 :
+      if ((mode==1) & ((setPoint2 + parameterZ + t3) <= returnTemp)) :
+         c = 1
+      elif ((mode==1) & ((setPoint2 + parameterZ - t3) > returnTemp)) :
+         c = 0
+      elif (mode==0):
+         c = 0
+   elif MO_C2 == 1 :
+       c = 1
+   elif MO_C2 == 2 :
+       c = 0
    
    GPIO_change = 0
    boiler_change = 0
-   for i in range (0,4):
-       chillerChange[i] = 0
+   chiller1_change = 0
+   chiller2_change = 0
    if boilerStatus != a:
        boilerStatus = a
        boiler_change = 1
        GPIO_change = 1
-   for chiller in range (0,4):
-       if chillerStatus[chiller] != b[chiller]:
-           chillerStatus[chiller] = b[chiller]
-           GPIO.output(chillerPin[chiller],chillerStatus[chiller])
-           cTime[chiller] = (time.strftime("%Y-%m-%d "), time.strftime("%H:%M:%S"))
-           startTime=time.time()
-           if (chillerStatus[chiller]==0): 
-              sortTime[chiller] = time.time()
-           cStatus[chiller]=chillerStatus[chiller]
-           chillerChange[chiller] = 1
-           GPIO_change = 1
-           if (nCon==0):
-              curTime = time.time()
-              nCmax = 0
-              for chiller in range(0,4):
-                  sortGap[chiller] = curTime - sortTime[chiller]
-                  p[chiller]=0
-              for i in range(0,4):
-                for j in range (0,(4-i)):
-                  if(sortGap[i]<sortGap[i+j]):
-                                               p[i] = p[i]+1
-                  else:
-                       p[i+j] = p[i+j]+1
-              for i in range(0,4):
-                  p[i] = p[i]-1         
+   if chiller1Status != b:
+       chiller1Status = b
+       chiller1_change = 1
+       GPIO_change = 1
+   if chiller2Status != c:
+       chiller2Status = c
+       chiller2_change = 1
+       GPIO_change = 1
 
    # GPIO control
    if boiler_change == 1 :
@@ -559,11 +471,33 @@ while 1:
            bStatus = 0
 
 
+   if chiller1_change == 1 :
+       if chiller1Status == 1 :
+           GPIO.output(chiller1Pin,True)
+           c1Time = (time.strftime("%Y-%m-%d ") + time.strftime("%H:%M:%S"))
+           c1Status = 1
+       elif chiller1Status == 0 :
+           GPIO.output(chiller1Pin,False)
+           c1Time = (time.strftime("%Y-%m-%d ") + time.strftime("%H:%M:%S"))
+           c1Status = 0
+
+
+   if chiller2_change == 1 :
+       if chiller2Status == 1 :
+           GPIO.output(chiller2Pin,True)
+           c2Time = (time.strftime("%Y-%m-%d ") + time.strftime("%H:%M:%S"))
+           c2Status = 1
+       elif chiller2Status == 0 :
+           GPIO.output(chiller2Pin,False)
+           c2Time = (time.strftime("%Y-%m-%d ") + time.strftime("%H:%M:%S"))
+           c2Status = 0
+
+
    # Update Databases
    try:
       conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
       cur = conn.cursor()
-      cmd_main = ("UPDATE mainTable SET outsideTemp=%s, waterOutTemp=%s, returnTemp=%s, boilerStatus=%s, chiller1Status=%s, chiller2Status=%s, chiller3Status=%s, chiller4Status=%s, setPoint2=%s, windSpeed=%s ORDER BY LID DESC LIMIT 1", (outsideTemp, waterOutTemp, returnTemp, boilerStatus, chillerStatus[0], chillerStatus[1], chillerStatus[2], chillerStatus[3], setPoint2, windSpeed))
+      cmd_main = ("UPDATE mainTable SET outsideTemp=%s, waterOutTemp=%s, returnTemp=%s, boilerStatus=%s, chiller1Status=%s, chiller2Status=%s, setPoint2=%s ORDER BY LID DESC LIMIT 1", (outsideTemp, waterOutTemp, returnTemp, boilerStatus, chiller1Status, chiller2Status, setPoint2))
       cur.execute(*cmd_main)
       conn.commit()
       conn.close()
@@ -585,7 +519,8 @@ while 1:
       logging.debug(timeStamp)
       logging.debug('Error updating errTable')
       conn.rollback()
-   errData = [error_T1, error_T2, error_DB, error_Web, error_GPIO]
+   
+   errData = [error_T1, error_T2, error_DB, error_Web, error_GPIO, freeSD, freeDB]
    try:
        dataFile = open('/var/www/sysStatus.txt', 'w')
        for eachitem in errData:
@@ -600,21 +535,19 @@ while 1:
        try:
           conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
           cur = conn.cursor()
+          
           if boiler_change == 1:
              cmd_b = ("UPDATE actStream SET timeStamp=%s, status=%s WHERE TID=1", (bTime, bStatus))
              cur.execute(*cmd_b)
-          if chillerChange[0] == 1:
-             cmd_c1 = ("UPDATE actStream SET timeStamp=%s, status=%s WHERE TID=2", ((cTime[0][0]+cTime[0][1]), cStatus[0]))
+          
+          if chiller1_change == 1:
+             cmd_c1 = ("UPDATE actStream SET timeStamp=%s, status=%s WHERE TID=2", (c1Time, c1Status))
              cur.execute(*cmd_c1)
-          if chillerChange[1] == 1:
-             cmd_c2 = ("UPDATE actStream SET timeStamp=%s, status=%s WHERE TID=3", ((cTime[1][0]+cTime[1][1]), cStatus[1]))
+         
+          if chiller2_change == 1:
+             cmd_c2 = ("UPDATE actStream SET timeStamp=%s, status=%s WHERE TID=3", (c2Time, c2Status))
              cur.execute(*cmd_c2)
-          if chillerChange[2] == 1:
-             cmd_c3 = ("UPDATE actStream SET timeStamp=%s, status=%s WHERE TID=4", ((cTime[2][0]+cTime[2][1]), cStatus[2]))
-             cur.execute(*cmd_c3)
-          if chillerChange[3] == 1:
-             cmd_c4 = ("UPDATE actStream SET timeStamp=%s, status=%s WHERE TID=5", ((cTime[3][0]+cTime[3][1]), cStatus[3]))
-             cur.execute(*cmd_c4)
+             
           conn.commit()
           conn.close()
        except:

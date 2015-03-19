@@ -24,4 +24,4 @@ if (powerMode == 3):
 elif (powerMode == 4):
     print "File transfer failed! Please wait while the main code is restarted."
 
-os.system("sudo python /home/pi/Desktop/Chronos/Chronos_main.py")
+os.system("sudo python /home/pi/Desktop/Chronos/Chronos_starter.py")

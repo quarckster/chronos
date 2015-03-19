@@ -10,6 +10,7 @@ led_red = 22
 led_green = 23
 led_blue = 24
 flag = 0
+pulserPin = 17
 
 GPIO.setmode(GPIO.BCM)  
 GPIO.setwarnings(False)
@@ -17,6 +18,11 @@ GPIO.setup(27, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(led_red, GPIO.OUT)  
 GPIO.setup(led_green, GPIO.OUT)
 GPIO.setup(led_blue, GPIO.OUT)
+GPIO.setup(pulserPin, GPIO.OUT)
+try:
+   os.system("sudo kill $(ps aux | grep led_starter.py | awk '{print $2 }')")
+except:
+   print "killError"
 p = GPIO.PWM(led_red, 80)
 p.start(0)
 count = 0
@@ -41,6 +47,9 @@ GPIO.output(led_blue,True)
 time.sleep(5)
 GPIO.output(led_blue,False)
 time.sleep(2)
+
+p = GPIO.PWM(pulserPin, 50000)
+p.start(60)
 
 while(1):
 

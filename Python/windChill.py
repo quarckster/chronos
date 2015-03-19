@@ -9,7 +9,7 @@ cur = conn.cursor()
 cur.execute("""SELECT mode FROM mainTable ORDER BY LID DESC LIMIT 1""")
 a = cur.fetchall()
 mode = a[0][0]
-cur.execute("""SELECT outsideTemp FROM mainTable WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 24 HOUR) AND mode = %s ORDER BY LID DESC LIMIT 1440""",(mode))
+cur.execute("""SELECT outsideTemp FROM mainTable WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR) AND mode = %s ORDER BY LID DESC LIMIT 5760""",(mode))
 results = cur.fetchall()
 for value in results:
     windChill = windChill + value[0]
