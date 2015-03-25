@@ -1,0 +1,3 @@
+#/bin/bash
+
+/usr/local/bin/bstat2 -s /dev/ttyUSB0

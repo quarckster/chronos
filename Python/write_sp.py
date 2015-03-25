@@ -1,4 +1,10 @@
 #!/usr/bin/python
+import MySQLdb
+
+setPoint2 = 00.00
+parameterX = 0.00
+effSetpoint = 00.00
+
 try:
    conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
    cur = conn.cursor()
@@ -9,6 +15,7 @@ try:
    conn.close()
 except:
     print "Error getting setpoint"
+    setPoint2 = 00.00
 try:
    conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
    cur = conn.cursor()
@@ -18,13 +25,14 @@ try:
    parameterX = results[0][0]           
    conn.close()
 except:
-    print "Error getting setpoint"
+    print "Error getting parameter"
+    parameterX = 0.00
 
 effSetpoint = setPoint2 + parameterX
 
 try:
    dataFile = open('/usr/local/bin/sp.txt', 'w')
-   dataFile.write(effSetpoint)
+   dataFile.write(str(effSetpoint))
    dataFile.close()
 except:
     print "Error opening sp.txt"
