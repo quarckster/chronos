@@ -1,4 +1,7 @@
-import multiprocessing
+import mmap
+import os
+import ctypes
+import struct
 
 IN = 1
 OUT = 0
@@ -23,8 +26,10 @@ BOTH = 33
 REV = 0  # Board revision less than 2.0
 #REV = 1  # Board revision 2.0 and above
 
+_TEST_GPIO_FILE="/tmp/gpio"
+
 # local part 
-_debug = True
+_debug = False
 _gpiomode = UNKNOWN;
 
 _pintogpio = [
@@ -33,18 +38,21 @@ _pintogpio = [
 ]
 
 _direction = [-1 for _ in range(0,54)]
-_state = [False for _ in range(0,54)]
+_state = [False for _ in range(0,55)]
 
 # communicate with remote side
 def _read_state(channel):
+
     if _debug:
         print(_direction)
         print(_state)
 
-    return _state[channel]
+    return _state[channel].value
 
 def _write_state(channel, val):
-    _state[channel] = val
+    # Set a value
+    _state[channel].value = val
+
     if _debug:
         print(_direction)
         print(_state)
@@ -54,7 +62,9 @@ def _cleanup():
     global _state
 
     _direction = [-1 for _ in range(0,54)]
-    _state = [0 for _ in range(0,54)]
+    for i in range(0,55):
+        _state[i] = False
+
     if _debug:
         print(_direction)
         print(_state)
@@ -65,19 +75,54 @@ def _get_channel(channel):
 
     return channel
 
-# Public interface
-def setmode(mode):
+def __init(clean):
+    global __fd
+    global __buf
+
+    __fd = os.open(_TEST_GPIO_FILE, os.O_CREAT | os.O_RDWR)
+
+    if clean :
+        # Zero out the file to insure it's the right size
+        assert os.write(__fd, '\x00' * mmap.PAGESIZE) == mmap.PAGESIZE
+
+    __buf = mmap.mmap(__fd, mmap.PAGESIZE, mmap.MAP_SHARED, mmap.PROT_WRITE)
+
+    # Now create a boolean in the memory mapping
+    #state = []
+
+    offset = 0
+    for i in range(0, 55):
+        _state[i] = ctypes.c_bool.from_buffer(__buf, offset)
+        offset += struct.calcsize(_state[i]._type_)
+
+    _state[54].value = True # start working
+
+def _testmode(mode, cleanup):
     global _gpiomode
     if mode in [BOARD,BCM]:
         _gpiomode = mode
     else:
         raise Exception('InvalidModeException')
+
+    __init(cleanup)
+    return
+
+# Public interface
+def setmode(mode):
+
+    global _gpiomode
+    if mode in [BOARD,BCM]:
+        _gpiomode = mode
+    else:
+        raise Exception('InvalidModeException')
+
+    __init(True)
     return
 
 def getmode():
     return _gpiomode
 
-def setup(channel, inout, pull_up_down=PUD_OFF):
+def setup(channel, direction, pull_up_down=PUD_OFF, initial = None):
     global _direction
     global _gpiomode
     global _pintogpio
@@ -88,7 +133,7 @@ def setup(channel, inout, pull_up_down=PUD_OFF):
     elif _gpiomode == BOARD:
         channel = _pintogpio[REV][channel]
 
-    _direction[channel] = inout
+    _direction[channel] = direction
     if _debug:
         print(_direction)
     return None
@@ -188,6 +233,12 @@ def wait_for_edge(channel, edge, bouncetime=0):
 
     #TODO: check the edge
     # RuntimeError("Conflicting edge detection events already exist for this GPIO channel")
+    if edge == RISING:
+        while _state[channel].value == False:
+            pass
+    elif edge == FALLING:
+        while _state[channel].value == True:
+            pass
 
 def gpio_function(gpio):
     # TODO mpa pins according to the board type
