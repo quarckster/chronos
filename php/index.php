@@ -1,3 +1,20 @@
+<?php
+$host  = $_SERVER['HTTP_HOST'];
+$uri   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+$extra = 'winter.php';
+$home='index.php';
+						include('SetConnect.php');
+						$sql="SELECT mode from mainTable order by LID desc limit 1";
+						$result=mysqli_query($con,$sql);
+						if($result){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if($row['mode']==0){                                                   
+								header("Location: http://$host$uri/$extra");
+                 }
+							
+							}
+						}
+					?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -48,9 +65,9 @@
           <?php
 						include('SetConnect.php');
 						$sql="SELECT returnTemp from mainTable order by LID desc limit 40";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
 							$arr[] = $row['returnTemp']; 
 							}
 						}
@@ -58,9 +75,9 @@
      <?php
 						include('SetConnect.php');
 						$sql="SELECT logdatetime from mainTable order by LID desc limit 40";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
 							$arrDate[] = $row['logdatetime']; 
 							}
 						}
@@ -69,9 +86,9 @@
      <?php
 						include('SetConnect.php');
 						$sql="SELECT waterOutTemp from mainTable order by LID desc limit 40";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
 							$arr1[] = $row['waterOutTemp']; 
 							}
 						}
@@ -392,13 +409,13 @@
 </script>
 	<!-- Top Container -->
 	
-	<div class="container-fluid" style="background-color:#3D7073;">
+<div class="container-fluid" style="background-color:#3D7073;">
 		<div id = "updateSetpointThree" class="container jumbotron" style="background-color:#3D7073; padding-top:0; padding-bottom:2px; margin-bottom:0; ">
 			<div id = "insideThree" class="row" >
 				<div class="col-md-3" style="text-align:center; color:#FFFFFF; background-color:#1E3839; padding:10px 10px;">
 					<h4><b>CHRONOS</b></h4>
 					<h5>SYSTEM - <?php
-					$myFileSys =fopen("/var/www/systemUp.txt","r") or die("Unable to open File");
+					$myFileSys =fopen("systemUp.txt","r") or die("Unable to open File");
 					$members = array();
 					while(!feof($myFileSys)){
 						$members[]=fgets($myFileSys);
@@ -429,34 +446,40 @@
 						<img src="<?php
 						include('SetConnect.php');
 						$sql="SELECT mode from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
-							if($row['mode']==0)
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if($row['mode']==0){   
+                                                          
 								echo "images/Icons/WinterSummer/WOn.png";
-							else if($row['mode']==1)
+               }
+							else if($row['mode']==1){
+                                                                                                     
 								echo "images/Icons/WinterSummer/WOff.png";
+              }
 							
 							}
 						}
 					?>" /><br/><a href="updateModeOn.php" font-size:10px;">Winter</a>
 						</div>
 					
-					<div style=" min-width:80px; font-size:10px; color:#FFFFFF; float:left; text-align=center;">
+					<div style="min-width:80px; font-size:10px; color:"#FFFFFF"; float:"left"; text-align="center";">
 						<img src="<?php
 						include('SetConnect.php');
 						$sql="SELECT mode from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
-							if($row['mode']==0)
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if($row['mode']==0){                                                   
 								echo "images/Icons/WinterSummer/SOff.png";
-							else if($row['mode']==1)
+                 }
+							else if($row['mode']==1){
 								echo "images/Icons/WinterSummer/SOn.png";
+                                                          }
 							
 							}
 						}
-					?>" /><br/><a href="updateModeOff.php" style="color:#FFFFFF; font-size:10px;">Summer</a>
+					?>" /><br/><a href="updateModeOff.php" style="color:"#FFFFFF"; font-size:10px;">Summer</a>
 					</div>
 
 					
@@ -473,58 +496,66 @@
 			     <div id="updateSetpoint">
 				<div class="col-md-3" id="inside" style="text-align:center; color:#FFFFFF; background-color:#224042; padding:0 0; min-height:360px;">
 					<div style="width:100%; background-color:#FF6600; padding:10px 10px;" >
-					<b>System Statistics</b>
+					<b>Summer Mode</b>
 					</div>
 					<br/>
-					<h5 style="font-size:15px;"><?php
-						include('SetConnect.php');
-						$sql="SELECT mode FROM mainTable ORDER BY LID DESC LIMIT 1";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							if ($row[mode]==0)
-								echo "Wind Chill"; 
-							else if ($row[mode]==1)
-								echo "Outside Temperature";
-							}
-						}
-					?></h5>
-					<h6 id="OutsideTemp"><?php
+					<h5 id="OutsideTemp" style="font-size:15px;">
+          <table align=center>
+          <tr>
+          <td align=left>Outdoor Temp</td>
+					<td><?php
 						include('SetConnect.php');
 						$sql="SELECT outsideTemp from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
 							echo $row['outsideTemp']; 
 							}
 						}
-					?> &deg;F</h6>		<!--Dynamic Content-->
+					?> &deg;F</td></tr>
+          <tr>		
+             <td>Avg Outdoor Temp (96 hrs)&nbsp;&nbsp;&nbsp;&nbsp; </td>
+					<td>
+					<?php
+					$myFileWC =fopen("/home/pi/Desktop/Chronos/windChillAvg.txt","r") or die("Unable to open File");
+					$members = array();
+					while(!feof($myFileWC)){
+						$members[]=fgets($myFileWC);
+						
+					}
+						echo $members[0];
+				
+					fclose($myFileWC);
+				?> &deg;F</td>
+          </tr>
+          </table></h5>	
+	
+					<!--Dynamic Content-->
 					<h6><small style="color:#FFFFFF;"><a href="http://wx.thomaslivestock.com" style="color:#FFFFFF;">wx.thomaslivestock.com</a></small></h6>
 					<div style="height:15px;"></div>
-					<table  align=center>
+					<h5 align=left><b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sensors</b></h5>
+					<table  align=center border=0>
 						<tr>
-						<td >Water Inlet</td>
-						<td width=5% style="border-right:1px solid rgba(255, 255, 255, 0.5);"></td>
-						<td>&nbsp;&nbsp;&nbsp;Water Outlet</td><!--Dynamic Content-->
-						</tr>
-						<tr>
-						<td><?php
+						<td width=170px align=left>Inlet</td>
+						<td width=80px><?php
 						include('SetConnect.php');
 						$sql="SELECT returnTemp from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
 							echo $row['returnTemp']; 
 							}
 						}
-					?> &deg;F</td>
-						<td width=5% style="border-right:1px solid rgba(255, 255, 255, 0.5);"></td>
+					?> &deg;F</td><!--Dynamic Content-->
+						</tr>
+						<tr>
+						<td align=left>Outlet</td>
 						<td><?php
 						include('SetConnect.php');
 						$sql="SELECT waterOutTemp from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
 							echo $row['waterOutTemp']; 
 							}
 						}
@@ -533,112 +564,92 @@
 						
 					</table>
 					<hr/ style="opacity:0.5;">
-					<table align=center style="font-size:13px;">
-                 <br/>
-						<h6 style="font-size:14px;">Activity Stream</h6>
+               <br/>
+					<table align=center style="font-size:13px;" border=0>
+                
+						<h6 style="font-size:14px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;On Time</h6>
 						<tr>
-						<td></td>
-						<td width=5% style="border-left:1px solid rgba(255, 255, 255, 0.5);"></td>
-						<td>&nbsp;&nbsp;&nbsp;Date &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Time</td><!--Dynamic Content-->
-						<td width=5% style="border-right:1px solid rgba(255, 255, 255, 0.5);"></td>
-						<td>&nbsp;&nbsp;&nbsp;Status</td>
+						<td width=100px></td>
+						<td width=150px align=left></td><!--Dynamic Content-->
 						</tr>
 						<tr>
-						<td>Boiler&nbsp;&nbsp;</td>
-						<td width=5% style="border-left:1px solid rgba(255, 255, 255, 0.5);"></td>
-						<td><?php
-						include('SetConnect.php');
-						$sql="SELECT timeStamp from actStream where TID=1";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							echo $row['timeStamp']; 
-							}
-						}
-					?></td><!--Dynamic Content-->
-						<td width=5% style="border-right:1px solid rgba(255, 255, 255, 0.5);"></td>
-						<td><?php
-						include('SetConnect.php');
-						$sql="SELECT status from actStream where TID=1";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							if ($row[status]==1)
-								echo "ON"; 
-							else if ($row[status]==0)
-								echo "OFF";
-							}
-						}
-					?></td>
-						</tr>
-						<tr>
-						<td>Chiller 1&nbsp;&nbsp;</td>
-						<td width=5% style="border-left:1px solid rgba(255, 255, 255, 0.5);"></td>
-						<td><?php
+						<td align=center>Chiller 1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+						<td align=left><?php
 						include('SetConnect.php');
 						$sql="SELECT timeStamp from actStream where TID=2";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
-							echo $row['timeStamp']; 
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+								$oldFormat = date_create($row['timeStamp']);
+								$new_date = date_format($oldFormat,'F j, g:ia');
+								echo $new_date ; 
 							}
 						}
 					?></td><!--Dynamic Content-->
-						<td width=5% style="border-right:1px solid rgba(255, 255, 255, 0.5);"></td>
-						<td><?php
-						include('SetConnect.php');
-						$sql="SELECT status from actStream where TID=2";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							if ($row[status]==1)
-								echo "ON"; 
-							else if ($row[status]==0)
-								echo "OFF";
-							}
-						}
-					?></td>
+						
 						</tr>
 						<tr>
-						<td>Chiller 2&nbsp;&nbsp;</td>
-						<td width=5% style="border-left:1px solid rgba(255, 255, 255, 0.5);"></td>
-						<td><?php
+						<td align=center>Chiller 2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+
+						<td align=left><?php
 						include('SetConnect.php');
 						$sql="SELECT timeStamp from actStream where TID=3";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
-							echo $row['timeStamp']; 
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							$oldFormat = date_create($row['timeStamp']);
+								$new_date = date_format($oldFormat,'F j, g:ia');
+								echo $new_date ;
 							}
 						}
 					?></td><!--Dynamic Content-->
-						<td width=5% style="border-right:1px solid rgba(255, 255, 255, 0.5);"></td>
-						<td><?php
+						
+						</tr>
+						<tr>
+						<td align=center>Chiller 3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+
+						<td align=left><?php
 						include('SetConnect.php');
-						$sql="SELECT status from actStream where TID=3";
-						$result=mysql_query($sql,$con);
+						$sql="SELECT timeStamp from actStream where TID=4";
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
-							if ($row[status]==1)
-								echo "ON"; 
-							else if ($row[status]==0)
-								echo "OFF";
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							$oldFormat = date_create($row['timeStamp']);
+								$new_date = date_format($oldFormat,'F j, g:ia ');
+								echo $new_date ;
 							}
 						}
-					?></td>
+					?></td><!--Dynamic Content-->
+						
+						</tr>
+						<tr>
+						<td align=center>Chiller 4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+
+						<td align=left><?php
+						include('SetConnect.php');
+						$sql="SELECT timeStamp from actStream where TID=5";
+						$result=mysqli_query($con,$sql);
+						if($result){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							$oldFormat = date_create($row['timeStamp']);
+								$new_date = date_format($oldFormat,'F j, g:ia');
+								echo $new_date ;
+							}
+						}
+					?></td><!--Dynamic Content-->
+						
 						</tr>
 					</table>
-					<br/>
 					<br/>
                
 				</div>
 			    </div>
-				<div id=Just data-toggle="tooltip" data-placement="down" data-original-title="<?php
+				<!-- <div id=Just data-toggle="tooltip" data-placement="down" data-original-title="<?php
 						include('SetConnect.php');
 						$sql="SELECT mode from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
 							if($row['mode']==0)
 								echo "Effective Setpoint = Dynamic Setpoint + Boiler Offset";
 							else if($row['mode']==1)
@@ -648,81 +659,95 @@
 						}
 					?>" style="position:absolute; z-index:100; right:180px; top:270px; min-height:40px; min-width:60px;">
             
-        </div>
+        </div> -->
 				<div class="col-md-6" id="updateImage" style="text-align:center; color:#FFFFFF; min-height:300px;">
-					<div  id="insideImage" style="width:100%; margin-top:30px; padding:10px 10px; background-image:url('<?php
+					<div  id="insideImage" style="width:100%; margin-top:30px; padding:10px 10px; font-size:11px; background-repeat:"no-repeat"; min-height:300px;" >
+               <div  style="float:left;">
+                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;
+                     </div> 
+                     <div min-width=250px style="float:left;">
+                     <img src="images/Icons/Boiler/arrow1.png" height=250px; style="z-index:-1;"/>
+                     <p  style="font-size:11px;" ><?php
 						include('SetConnect.php');
-						$sql="SELECT returnTemp from mainTable order by logdatetime desc limit 1";
-						$sql2="SELECT waterOutTemp from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
-						$result1=mysql_query($sql2,$con);
+						$sql="SELECT returnTemp from mainTable order by LID desc limit 1";
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while(($row=mysql_fetch_array($result)) && ($row1=mysql_fetch_array($result1))){
-							if ($row[returnTemp]>=80&&$row1[waterOutTemp]>=80)
-								echo "images/Icons/MainImage/OHIH.png"; 
-							else if ($row[returnTemp]<80&&$row1[waterOutTemp]<80)
-								echo "images/Icons/MainImage/OCIC.png"; 
-							else if ($row[returnTemp]<80&&$row1[waterOutTemp]>=80)
-								echo "images/Icons/MainImage/OHIC.png"; 
-							else if ($row[returnTemp]>=80&&$row1[waterOutTemp]<80)
-								echo "images/Icons/MainImage/OCIH.png";
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							echo $row['returnTemp']; 
 							}
 						}
-					?>'); font-size:11px; background-repeat: no-repeat; min-height:300px;" >
-						<table border="0" >
+					?> &deg;F</p>
+                     </div>
+						 <div style="float:left;"><table border="0" >
 							<tr height=30px>
-								<td width="55%"></td>
+							
 								<td></td>
 								<td></td>
 								<td></td>
-								<td></td>
+							  <td></td>
 							<tr>
 							<tr>
+							
+								<td></td>	
+								<td></td>
+								<td></td>
 								<td ></td>
-								<td width=11%></td>	
-								<td></td>
-								<td></td>
-								<td align="right"></td>
 							<tr>
 							<tr>
+                
 								<td></td>
 								<td></td>
-								<td align="left"><div><br/><img src="<?php
+								<td></td>
+								<td></td>
+							
+							<tr>
+							<tr>
+                                  
+								<td></td>
+								<td></td>	
+								<td></td>
+								<td></td>
+							
+							<tr>
+							<tr>
+              
+								<td><br/><img src="<?php
 						include('SetConnect.php');
-						$sql="SELECT status from actStream where TID=1";
-						$result=mysql_query($sql,$con);
+						$sql="SELECT status from actStream where TID=2";
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
-							if ($row[status]==1)
-								echo "images/Icons/Boiler/Boiler-ON.png"; 
-							else if ($row[status]==0)
-								echo "images/Icons/Boiler/Boiler-OFF.png"; 
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if ($row['status']==1)
+								echo "images/Icons/Boiler/Chiller-ON.png"; 
+							else if ($row['status']==0)
+								echo "images/Icons/Boiler/Chiller-OFF.png"; 
 							
 							}
 						}
-					?>" /></div></td>
-								<td></td>
-								<td></td>
-							<tr>
-							<tr>
-								<td></td>
-								<td></td>	
-								<td align="left">&nbsp;Boiler 1</td>
-								<td></td>
-								<td></td>
-							<tr>
-							<tr>
-								<td></td>
-								<td></td>
-								<td align="left" width=100px><br/><img src="<?php
+					?>" /></td>
+								<td><br/><img src="<?php
 						include('SetConnect.php');
-						$sql="SELECT status from actStream where TID=2";
-						$result=mysql_query($sql,$con);
+						$sql="SELECT status from actStream where TID=3";
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
-							if ($row[status]==1)
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if ($row['status']==1)
 								echo "images/Icons/Boiler/Chiller-ON.png"; 
-							else if ($row[status]==0)
+							else if ($row['status']==0)
+								echo "images/Icons/Boiler/Chiller-OFF.png"; 
+							
+							}
+						}
+					?>" /></td>
+								<td align="left" ><br/><img src="<?php
+						include('SetConnect.php');
+						$sql="SELECT status from actStream where TID=4";
+						$result=mysqli_query($con,$sql);
+						if($result){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if ($row['status']==1)
+								echo "images/Icons/Boiler/Chiller-ON.png"; 
+							else if ($row['status']==0)
 								echo "images/Icons/Boiler/Chiller-OFF.png"; 
 							
 							}
@@ -730,28 +755,34 @@
 					?>" /></td>
 								<td align="left"><br/><img src="<?php
 						include('SetConnect.php');
-						$sql="SELECT status from actStream where TID=3";
-						$result=mysql_query($sql,$con);
+						$sql="SELECT status from actStream where TID=5";
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
-							if ($row[status]==1)
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if ($row['status']==1)
 								echo "images/Icons/Boiler/Chiller-ON.png"; 
-							else if ($row[status]==0)
+							else if ($row['status']==0)
 								echo "images/Icons/Boiler/Chiller-OFF.png"; 
 							
 							}
 						}
 					?>"/></td>
-								<td></td>
-							<tr>
-							<tr>
-								<td></td>
-								<td></td>
-								<td align="left">Chiller 1</td>
-								<td align="left">Chiller 2</td>
-								<td></td>
-							<tr>
-						</table>
+							
+						</tr>
+						</table></div>
+                <div width=100px style="float:left;">
+                <img src="images/Icons/Boiler/arrow2.png" height=250px;/>
+                 <p  style="font-size:11px;" ><?php
+						include('SetConnect.php');
+						$sql="SELECT waterOutTemp from mainTable order by LID desc limit 1";
+						$result=mysqli_query($con,$sql);
+						if($result){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							echo $row['waterOutTemp']; 
+							}
+						}
+					?> &deg;F</p>
+                     </div>     
 					</div>
 					
 				</div>
@@ -767,213 +798,137 @@
 				<div id="updateSetpointtwo">
 				<div  id="insidetwo" style="text-align:center; color:#FFFFFF; background-color:#224042; padding:0 0;">
 					
-					<h5 style="font-size:15px;">Dynamic Setpoint</h5>
-					<h6 id="OutsideTemp"><?php
+					<h5 id="OutsideTemp" style="font-size:15px;">
+              <br/>
+          <table align=center border=0><tr>
+          <td align=left width=180px>Baseline Setpoint &nbsp;</td>
+					<td><?php
+						include('SetConnect.php');
+						$sql="SELECT outsideTemp from mainTable order by LID desc limit 1";
+						$result=mysqli_query($con,$sql);
+						if($result){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							$temp = $row['outsideTemp']; 
+							}
+						}
+              $temp = intval($temp);
+            $sql1="SELECT setPoint from SetpointLookup where windChill = '$temp'";
+            $result=mysqli_query($con,$sql1);
+						if($result){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							echo $row['setPoint']; 
+							}
+						}
+					?> &deg;F</td>		<!--Dynamic Content-->
+           </tr>
+           <tr>
+           <td>&nbsp;</td>
+           <td></td>
+           </tr><tr>  
+					<td align=left>THA Setpoint</td>
+          <td> <?php
 						include('SetConnect.php');
 						$sql="SELECT setPoint2 from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
 							echo $row['setPoint2']; 
 							}
 						}
-					?> &deg;F</h6>		<!--Dynamic Content-->
-					<h6 ><small style="color:#FFFFFF;">Average <?php
-						include('SetConnect.php');
-						$sql="SELECT mode FROM mainTable ORDER BY LID DESC LIMIT 1";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							if ($row[mode]==0)
-								echo "Wind Chill"; 
-							else if ($row[mode]==1)
-								echo "Outside Temperature";
-							}
-						}
-					?> (24 Hours) = <?php
-					$myFileWC =fopen("/home/pi/Desktop/Chronos/windChillAvg.txt","r") or die("Unable to open File");
+					?> &deg;F</td>
+            </tr>
+            <tr>
+           <td>&nbsp;</td>
+           <td></td>
+           </tr><tr> 
+					<td align=left>Effective Setpoint</td>
+          <td>  <?php
+					$myFileSP =fopen("/usr/local/bin/sp.txt","r") or die("Unable to open File");
 					$members = array();
-					while(!feof($myFileWC)){
-						$members[]=fgets($myFileWC);
+					while(!feof($myFileSP)){
+						$members[]=fgets($myFileSP);
 						
 					}
 						echo $members[0];
 				
-					fclose($myFileTin);
-				?> </small></h6>
-					<div style="height:5px;"></div>
-					<h5 style="font-size:15px;">Effective Setpoint</h5>
-					<h6 id="OutsideTemp" style="width:100%;"><?php
-						include('SetConnect.php');
-						$sql="SELECT mode from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							$a = $row['mode']; 
-							}
-						}
-						$sql="SELECT setPoint2 from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							$b = $row['setPoint2']; 
-							}
-						}
-						$sql="SELECT parameterY from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							$c = $row['parameterY']; 
-							}
-						}
-            $sql="SELECT parameterX from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							$d = $row['parameterX']; 
-							}
-						}
-						if($a){
-							echo ($b + $c);
-						}
-						else{
-							echo ($b + $d);
-						}
-					?> &deg;F</h6>	<!--Dynamic Content-->
-				</div>
-			    </div>
-					
+					fclose($myFileSP);
+				?>&deg;F </small></td>
+        </tr>
+        
+        </table></h5>
+				<br/>
+        <br/>
+	</div>
+</div>					
           <hr/ style="opacity:0.5;">
-<div class="flip-container" id = "flip-toggle" ontouchstart="this.classList.toggle('hover');">
-	<div class="flipper">
+<div>
+  <div>
        <form name="UpdateParameter" action="UpdatePara.php" method=post>
 
-	    <div class="front">
-         
-			  <h6 style="font-size:14px;">Offset Parameters</h6>
+	  
+			  <br/>
+               <br/>
 					
 					<table border=0 align=center>
 						
 						<tr>
-						<td>Boiler</td>
+						<td>Setpoint Offset</td>
 						<td width=5%></td>
 						<td><?php
 						include('SetConnect.php');
 						$sql="SELECT parameterX from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
 							echo $row['parameterX']; 
 							}
 						}
-					?> &deg;F</td><td ></td>
+					?> &deg;F</td>
+            <td width=10px></td>
 						<td style="color:#000000;"><input type="text" name="parameterX" size=2></td><!--Dynamic Content-->
 						<td width=3%></td>
 						<td><input type="Submit" value="Update" style="color:#000000;"></td>
 						</tr>
             <tr>
-						<td>Chiller 1</td>
-						<td width=5%></td>
-						<td><?php
-						include('SetConnect.php');
-						$sql="SELECT parameterY from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							echo $row['parameterY']; 
-							}
-						}
-					?> &deg;F</td><td ></td>
-						<td style="color:#000000;"><input type="text" name="parameterY" size=2></td><!--Dynamic Content-->
-						<td width=3%></td>
-						<td><input type="Submit" value="Update" style="color:#000000;"></td>
-						</tr>
-						<tr>
-						<td>Chiller 2</td>
-						<td width=5%></td>
-						<td><?php
-						include('SetConnect.php');
-						$sql="SELECT parameterZ from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							echo $row['parameterZ']; 
-							}
-						}
-					?> &deg;F</td><!--Dynamic Content--><td >&nbsp;&nbsp;</td>
-						<td style="color:#000000;"><input type="text" name="parameterZ" size=2></td>
-						<td width=3%></td>
-						<td><input type="Submit" value="Update" style="color:#000000;"></td>
-						</tr>
-					</table>
-		</div>
-   
-   
-		<div class="back">
-			<!-- back content -->
-      
-			  <h6 style="font-size:14px;">Threshold Parameters</h6>
-					
-      <table border=0 align=center>
-					
-						<tr>
-						<td>Boiler (t1)</td>
+						<td>Tolerance</td>
 						<td width=5%></td>
 						<td><?php
 						include('SetConnect.php');
 						$sql="SELECT t1 from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
 							echo $row['t1']; 
 							}
 						}
-					?> &deg;F</td><td ></td>
+					?> &deg;F</td><td></td>
 						<td style="color:#000000;"><input type="text" name="t1" size=2></td><!--Dynamic Content-->
 						<td width=3%></td>
 						<td><input type="Submit" value="Update" style="color:#000000;"></td>
 						</tr>
             <tr>
-						<td>Chiller 1 (t2)</td>
+						<td>Cascade Time</td>
 						<td width=5%></td>
 						<td><?php
 						include('SetConnect.php');
-						$sql="SELECT t2 from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
+						$sql="SELECT CCT from mainTable order by LID desc limit 1";
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
-							echo $row['t2']; 
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							echo $row['CCT']; 
 							}
 						}
-					?> &deg;F</td><td ></td>
-						<td style="color:#000000;"><input type="text" name="t2" size=2></td><!--Dynamic Content-->
-						<td width=3%></td>
-						<td><input type="Submit" value="Update" style="color:#000000;"></td>
-						</tr>
-						<tr>
-						<td>Chiller 2 (t3)</td>
-						<td width=5%></td>
-						<td><?php
-						include('SetConnect.php');
-						$sql="SELECT t3 from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
-						if($result){
-							while($row=mysql_fetch_array($result)){
-							echo $row['t3']; 
-							}
-						}
-					?> &deg;F</td><!--Dynamic Content--><td >&nbsp;&nbsp;</td>
-						<td style="color:#000000;"><input type="text" name="t3" size=2></td>
+					?> min</td><td ></td>
+						<td style="color:#000000;"><input type="text" name="CCT" size=2></td><!--Dynamic Content-->
 						<td width=3%></td>
 						<td><input type="Submit" value="Update" style="color:#000000;"></td>
 						</tr>
 					</table>
-		</div>
+	<br/>	<br/>
     </form>
 	</div>
 </div> 
-
-<button onclick="document.querySelector('#flip-toggle').classList.toggle('hover');" class="toggleButton">Toggle</button>		
+		
 				</div>
 			</div>
 		</div>
@@ -1017,9 +972,9 @@
 	<div class="container-fluid" id="updateInterface" style="background-color:#FFFFFF;">
 		<div class="container jumbotron" id="insideInterface" style="background-color:#FFFFFF; margin-bottom:0; padding-bottom:0; padding-top:5px;">
 			<div class="row" >
-				<div class="col-md-4" style="width: 150px; text-align:center; color:#3D7073;">
+				<div class="col-md-4" style="width:50px; text-align:center; color:#3D7073;">
 				</div>
-				<div class="col-md-4" style="text-align:center; color:#3D7073; ">
+				<div class="col-md-6" style="text-align:center; color:#3D7073; ">
 					<h5>MANUAL OVERRIDE</h5><br/>
 					<div style="min-height:100px; min-width:35px; float:left;">
 							
@@ -1027,9 +982,9 @@
 						<div style="background-image:url('<?php
 						include('SetConnect.php');
 						$sql="SELECT MO_B from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
 							if($row['MO_B']==0)
 								echo "images/Icons/Manual/Auto.png";
 							else if($row['MO_B']==1)
@@ -1098,9 +1053,9 @@
 						<div style="background-image:url('<?php
 						include('SetConnect.php');
 						$sql="SELECT MO_C1 from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
 							if($row['MO_C1']==0)
 								echo "images/Icons/Manual/Auto.png";
 							else if($row['MO_C1']==1)
@@ -1168,9 +1123,9 @@
 						<div style="background-image:url('<?php
 						include('SetConnect.php');
 						$sql="SELECT MO_C2 from mainTable order by LID desc limit 1";
-						$result=mysql_query($sql,$con);
+						$result=mysqli_query($con,$sql);
 						if($result){
-							while($row=mysql_fetch_array($result)){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
 							if($row['MO_C2']==0)
 								echo "images/Icons/Manual/Auto.png";
 							else if($row['MO_C2']==1)
@@ -1235,6 +1190,147 @@
 							
 							
 						</div>
+                      <div style="background-image:url('<?php
+						include('SetConnect.php');
+						$sql="SELECT MO_C3 from mainTable order by LID desc limit 1";
+						$result=mysqli_query($con,$sql);
+						if($result){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if($row['MO_C3']==0)
+								echo "images/Icons/Manual/Auto.png";
+							else if($row['MO_C3']==1)
+								echo "images/Icons/Manual/ON.png";
+							else if($row['MO_C3']==2)
+								echo "images/Icons/Manual/OFF.png";
+							}
+						}
+					?>'); 	background-repeat: no-repeat; min-height:100px; min-width:110px; font-size:10px; color:#FFFFFF; float:left;">
+							<table border=0>
+								<tr height=10%>
+								<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+								</tr>
+								<tr>
+								<tr height=15px>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td></td>
+								</tr>
+								<tr>
+								<td></td>
+								<td></td>
+								<td><a href="UpdateAutoC3.php">&nbsp;Auto</a></td>
+								<td></td>
+								<td><a href="UpdateOnC3.php">On</a></td>
+								<td></td>
+								</tr>
+								<tr >
+								<td>&nbsp;</td>
+								<td></td>
+								<td></td>
+								<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+								<td></td>
+								<td></td>
+								</tr>
+								<tr>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td><a href="UpdateOffC3.php">Off</a></td>
+								<td></td>
+								<td></td>
+								</tr>
+								<tr height=5%>
+								<td colspan=6>&nbsp;</td>
+								</tr>
+								<tr height=5%>
+								<td colspan=6>&nbsp;</td>
+								</tr>
+								<tr>
+								<td colspan=6 style="color:#3D7073; font-size:12px;">&nbsp;&nbsp;Chiller 3</td>
+								</tr>
+							</table>
+							
+							
+						</div>
+                      <div style="background-image:url('<?php
+						include('SetConnect.php');
+						$sql="SELECT MO_C4 from mainTable order by LID desc limit 1";
+						$result=mysqli_query($con,$sql);
+						if($result){
+							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if($row['MO_C4']==0)
+								echo "images/Icons/Manual/Auto.png";
+							else if($row['MO_C4']==1)
+								echo "images/Icons/Manual/ON.png";
+							else if($row['MO_C4']==2)
+								echo "images/Icons/Manual/OFF.png";
+							}
+						}
+					?>'); 	background-repeat: no-repeat; min-height:100px; min-width:110px; font-size:10px; color:#FFFFFF; float:left;">
+							<table border=0>
+								<tr height=10%>
+								<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+								</tr>
+								<tr>
+								<tr height=15px>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td></td>
+								</tr>
+								<tr>
+								<td></td>
+								<td></td>
+								<td><a href="UpdateAutoC4.php">&nbsp;Auto</a></td>
+								<td></td>
+								<td><a href="UpdateOnC4.php">On</a></td>
+								<td></td>
+								</tr>
+								<tr >
+								<td>&nbsp;</td>
+								<td></td>
+								<td></td>
+								<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+								<td></td>
+								<td></td>
+								</tr>
+								<tr>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td><a href="UpdateOffC4.php">Off</a></td>
+								<td></td>
+								<td></td>
+								</tr>
+								<tr height=5%>
+								<td colspan=6>&nbsp;</td>
+								</tr>
+								<tr height=5%>
+								<td colspan=6>&nbsp;</td>
+								</tr>
+								<tr>
+								<td colspan=6 style="color:#3D7073; font-size:12px;">&nbsp;&nbsp;Chiller 4</td>
+								</tr>
+							</table>
+							
+							
+						</div>
+                      
 						<!--<img src="images/Icons/Manual/Auto.png">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="images/Icons/Manual/On.png">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="images/Icons/Manual/off.png">-->
 							
 				</div>
