@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #version 2.0
-#UID CHRON001
-#New logic incoming
+#UID CHRON003
 
 import time
 time.sleep(15)
@@ -119,8 +118,12 @@ except:
     logging.debug('ErrorGPIO')
 
 #-----temp sensors-----
-sensorOutID = '28-00042d4367ff'
-sensorInID = '28-00042c648eff'
+#sensorOutID = '28-00042d4367ff'
+#sensorInID = '28-00042c648eff'
+#sensorOutID = '28-00000677b889'
+#sensorInID = '28-000006764525'
+sensorOutID = '28-00000677d162'
+sensorInID = '28-00000676e315'
 os.system('modprobe w1-gpio')
 os.system('modprobe w1-therm')
 

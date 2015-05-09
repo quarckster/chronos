@@ -1,9 +1,7 @@
 #!/usr/bin/python
 import MySQLdb
-
 setPoint2 = 00.00
 parameterX = 0.00
-effSetpoint = 00.00
 
 try:
    conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")

@@ -9,7 +9,7 @@ To: Benjamin <benjamin@estrrado.com>
 Subject: Chronos Status Notifier
      
 CHRONOS v2.0
-Serial No: CHRON001
+Serial No: CHRON003
 Current system status :
      """
 try:
@@ -23,17 +23,16 @@ try:
            outsideTemp = row[2]
            waterOutTemp = row[3]
            returnTemp = row[4]
-           setPoint2 = row[9]
-           parameterX = row[10]
-           parameterY = row[11]
-           parameterZ = row[12]
-           t1 = row[13]
-           t2 = row[14]
-           t3 = row[15]
-           MO_B = row[16]
-           MO_C1 = row[17]
-           MO_C2 = row[18]
-           mode = row[19]
+           setPoint2 = row[10]
+           parameterX = row[11]
+           t1 = row[12]
+           MO_B = row[13]
+           MO_C1 = row[14]
+           MO_C2 = row[15]
+           MO_C3 = row[16]
+           MO_C4 = row[17]
+           mode = row[18]
+           windSpeed = row[21]
        sql = "SELECT * FROM errTable"
        cur.execute(sql)
        results = cur.fetchall()
@@ -61,6 +60,18 @@ try:
        for row in results:
            chiller2Time = row[1]
            chiller2Status = row[2]
+       sql = "SELECT * FROM actStream WHERE TID=4"
+       cur.execute(sql)
+       results = cur.fetchall()
+       for row in results:
+           chiller3Time = row[1]
+           chiller3Status = row[2]
+       sql = "SELECT * FROM actStream WHERE TID=5"
+       cur.execute(sql)
+       results = cur.fetchall()
+       for row in results:
+           chiller4Time = row[1]
+           chiller4Status = row[2]
        
        conn.close()       
 except:
@@ -82,6 +93,14 @@ if (chiller2Status == 1):
    chiller2Status = ("""ON""")
 else:
      chiller2Status = ("""OFF""")
+if (chiller3Status == 1):
+   chiller3Status = ("""ON""")
+else:
+     chiller3Status = ("""OFF""")
+if (chiller4Status == 1):
+   chiller4Status = ("""ON""")
+else:
+     chiller4Status = ("""OFF""")
 if (MO_B == 0):
    MO_B = ("""Auto""")
 elif (MO_B == 1):
@@ -100,6 +119,18 @@ elif (MO_C2 == 1):
    MO_C2 = ("""ON""")
 else:
      MO_C2 = ("""OFF""")
+if (MO_C3 == 0):
+   MO_C3 = ("""Auto""")
+elif (MO_C3 == 1):
+   MO_C3 = ("""ON""")
+else:
+     MO_C3 = ("""OFF""")
+if (MO_C4 == 0):
+   MO_C4 = ("""Auto""")
+elif (MO_C4 == 1):
+   MO_C4 = ("""ON""")
+else:
+     MO_C4 = ("""OFF""")
 sysUpFile = open("/var/www/systemUp.txt","r")
 sysUp = sysUpFile.readline()
 
@@ -131,13 +162,17 @@ message6 = ("""\nInlet Temperature : """ + str(returnTemp))
 message7 = ("""\nBoiler """ + str(boilerStatus) + """ since """ + str(boilerTime))
 message8 = ("""\nChiller 1 """ + str(chiller1Status) + """ since """ + str(chiller1Time))
 message9 = ("""\nChiller 2 """ + str(chiller2Status) + """ since """ + str(chiller2Time))
+message9_1 = ("""\nChiller 3 """ + str(chiller3Status) + """ since """ + str(chiller3Time))
+message9_2 = ("""\nChiller 4 """ + str(chiller4Status) + """ since """ + str(chiller4Time))
 message10 = ("""\nCurrent Setpoint : """ + str(setPoint2))
-message11 = ("""\nSystem Parameters : """ + str(parameterX) + """, """ + str(parameterY) + """, """ + str(parameterZ) + """, """  + str(t1) + """, """ + str(t2) + """, """ + str(t3))
+message11 = ("""\nSystem Parameters : """ + str(parameterX) + """, """ + str(t1))
 message12 = ("""\nBoiler Override : """ + str(MO_B))
 message13 = ("""\nChiller1 Override : """ + str(MO_C1))
 message14 = ("""\nChiller2 Override : """ + str(MO_C2))
+message14_1 = ("""\nChiller3 Override : """ + str(MO_C3))
+message14_2 = ("""\nChiller4 Override : """ + str(MO_C4))
 message15 = """\n\nYou have received this email as a result of your subsciption to the Chronos status notifier mailing list. If you wish to unsubscribe, please contact your local Chronos system administrator."""
-message = message1 + message2 + message3 + message2_1 + message2_2 + message2_3 + message2_4 + message2_5 + """\n""" + message7 + message8 + message9 + """\n""" + message4 + message6 + message5 + message10 + """\n""" + message12 + message13 + message14 + message11 + """\n""" + message15
+message = message1 + message2 + message3 + message2_1 + message2_2 + message2_3 + message2_4 + message2_5 + """\n""" + message7 + message8 + message9 + message9_1 + message9_2 + """\n""" + message4 + message6 + message5 + message10 + """\n""" + message12 + message13 + message14 + message11 + """\n""" + message15
 #print message
 #smtpObj = smtplib.SMTP('mail.estrrado.com', 26)
 #smtpObj.sendmail(sender, receivers, message)
