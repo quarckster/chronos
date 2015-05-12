@@ -508,7 +508,10 @@ while 1:
                    nCmax = nCmax + 1
                    startTime = time.time()
            elif ((mode==1) & ((setPoint2 + parameterX - t1) > returnTemp)):
-               if (((nCmax-nCon)==p[chiller]) & (timeGap>CCT)):
+               if nCon == 0:
+                   b[chiller] = 0
+                   startTime = time.time()
+               elif (((nCmax-nCon)==p[chiller]) & (timeGap>CCT)):
                    b[chiller] = 0
                    nCon = nCon - 1
                    startTime = time.time()
