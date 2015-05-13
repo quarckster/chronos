@@ -4,7 +4,7 @@ $uri   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 $extra = 'winter.php';
 $home='index.php';
 include('SetConnect.php');
-						$sql1="SELECT mode from mainTable order by LID desc limit 1";
+						$sql1="SELECT * from mainTable order by LID desc limit 1";
 						$result1=mysqli_query($con,$sql1);
 						if($result1){
 							// while($row1=mysqli_fetch_array($result1,MYSQLI_ASSOC)){
@@ -517,12 +517,12 @@ include('SetConnect.php');
           <td align=left>Outdoor Temp</td>
 					<td><?php
 						
-						$sql3="SELECT outsideTemp from mainTable order by LID desc limit 1";
-						$result3=mysqli_query($con,$sql3);
-						if($result3){
+						// $sql3="SELECT outsideTemp from mainTable order by LID desc limit 1";
+						// $result3=mysqli_query($con,$sql3);
+						if($result1){
 							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            $row3=mysqli_fetch_array($result3,MYSQLI_ASSOC);
-							echo $row3['outsideTemp']; 
+                            // $row3=mysqli_fetch_array($result3,MYSQLI_ASSOC);
+							echo $row1['outsideTemp']; 
 							// }
 						}
 					?> &deg;F</td></tr>
@@ -552,12 +552,12 @@ include('SetConnect.php');
 						<td width=170px align=left>Inlet</td>
 						<td width=80px><?php
 						
-						$sql="SELECT returnTemp from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							echo $row['returnTemp']; 
-							}
+						// $sql="SELECT returnTemp from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result1){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							echo $row1['returnTemp']; 
+							// }
 						}
 					?> &deg;F</td><!--Dynamic Content-->
 						</tr>
@@ -565,12 +565,12 @@ include('SetConnect.php');
 						<td align=left>Outlet</td>
 						<td><?php
 						
-						$sql="SELECT waterOutTemp from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							echo $row['waterOutTemp']; 
-							}
+						// $sql="SELECT waterOutTemp from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result1){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							echo $row1['waterOutTemp']; 
+							// }
 						}
 					?> &deg;F</td><!--Dynamic Content-->
 						</tr>
@@ -682,12 +682,12 @@ include('SetConnect.php');
                      <img src="images/Icons/Boiler/arrow1.png" height=250px; style="z-index:-1;"/>
                      <p  style="font-size:11px;" ><?php
 						
-						$sql="SELECT returnTemp from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							echo $row['returnTemp']; 
-							}
+						// $sql="SELECT returnTemp from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result1){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							echo $row1['returnTemp']; 
+							// }
 						}
 					?> &deg;F</p>
                      </div>
@@ -787,12 +787,12 @@ include('SetConnect.php');
                 <img src="images/Icons/Boiler/arrow2.png" height=250px;/>
                  <p  style="font-size:11px;" ><?php
 						
-						$sql="SELECT waterOutTemp from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							echo $row['waterOutTemp']; 
-							}
+						// $sql="SELECT waterOutTemp from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result1){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							echo $row1['waterOutTemp']; 
+							// }
 						}
 					?> &deg;F</p>
                      </div>     
@@ -819,9 +819,9 @@ include('SetConnect.php');
 						
 						// $sql="SELECT outsideTemp from mainTable order by LID desc limit 1";
 						// $result=mysqli_query($con,$sql);
-						if($result3){
+						if($result1){
 							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							$temp = $row3['outsideTemp']; 
+							$temp = $row1['outsideTemp']; 
 							// }
 						}
               $temp = intval($temp);
@@ -841,12 +841,12 @@ include('SetConnect.php');
 					<td align=left>THA Setpoint</td>
           <td> <?php
 						
-						$sql="SELECT setPoint2 from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							echo $row['setPoint2']; 
-							}
+						// $sql="SELECT setPoint2 from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result1){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							echo $row1['setPoint2']; 
+							// }
 						}
 					?> &deg;F</td>
             </tr>
@@ -888,11 +888,11 @@ include('SetConnect.php');
 						<td>Setpoint Offset</td>
 						<td width=5%></td>
 						<td><?php
-						$sql4="SELECT parameterX, t1, CCT from mainTable order by LID desc limit 1";
-                        $result4=mysqli_query($con,$sql4);
-                        if($result4){
-                            $row4=mysqli_fetch_array($result4,MYSQLI_ASSOC);
-                            echo $row4['parameterX']; 
+						// $sql4="SELECT parameterX, t1, CCT from mainTable order by LID desc limit 1";
+                        // $result4=mysqli_query($con,$sql4);
+                        if($result1){
+                            // $row4=mysqli_fetch_array($result4,MYSQLI_ASSOC);
+                            echo $row1['parameterX']; 
                         }
 
 						// $sql="SELECT parameterX from mainTable order by LID desc limit 1";
@@ -920,8 +920,8 @@ include('SetConnect.php');
 						// 	echo $row['t1']; 
 						// 	}
 						// }
-                        if($result4){
-                            echo $row4['t1'];
+                        if($result1){
+                            echo $row1['t1'];
                         }
 					?> &deg;F</td><td></td>
 						<td style="color:#000000;"><input type="text" name="t1" size=2></td><!--Dynamic Content-->
@@ -940,8 +940,8 @@ include('SetConnect.php');
 						// 	echo $row['CCT']; 
 						// 	}
 						// }
-                        if($result4){
-                            echo $row4['CCT'];
+                        if($result1){
+                            echo $row1['CCT'];
                         }
 					?> min</td><td ></td>
 						<td style="color:#000000;"><input type="text" name="CCT" size=2></td><!--Dynamic Content-->
@@ -1006,17 +1006,17 @@ include('SetConnect.php');
 						</div>
 						<div style="background-image:url('<?php
 						
-						$sql="SELECT MO_B from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							if($row['MO_B']==0)
+						// $sql="SELECT MO_B from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result1){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if($row1['MO_B']==0)
 								echo "images/Icons/Manual/Auto.png";
-							else if($row['MO_B']==1)
+							else if($row1['MO_B']==1)
 								echo "images/Icons/Manual/ON.png";
-							else if($row['MO_B']==2)
+							else if($row1['MO_B']==2)
 								echo "images/Icons/Manual/OFF.png";
-							}
+							// }
 						}
 					?>'); 	background-repeat: no-repeat; min-height:100px; min-width:110px; font-size:10px; color:#FFFFFF; float:left;">
 							<table border=0>
@@ -1077,17 +1077,17 @@ include('SetConnect.php');
 						</div>
 						<div style="background-image:url('<?php
 						
-						$sql="SELECT MO_C1 from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							if($row['MO_C1']==0)
+						// $sql="SELECT MO_C1 from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result1){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if($row1['MO_C1']==0)
 								echo "images/Icons/Manual/Auto.png";
-							else if($row['MO_C1']==1)
+							else if($row1['MO_C1']==1)
 								echo "images/Icons/Manual/ON.png";
-							else if($row['MO_C1']==2)
+							else if($row1['MO_C1']==2)
 								echo "images/Icons/Manual/OFF.png";
-							}
+							// }
 						}
 					?>'); 	background-repeat: no-repeat; min-height:100px; min-width:110px; font-size:10px; color:#FFFFFF; float:left;">
 							<table border=0>
@@ -1147,17 +1147,17 @@ include('SetConnect.php');
 						</div>
 						<div style="background-image:url('<?php
 						
-						$sql="SELECT MO_C2 from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							if($row['MO_C2']==0)
+						// $sql="SELECT MO_C2 from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result1){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if($row1['MO_C2']==0)
 								echo "images/Icons/Manual/Auto.png";
-							else if($row['MO_C2']==1)
+							else if($row1['MO_C2']==1)
 								echo "images/Icons/Manual/ON.png";
-							else if($row['MO_C2']==2)
+							else if($row1['MO_C2']==2)
 								echo "images/Icons/Manual/OFF.png";
-							}
+							// }
 						}
 					?>'); 	background-repeat: no-repeat; min-height:100px; min-width:110px; font-size:10px; color:#FFFFFF; float:left;">
 							<table border=0>
@@ -1217,17 +1217,17 @@ include('SetConnect.php');
 						</div>
                       <div style="background-image:url('<?php
 						
-						$sql="SELECT MO_C3 from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							if($row['MO_C3']==0)
+						// $sql="SELECT MO_C3 from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result1){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if($row1['MO_C3']==0)
 								echo "images/Icons/Manual/Auto.png";
-							else if($row['MO_C3']==1)
+							else if($row1['MO_C3']==1)
 								echo "images/Icons/Manual/ON.png";
-							else if($row['MO_C3']==2)
+							else if($row1['MO_C3']==2)
 								echo "images/Icons/Manual/OFF.png";
-							}
+							// }
 						}
 					?>'); 	background-repeat: no-repeat; min-height:100px; min-width:110px; font-size:10px; color:#FFFFFF; float:left;">
 							<table border=0>
@@ -1287,17 +1287,17 @@ include('SetConnect.php');
 						</div>
                       <div style="background-image:url('<?php
 						
-						$sql="SELECT MO_C4 from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							if($row['MO_C4']==0)
+						// $sql="SELECT MO_C4 from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result1){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if($row1['MO_C4']==0)
 								echo "images/Icons/Manual/Auto.png";
-							else if($row['MO_C4']==1)
+							else if($row1['MO_C4']==1)
 								echo "images/Icons/Manual/ON.png";
-							else if($row['MO_C4']==2)
+							else if($row1['MO_C4']==2)
 								echo "images/Icons/Manual/OFF.png";
-							}
+							// }
 						}
 					?>'); 	background-repeat: no-repeat; min-height:100px; min-width:110px; font-size:10px; color:#FFFFFF; float:left;">
 							<table border=0>
