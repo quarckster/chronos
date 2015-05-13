@@ -3,16 +3,17 @@ $host  = $_SERVER['HTTP_HOST'];
 $uri   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 $extra = 'winter.php';
 $home='index.php';
-						include('SetConnect.php');
-						$sql="SELECT mode from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							if($row['mode']==0){                                                   
+include('SetConnect.php');
+						$sql1="SELECT mode from mainTable order by LID desc limit 1";
+						$result1=mysqli_query($con,$sql1);
+						if($result1){
+							// while($row1=mysqli_fetch_array($result1,MYSQLI_ASSOC)){
+                            $row1=mysqli_fetch_array($result1,MYSQLI_ASSOC);
+							if($row1['mode']==0){                                                   
 								header("Location: http://$host$uri/$extra");
                  }
 							
-							}
+							// }
 						}
 					?>
 <!DOCTYPE html>
@@ -62,38 +63,49 @@ $home='index.php';
 
 	<!-- amCharts javascript code -->
 		<script type="text/javascript">
-          <?php
-						include('SetConnect.php');
-						$sql="SELECT returnTemp from mainTable order by LID desc limit 40";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							$arr[] = $row['returnTemp']; 
-							}
-						}
-					?>;
-     <?php
-						include('SetConnect.php');
-						$sql="SELECT logdatetime from mainTable order by LID desc limit 40";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							$arrDate[] = $row['logdatetime']; 
-							}
-						}
+     //      <?php
+						
+					// 	$sql="SELECT returnTemp from mainTable order by LID desc limit 40";
+					// 	$result=mysqli_query($con,$sql);
+					// 	if($result){
+					// 		while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+					// 		$arr[] = $row['returnTemp']; 
+					// 		}
+					// 	}
+					// ?>;
+     // <?php
+						
+					// 	$sql="SELECT logdatetime from mainTable order by LID desc limit 40";
+					// 	$result=mysqli_query($con,$sql);
+					// 	if($result){
+					// 		while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+					// 		$arrDate[] = $row['logdatetime']; 
+					// 		}
+					// 	}
                
-					?>;
-     <?php
-						include('SetConnect.php');
-						$sql="SELECT waterOutTemp from mainTable order by LID desc limit 40";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							$arr1[] = $row['waterOutTemp']; 
-							}
-						}
-					?>;
-
+					// ?>;
+     // <?php
+						
+					// 	$sql="SELECT waterOutTemp from mainTable order by LID desc limit 40";
+					// 	$result=mysqli_query($con,$sql);
+					// 	if($result){
+					// 		while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+					// 		$arr1[] = $row['waterOutTemp']; 
+					// 		}
+					// 	}
+					// ?>;
+              <?php
+                            
+                         $sql2="SELECT returnTemp, logdatetime, waterOutTemp from mainTable order by LID desc limit 40";
+                         $result2=mysqli_query($con,$sql2);
+                         if($result2){
+                             while($row2=mysqli_fetch_array($result2,MYSQLI_ASSOC)){
+                             $arr[] = $row2['returnTemp'];
+                             $arrDate[] = $row2['logdatetime'];
+                             $arr1[] = $row2['waterOutTemp'];
+                             }
+                         }
+                        ?>;
     
 		var d = new Date();
 		var n = d.getMinutes();
@@ -444,40 +456,40 @@ $home='index.php';
 						</div>
 						<div style="min-width:80px; font-size:10px; color:#FFFFFF; float:left; text-align=center;">
 						<img src="<?php
-						include('SetConnect.php');
-						$sql="SELECT mode from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							if($row['mode']==0){   
+						
+						// $sql="SELECT mode from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result1){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if($row1['mode']==0){   
                                                           
 								echo "images/Icons/WinterSummer/WOn.png";
                }
-							else if($row['mode']==1){
+							else if($row1['mode']==1){
                                                                                                      
 								echo "images/Icons/WinterSummer/WOff.png";
               }
 							
-							}
+							// }
 						}
 					?>" /><br/><a href="updateModeOn.php" font-size:10px;">Winter</a>
 						</div>
 					
 					<div style="min-width:80px; font-size:10px; color:"#FFFFFF"; float:"left"; text-align="center";">
 						<img src="<?php
-						include('SetConnect.php');
-						$sql="SELECT mode from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							if($row['mode']==0){                                                   
+						
+						// $sql="SELECT mode from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result1){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if($row1['mode']==0){                                                   
 								echo "images/Icons/WinterSummer/SOff.png";
                  }
-							else if($row['mode']==1){
+							else if($row1['mode']==1){
 								echo "images/Icons/WinterSummer/SOn.png";
                                                           }
 							
-							}
+							// }
 						}
 					?>" /><br/><a href="updateModeOff.php" style="color:"#FFFFFF"; font-size:10px;">Summer</a>
 					</div>
@@ -504,13 +516,14 @@ $home='index.php';
           <tr>
           <td align=left>Outdoor Temp</td>
 					<td><?php
-						include('SetConnect.php');
-						$sql="SELECT outsideTemp from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							echo $row['outsideTemp']; 
-							}
+						
+						$sql3="SELECT outsideTemp from mainTable order by LID desc limit 1";
+						$result3=mysqli_query($con,$sql3);
+						if($result3){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+                            $row3=mysqli_fetch_array($result3,MYSQLI_ASSOC);
+							echo $row3['outsideTemp']; 
+							// }
 						}
 					?> &deg;F</td></tr>
           <tr>		
@@ -538,7 +551,7 @@ $home='index.php';
 						<tr>
 						<td width=170px align=left>Inlet</td>
 						<td width=80px><?php
-						include('SetConnect.php');
+						
 						$sql="SELECT returnTemp from mainTable order by LID desc limit 1";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -551,7 +564,7 @@ $home='index.php';
 						<tr>
 						<td align=left>Outlet</td>
 						<td><?php
-						include('SetConnect.php');
+						
 						$sql="SELECT waterOutTemp from mainTable order by LID desc limit 1";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -575,7 +588,7 @@ $home='index.php';
 						<tr>
 						<td align=center>Chiller 1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
 						<td align=left><?php
-						include('SetConnect.php');
+						
 						$sql="SELECT timeStamp from actStream where TID=2";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -592,7 +605,7 @@ $home='index.php';
 						<td align=center>Chiller 2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
 
 						<td align=left><?php
-						include('SetConnect.php');
+						
 						$sql="SELECT timeStamp from actStream where TID=3";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -609,7 +622,7 @@ $home='index.php';
 						<td align=center>Chiller 3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
 
 						<td align=left><?php
-						include('SetConnect.php');
+						
 						$sql="SELECT timeStamp from actStream where TID=4";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -626,7 +639,7 @@ $home='index.php';
 						<td align=center>Chiller 4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
 
 						<td align=left><?php
-						include('SetConnect.php');
+						
 						$sql="SELECT timeStamp from actStream where TID=5";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -645,17 +658,17 @@ $home='index.php';
 				</div>
 			    </div>
 				<!-- <div id=Just data-toggle="tooltip" data-placement="down" data-original-title="<?php
-						include('SetConnect.php');
-						$sql="SELECT mode from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							if($row['mode']==0)
+						
+						// $sql="SELECT mode from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result1){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							if($row1['mode']==0)
 								echo "Effective Setpoint = Dynamic Setpoint + Boiler Offset";
-							else if($row['mode']==1)
+							else if($row1['mode']==1)
 								echo "Effective Setpoint = Dynamic Setpoint + Chiller1 Offset";
 							
-							}
+							// }
 						}
 					?>" style="position:absolute; z-index:100; right:180px; top:270px; min-height:40px; min-width:60px;">
             
@@ -668,7 +681,7 @@ $home='index.php';
                      <div min-width=250px style="float:left;">
                      <img src="images/Icons/Boiler/arrow1.png" height=250px; style="z-index:-1;"/>
                      <p  style="font-size:11px;" ><?php
-						include('SetConnect.php');
+						
 						$sql="SELECT returnTemp from mainTable order by LID desc limit 1";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -712,7 +725,7 @@ $home='index.php';
 							<tr>
               
 								<td><br/><img src="<?php
-						include('SetConnect.php');
+						
 						$sql="SELECT status from actStream where TID=2";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -726,7 +739,7 @@ $home='index.php';
 						}
 					?>" /></td>
 								<td><br/><img src="<?php
-						include('SetConnect.php');
+						
 						$sql="SELECT status from actStream where TID=3";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -740,7 +753,7 @@ $home='index.php';
 						}
 					?>" /></td>
 								<td align="left" ><br/><img src="<?php
-						include('SetConnect.php');
+						
 						$sql="SELECT status from actStream where TID=4";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -754,7 +767,7 @@ $home='index.php';
 						}
 					?>" /></td>
 								<td align="left"><br/><img src="<?php
-						include('SetConnect.php');
+						
 						$sql="SELECT status from actStream where TID=5";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -773,7 +786,7 @@ $home='index.php';
                 <div width=100px style="float:left;">
                 <img src="images/Icons/Boiler/arrow2.png" height=250px;/>
                  <p  style="font-size:11px;" ><?php
-						include('SetConnect.php');
+						
 						$sql="SELECT waterOutTemp from mainTable order by LID desc limit 1";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -803,13 +816,13 @@ $home='index.php';
           <table align=center border=0><tr>
           <td align=left width=180px>Baseline Setpoint &nbsp;</td>
 					<td><?php
-						include('SetConnect.php');
-						$sql="SELECT outsideTemp from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							$temp = $row['outsideTemp']; 
-							}
+						
+						// $sql="SELECT outsideTemp from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						if($result3){
+							// while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+							$temp = $row3['outsideTemp']; 
+							// }
 						}
               $temp = intval($temp);
             $sql1="SELECT setPoint from SetpointLookup where windChill = '$temp'";
@@ -827,7 +840,7 @@ $home='index.php';
            </tr><tr>  
 					<td align=left>THA Setpoint</td>
           <td> <?php
-						include('SetConnect.php');
+						
 						$sql="SELECT setPoint2 from mainTable order by LID desc limit 1";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -875,14 +888,20 @@ $home='index.php';
 						<td>Setpoint Offset</td>
 						<td width=5%></td>
 						<td><?php
-						include('SetConnect.php');
-						$sql="SELECT parameterX from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							echo $row['parameterX']; 
-							}
-						}
+						$sql4="SELECT parameterX, t1, CCT from mainTable order by LID desc limit 1";
+                        $result4=mysqli_query($con,$sql4);
+                        if($result4){
+                            $row4=mysqli_fetch_array($result4,MYSQLI_ASSOC);
+                            echo $row4['parameterX']; 
+                        }
+
+						// $sql="SELECT parameterX from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						// if($result){
+						// 	while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+						// 	echo $row['parameterX']; 
+						// 	}
+						// }
 					?> &deg;F</td>
             <td width=10px></td>
 						<td style="color:#000000;"><input type="text" name="parameterX" size=2></td><!--Dynamic Content-->
@@ -893,14 +912,17 @@ $home='index.php';
 						<td>Tolerance</td>
 						<td width=5%></td>
 						<td><?php
-						include('SetConnect.php');
-						$sql="SELECT t1 from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							echo $row['t1']; 
-							}
-						}
+						
+						// $sql="SELECT t1 from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						// if($result){
+						// 	while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+						// 	echo $row['t1']; 
+						// 	}
+						// }
+                        if($result4){
+                            echo $row4['t1'];
+                        }
 					?> &deg;F</td><td></td>
 						<td style="color:#000000;"><input type="text" name="t1" size=2></td><!--Dynamic Content-->
 						<td width=3%></td>
@@ -910,14 +932,17 @@ $home='index.php';
 						<td>Cascade Time</td>
 						<td width=5%></td>
 						<td><?php
-						include('SetConnect.php');
-						$sql="SELECT CCT from mainTable order by LID desc limit 1";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							echo $row['CCT']; 
-							}
-						}
+						
+						// $sql="SELECT CCT from mainTable order by LID desc limit 1";
+						// $result=mysqli_query($con,$sql);
+						// if($result){
+						// 	while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
+						// 	echo $row['CCT']; 
+						// 	}
+						// }
+                        if($result4){
+                            echo $row4['CCT'];
+                        }
 					?> min</td><td ></td>
 						<td style="color:#000000;"><input type="text" name="CCT" size=2></td><!--Dynamic Content-->
 						<td width=3%></td>
@@ -980,7 +1005,7 @@ $home='index.php';
 							
 						</div>
 						<div style="background-image:url('<?php
-						include('SetConnect.php');
+						
 						$sql="SELECT MO_B from mainTable order by LID desc limit 1";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -1051,7 +1076,7 @@ $home='index.php';
 							
 						</div>
 						<div style="background-image:url('<?php
-						include('SetConnect.php');
+						
 						$sql="SELECT MO_C1 from mainTable order by LID desc limit 1";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -1121,7 +1146,7 @@ $home='index.php';
 							
 						</div>
 						<div style="background-image:url('<?php
-						include('SetConnect.php');
+						
 						$sql="SELECT MO_C2 from mainTable order by LID desc limit 1";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -1191,7 +1216,7 @@ $home='index.php';
 							
 						</div>
                       <div style="background-image:url('<?php
-						include('SetConnect.php');
+						
 						$sql="SELECT MO_C3 from mainTable order by LID desc limit 1";
 						$result=mysqli_query($con,$sql);
 						if($result){
@@ -1261,7 +1286,7 @@ $home='index.php';
 							
 						</div>
                       <div style="background-image:url('<?php
-						include('SetConnect.php');
+						
 						$sql="SELECT MO_C4 from mainTable order by LID desc limit 1";
 						$result=mysqli_query($con,$sql);
 						if($result){
