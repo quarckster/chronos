@@ -104,4 +104,3 @@ except:
    print "SystemCheckError"
    logging.debug(datetime)
    logging.debug('SystemCheckError')
-   
