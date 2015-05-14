@@ -800,7 +800,7 @@ include('SetConnect.php');
 					
 				</div>
 			
-				<div class="col-md-3" style="text-align:center; color:#FFFFFF; background-color:#224042; padding:0 0; min-height:360px;">
+				<div class="col-md-3" style="text-align:center; color:#FFFFFF; background-color:#224042; padding:0 0; min-height:400px;">
 			
 			
 
@@ -869,7 +869,6 @@ include('SetConnect.php');
         </tr>
         
         </table></h5>
-				<br/>
         <br/>
 	</div>
 </div>					
@@ -880,7 +879,6 @@ include('SetConnect.php');
 
 	  
 			  <br/>
-               <br/>
 					
 					<table border=0 align=center>
 						
@@ -949,8 +947,103 @@ include('SetConnect.php');
 						<td><input type="Submit" value="Update" style="color:#000000;"></td>
 						</tr>
 					</table>
-	<br/>	<br/>
+</form>
+
+    <form name="UpdateMin" action="UpdateMin.php" method=post>
+
+
+
+                   
+
+                   <table border=0 align=center>   
+
+                       <tr>
+
+                       <td>Min. Setpoint</td>
+
+                       <td width=10%></td>
+
+                       <td width=15%><?php
+
+                       $myFileMin =fopen("/usr/local/bin/spMin.txt","r") or die("Unable to open File");
+
+                   $members = array();
+
+                   while(!feof($myFileMin)){
+
+                       $members[]=fgets($myFileMin);
+
+                       
+
+                   }
+
+                       echo $members[0];
+
+               
+
+                   fclose($myFileMin);
+
+                   ?> &deg;F</td>
+
+            <td width=10px></td>
+
+                       <td style="color:#000000;"><input type="text" name="MinSP" size=2></td><!--Dynamic Content-->
+
+                       <td width=3%></td>
+
+                       <td><input type="Submit" value="Update" style="color:#000000;"></td>
+
+                       </tr>
+
+                   </table>
+
     </form>
+    <form name="UpdateMax" action="UpdateMax.php" method=post>
+
+
+                   <table border=0 align=center>   
+
+                       <tr>
+
+                       <td>Max. Setpoint</td>
+
+                       <td width=9%></td>
+
+                       <td width=15%><?php
+
+                       $myFileMax =fopen("/usr/local/bin/spMax.txt","r") or die("Unable to open File");
+
+                   $members = array();
+
+                   while(!feof($myFileMax)){
+
+                       $members[]=fgets($myFileMax);
+
+                       
+
+                   }
+
+                       echo $members[0];
+
+               
+
+                   fclose($myFileMax);
+
+                   ?> &deg;F</td>
+
+            <td width=10px></td>
+
+                       <td style="color:#000000;"><input type="text" name="MaxSP" size=2></td><!--Dynamic Content-->
+
+                       <td width=3%></td>
+
+                       <td><input type="Submit" value="Update" style="color:#000000;"></td>
+
+                       </tr>
+
+                   </table>                
+    </form>
+    <br/>
 	</div>
 </div> 
 		
