@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #version 2.0
-#UID CHRON001
+#UID CHRON003
 #New logic incoming
 
 import time
@@ -32,6 +32,8 @@ boilerStatus = 0        #ON = 1, OFF = 0
 valveStatus = 0
 valveFlag = 0
 
+windChillAvg = 0
+
 MO_B = 0                #Manual overrides. AUTO = 0, ON = 1, OFF = 2
 GPIO_change = 0
 a=0
@@ -60,6 +62,8 @@ startTime = time.time()
 ctime = (time.strftime("%Y-%m-%d "), time.strftime("%H:%M:%S"))
 cstatus = 0
 windSpeed = 0.00
+spMin = 40.00
+spMax= 100.00
 
 # --------Arrays---------
 p = [i for i in xrange(4)]
@@ -121,6 +125,8 @@ except:
 #-----temp sensors-----
 sensorOutID = '28-00042d4367ff'
 sensorInID = '28-00042c648eff'
+#sensorOutID = '28-00000677d162'
+#sensorInID = '28-00000676e315'
 # os.system('modprobe w1-gpio')
 # os.system('modprobe w1-therm')
 
@@ -145,15 +151,23 @@ except:
    logging.debug(timeStamp)
    logging.debug('killError2')
 
+try:
+    conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
+except Exception, e:
+    print "Cannot connect to DB,", str(e)
+    time.sleep(5)
+    try:
+        conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
+    except Exception, e:
+        print "Cannot connect to DB,", str(e)
+        raise
+
 #-----reset DB values-----
 try:
-   #conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-   conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
    cur = conn.cursor()
    cmd_main = ("UPDATE mainTable SET boilerStatus=%s, chiller1Status=%s, chiller2Status=%s, chiller3Status=%s, chiller4Status=%s, MO_B=%s, MO_C1=%s, MO_C2=%s, MO_C3=%s, MO_C4=%s, powerMode=%s ORDER BY LID DESC LIMIT 1", (boilerStatus, chillerStatus[0], chillerStatus[1], chillerStatus[2], chillerStatus[3], MO_B, MO_C[0], MO_C[1], MO_C[2], MO_C[3], powerMode))
    cur.execute(*cmd_main)
    conn.commit()
-   conn.close()
 except:
    print 'Error while resetting DB values'
    logging.debug(timeStamp)
@@ -162,16 +176,13 @@ except:
    time.sleep(0.7)
    GPIO.output(led_red,False)
    conn.rollback()
-   conn.close()
 
 try:
-   #conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-   conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
    cur = conn.cursor()
    cmd_main = ("UPDATE actStream SET timeStamp=%s, status=%s", (timeStamp, boilerStatus))
    cur.execute(*cmd_main)
    conn.commit()
-   conn.close()
+
 except:
    print 'Error resetting DB values'
    logging.debug(timeStamp)
@@ -180,7 +191,6 @@ except:
    time.sleep(0.7)
    GPIO.output(led_red,False)
    conn.rollback()
-   conn.close()
 # -----|| one-time stuff ||-----
 
 
@@ -220,7 +230,6 @@ while 1:
       error_T1 = 1
       error_T2 = 1
       for sensors in range (2):
-         # base_dir = '/sys/bus/w1/devices/'
          base_dir = '/home/pi/fake_sys/'
          device_folder = glob.glob(base_dir + '28*')[sensors]
          print device_folder
@@ -269,21 +278,18 @@ while 1:
                returnTemp = read_temp()
                print "SensorInID is %s. Temp is %s" % (read_ID(), returnTemp)
                error_T1 = 0
-   except:
-      print "Temp sensor error"
+   except Exception, e:
+      print "Temp sensor error:", str(e)
       logging.debug(timeStamp)
       logging.debug('Temp sensor error')
       GPIO.output(led_red,True)
       time.sleep(0.7)
       GPIO.output(led_red,False)
-      #conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-      conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
       cur = conn.cursor()
       sql = "SELECT returnTemp FROM mainTable ORDER BY LID DESC LIMIT 1"
       cur.execute(sql)
       results = cur.fetchall()
       returnTemp = results[0][0]           
-      conn.close()
 
 
    # Read values from DB
@@ -305,8 +311,6 @@ while 1:
        else:
            breather_count = 0
            
-       #conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-       conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
        cur = conn.cursor()
        sql = "SELECT * FROM mainTable ORDER BY LID DESC LIMIT 1"
        cur.execute(sql)
@@ -328,8 +332,6 @@ while 1:
            mode = row[18]
            powerMode = row[19]
            CCT = row[20]
-           
-       conn.close()       
    except:
        print "Error fetching data from DB"
        logging.debug(timeStamp)
@@ -337,7 +339,6 @@ while 1:
        GPIO.output(led_red,True)
        time.sleep(0.7)
        GPIO.output(led_red,False)
-       conn.close()
 
    CCT = CCT*60
 
@@ -363,22 +364,17 @@ while 1:
        time.sleep(0.7)
        GPIO.output(led_red,False)
        try:
-           #conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-           conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
            cur = conn.cursor()
            sql = "SELECT outsideTemp FROM mainTable ORDER BY LID DESC LIMIT 1"
            cur.execute(sql)
            results = cur.fetchall()
-           outsideTemp = results[0][0]           
-           conn.close()
-             
+           outsideTemp = results[0][0]
        except:
            print 'Unable to get value from DB'
            print 'Reverting to default value of 65 deg F...'
            logging.debug(timeStamp)
            logging.debug('Unable to get value from DB. Reverting to default value of 65 deg F...')
            outsideTemp = 65.00
-           conn.close()
    try:
        website = urllib2.urlopen('http://wx.thomaslivestock.com')
        website_html = website.read()
@@ -392,14 +388,11 @@ while 1:
        logging.debug(timeStamp)
        logging.debug('Unable to get wind speed from website. Reading previous value from DB.')
        try:
-           #conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-           conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
            cur = conn.cursor()
            sql = "SELECT windSpeed FROM mainTable ORDER BY LID DESC LIMIT 1"
            cur.execute(sql)
            results = cur.fetchall()
            windSpeed = results[0][0]           
-           conn.close()
              
        except:
            print 'Unable to get wind speed from DB'
@@ -407,7 +400,6 @@ while 1:
            logging.debug(timeStamp)
            logging.debug('Unable to get wind speed from DB. Reverting to default value of 0 mph...')
            windSpeed = 0.00
-           conn.close()
 
 
    # Calculate setpoint from windChill
@@ -425,8 +417,6 @@ while 1:
       setPoint2 = 100
    else:
       try:
-         #conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-         conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
          cur = conn.cursor()
          sql = ("SELECT setPoint FROM SetpointLookup WHERE windChill = %s", (windChill))
          cur.execute(*sql)
@@ -435,8 +425,6 @@ while 1:
 
       except:
          try:
-            #conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-            conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
             cur = conn.cursor()
             sql = ("SELECT setPoint FROM SetpointLookup WHERE windChill = %s", (windChill))
             cur.execute(*sql)
@@ -452,8 +440,6 @@ while 1:
       setpointOffset = 0
    else:
       try:
-         #conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-         conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
          cur = conn.cursor()
          sql = ("SELECT setPointOffset FROM SetpointLookup WHERE avgWindChill = %s", (windChillAvg))
          cur.execute(*sql)
@@ -461,8 +447,6 @@ while 1:
          setpointOffset = results[0][0]
       except:
          try:
-            #conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-            conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
             cur = conn.cursor()
             sql = ("SELECT setPointOffset FROM SetpointLookup WHERE avgWindChill = %s", (windChillAvg))
             cur.execute(*sql)
@@ -479,9 +463,31 @@ while 1:
    else:
         valveFlag = 1
    cur_eff_sp = setPoint2 + parameterX
+   #Constrain effective setpoint
+   try:
+       spMinFile = open("/usr/local/bin/spMin.txt","r")
+       buf = spMinFile.readline()
+       spMin = float(buf)
+   except:
+       print "Unable to open file to read"
+       logging.debug(timeStamp)
+       logging.debug('Unable to open spMin.txt to read')
+   try:
+       spMaxFile = open("/usr/local/bin/spMax.txt","r")
+       buf = spMaxFile.readline()
+       spMax = float(buf)
+   except:
+       print "Unable to open file to read"
+       logging.debug(timeStamp)
+       logging.debug('Unable to open spMax.txt to read')
+              
+   if(cur_eff_sp > spMax):
+       cur_eff_sp = spMax
+   elif(cur_eff_sp < spMin):
+       cur_eff_sp = spMin
+
    if (cur_eff_sp!=prev_eff_sp):
-       # os.system("sudo python /home/pi/Desktop/Chronos/write_sp.py")
-       os.system("sudo python /home/pi/chronosqemu/Python/write_sp.py")
+       os.system("sudo python /home/pi/Desktop/Chronos/write_sp.py")
    prev_eff_sp = cur_eff_sp
    # Conditions Check
    if MO_B == 0 :
@@ -581,13 +587,10 @@ while 1:
 
    # Update Databases
    try:
-      #conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-      conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
       cur = conn.cursor()
       cmd_main = ("UPDATE mainTable SET outsideTemp=%s, waterOutTemp=%s, returnTemp=%s, boilerStatus=%s, chiller1Status=%s, chiller2Status=%s, chiller3Status=%s, chiller4Status=%s, setPoint2=%s, windSpeed=%s ORDER BY LID DESC LIMIT 1", (outsideTemp, waterOutTemp, returnTemp, boilerStatus, chillerStatus[0], chillerStatus[1], chillerStatus[2], chillerStatus[3], setPoint2, windSpeed))
       cur.execute(*cmd_main)
       conn.commit()
-      conn.close()
    except:
       print 'Error updating mainTable'
       logging.debug(timeStamp)
@@ -595,13 +598,10 @@ while 1:
       conn.rollback()
 
    try:
-      #conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-      conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
       cur = conn.cursor()
       cmd_main = ("UPDATE errTable SET err_T1=%s, err_T2=%s, err_Web=%s, err_GPIO=%s, err_DB=%s", (error_T1, error_T2, error_Web, error_GPIO, error_DB))
       cur.execute(*cmd_main)
       conn.commit()
-      conn.close()
    except:
       print 'Error updating errTable'
       logging.debug(timeStamp)
@@ -609,8 +609,7 @@ while 1:
       conn.rollback()
    errData = [error_T1, error_T2, error_DB, error_Web, error_GPIO]
    try:
-       # dataFile = open('/var/www/sysStatus.txt', 'w')
-       dataFile = open('/var/www/chronosqemu/sysStatus.txt', 'w')
+       dataFile = open('/var/www/sysStatus.txt', 'w')
        for eachitem in errData:
            dataFile.write(str(eachitem)+'\n')
        dataFile.close()
@@ -621,8 +620,6 @@ while 1:
    
    if GPIO_change == 1:
        try:
-          #conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
-          conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
           cur = conn.cursor()
           if boiler_change == 1:
              cmd_b = ("UPDATE actStream SET timeStamp=%s, status=%s WHERE TID=1", (bTime, bStatus))
@@ -640,11 +637,11 @@ while 1:
              cmd_c4 = ("UPDATE actStream SET timeStamp=%s, status=%s WHERE TID=5", ((cTime[3][0]+cTime[3][1]), cStatus[3]))
              cur.execute(*cmd_c4)
           conn.commit()
-          conn.close()
        except:
           print 'Error updating actStream'
           logging.debug(timeStamp)
           logging.debug('Error updating actStream')
           conn.rollback()
-   
+  
+conn.close()
 GPIO.cleanup()
