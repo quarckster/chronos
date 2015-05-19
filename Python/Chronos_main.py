@@ -418,19 +418,18 @@ while 1:
    else:
       try:
          cur = conn.cursor()
-         sql = ("SELECT setPoint FROM SetpointLookup WHERE windChill = %s", (windChill))
-         cur.execute(*sql)
+         sql = "SELECT setPoint FROM SetpointLookup WHERE windChill = %s" % windChill
+         cur.execute(sql)
          results = cur.fetchall()
          setPoint2 = results[0][0]
 
       except:
          try:
             cur = conn.cursor()
-            sql = ("SELECT setPoint FROM SetpointLookup WHERE windChill = %s", (windChill))
+            sql = "SELECT setPoint FROM SetpointLookup WHERE windChill = %s" % windChill
             cur.execute(*sql)
             results = cur.fetchall()
             setPoint2 = results[0][0]
-
          except:
             print "setpoint error"
             logging.debug(timeStamp)
@@ -441,15 +440,15 @@ while 1:
    else:
       try:
          cur = conn.cursor()
-         sql = ("SELECT setPointOffset FROM SetpointLookup WHERE avgWindChill = %s", (windChillAvg))
-         cur.execute(*sql)
+         sql = "SELECT setPointOffset FROM SetpointLookup WHERE avgWindChill = %s" % windChillAvg
+         cur.execute(sql)
          results = cur.fetchall()
          setpointOffset = results[0][0]
       except:
          try:
             cur = conn.cursor()
-            sql = ("SELECT setPointOffset FROM SetpointLookup WHERE avgWindChill = %s", (windChillAvg))
-            cur.execute(*sql)
+            sql = "SELECT setPointOffset FROM SetpointLookup WHERE avgWindChill = %s" % windChillAvg
+            cur.execute(sql)
             results = cur.fetchall()
             setpointOffset = results[0][0]
          except:
@@ -480,15 +479,21 @@ while 1:
        print "Unable to open file to read"
        logging.debug(timeStamp)
        logging.debug('Unable to open spMax.txt to read')
-              
+   print "spMin = %s, spMax = %s, cur_eff_sp = %s, prev_eff_sp = %s, parameterX = %s" % (spMin, spMax, cur_eff_sp, prev_eff_sp, parameterX)
    if(cur_eff_sp > spMax):
        cur_eff_sp = spMax
    elif(cur_eff_sp < spMin):
        cur_eff_sp = spMin
 
-   if (cur_eff_sp!=prev_eff_sp):
-       os.system("sudo python /home/pi/Desktop/Chronos/write_sp.py")
-   prev_eff_sp = cur_eff_sp
+   if cur_eff_sp != prev_eff_sp:
+       try:
+          dataFile = open('/usr/local/bin/sp.txt', 'w')
+          dataFile.write(str(cur_eff_sp))
+          dataFile.close()
+       except:
+          print "Error opening sp.txt"
+       # os.system("sudo python /home/pi/Desktop/Chronos/write_sp.py")
+   cur_eff_sp = prev_eff_sp
    # Conditions Check
    if MO_B == 0 :
       if ((mode==0) & (returnTemp <= (setPoint2 + parameterX - t1))) :
