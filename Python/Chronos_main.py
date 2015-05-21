@@ -479,7 +479,6 @@ while 1:
        print "Unable to open file to read"
        logging.debug(timeStamp)
        logging.debug('Unable to open spMax.txt to read')
-   print "spMin = %s, spMax = %s, cur_eff_sp = %s, prev_eff_sp = %s, parameterX = %s" % (spMin, spMax, cur_eff_sp, prev_eff_sp, parameterX)
    if(cur_eff_sp > spMax):
        cur_eff_sp = spMax
    elif(cur_eff_sp < spMin):
@@ -493,7 +492,7 @@ while 1:
        except:
           print "Error opening sp.txt"
        # os.system("sudo python /home/pi/Desktop/Chronos/write_sp.py")
-   cur_eff_sp = prev_eff_sp
+   
    # Conditions Check
    if MO_B == 0 :
       if ((mode==0) & (returnTemp <= (setPoint2 + parameterX - t1))) :
@@ -511,14 +510,15 @@ while 1:
        nowTime = time.time()
        timeGap = nowTime-startTime
        if MO_C[chiller] == 0:
-           if ((mode==1) & ((setPoint2 + parameterX + t1) <= returnTemp)):
-              
+           # if ((mode==1) & ((setPoint2 + parameterX + t1) <= returnTemp)):
+           if mode == 1 and (cur_eff_sp + t1) <= returnTemp: 
                if ((nCon==p[chiller]) & (timeGap>=CCT)):
                    b[chiller] = 1                 
                    nCon = nCon + 1
                    nCmax = nCmax + 1
                    startTime = time.time()
-           elif ((mode==1) & ((setPoint2 + parameterX - t1) > returnTemp)):
+           # elif ((mode==1) & ((setPoint2 + parameterX - t1) > returnTemp)):
+           elif mode == 1 and (cur_eff_sp - t1) > returnTemp:
                if nCon == 0:
                    b[chiller] = 0
                    startTime = time.time()
@@ -532,7 +532,7 @@ while 1:
            b[chiller] = 1
        elif MO_C[chiller] == 2:
            b[chiller] = 0
-           
+   cur_eff_sp = prev_eff_sp        
    if (valveFlag!=valveStatus):
      if(valveFlag == 0):
        GPIO.output(valve1Pin, True)
