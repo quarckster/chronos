@@ -402,7 +402,7 @@ include('SetConnect.php');
 					}
 						echo $members[0];
 				
-					fclose($myFileTin);
+					fclose($myFileSys);
 				?></h5><!--Dynamic Content-->
 				</div>
 				<div class="col-md-6" style="text-align:center; color:#FFFFFF;">
