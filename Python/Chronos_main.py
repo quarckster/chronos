@@ -512,17 +512,18 @@ while 1:
        if MO_C[chiller] == 0:
            # if ((mode==1) & ((setPoint2 + parameterX + t1) <= returnTemp)):
            if mode == 1 and (cur_eff_sp + t1) <= returnTemp: 
-               if ((nCon==p[chiller]) & (timeGap>=CCT)):
+               if ((nCon==p[chiller]) & (timeGap>=CCT) & (nCon < 4)):
                    b[chiller] = 1                 
+                   if(nCon==nCmax):
+                      nCmax = nCmax + 1
                    nCon = nCon + 1
-                   nCmax = nCmax + 1
                    startTime = time.time()
            # elif ((mode==1) & ((setPoint2 + parameterX - t1) > returnTemp)):
            elif mode == 1 and (cur_eff_sp - t1) > returnTemp:
                if nCon == 0:
                    b[chiller] = 0
                    startTime = time.time()
-               elif (((nCmax-nCon)==p[chiller]) & (timeGap>CCT)):
+               elif (((nCmax-nCon)==p[chiller]) & (timeGap>CCT) & (nCon > 0)):
                    b[chiller] = 0
                    nCon = nCon - 1
                    startTime = time.time()
