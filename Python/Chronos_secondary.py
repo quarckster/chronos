@@ -14,7 +14,7 @@ SYSTEMDOWN = "/var/www/systemDown.txt"
 LOG_FILENAME = "/home/pi/chronosqemu/Python/log_Chronos_sec.out"
 LED_TRIAL = "led_trial2.py"
 LED_STARTER = "/home/pi/chronosqemu/Python/led_starter.py"
-WIND_CHILL = "/home/pi/chronosqemu/Python/windChillAvg.txt"
+WIND_CHILL = "/home/pi/Desktop/Chronos/windChillAvg.txt"
 logging.basicConfig(filename=LOG_FILENAME,
                     level=logging.ERROR,
                     format="%(asctime)s %(levelname)s:%(message)s")
@@ -36,9 +36,9 @@ def get_count():
 def db_queries():
     try:
         conn = MySQLdb.connect(host="localhost",
-                                    user="raspberry",
-                                    passwd="estrrado",
-                                    db="Chronos")
+                               user="raspberry",
+                               passwd="estrrado",
+                               db="Chronos")
     except MySQLdb.Error as e:
         print "Can't connect to database: %s" % e
         logging.exception("DBConnectionError: %s" % e)
@@ -88,6 +88,7 @@ def update_systemUp(count):
     with open(SYSTEMUP, "w") as dataFile:
         dataFile.write("%s\n" % error_system)
         dataFile.write(str(count))
+    return count
 
 
 def chronos_starter(count):
@@ -120,7 +121,7 @@ def wind_chill(results):
 if __name__ == '__main__':
     count = get_count()
     results = db_queries()
-    update_systemUp(count)
+    count = update_systemUp(count)
     chronos_starter(count)
-    led_starter()
+    # led_starter()
     wind_chill(results)
