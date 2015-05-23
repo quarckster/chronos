@@ -7,12 +7,12 @@ import time
 import os
 import subprocess
 
-CHRONOS_MAIN = "/home/pi/Desktop/Chronos/Chronos_main.py"
+CHRONOS_MAIN = "Chronos_main.py"
 CHRONOS_STARTER = "/home/pi/chronosqemu/Python/Chronos_starter.py"
 SYSTEMUP = "/var/www/systemUp.txt"
 SYSTEMDOWN = "/var/www/systemDown.txt"
 LOG_FILENAME = "/home/pi/chronosqemu/Python/log_Chronos_sec.out"
-LED_TRIAL = "/home/pi/chronosqemu/Python/led_trial2.py"
+LED_TRIAL = "led_trial2.py"
 LED_STARTER = "/home/pi/chronosqemu/Python/led_starter.py"
 WIND_CHILL = "/home/pi/chronosqemu/Python/windChillAvg.txt"
 logging.basicConfig(filename=LOG_FILENAME,
@@ -91,7 +91,7 @@ def update_systemUp(count):
 
 
 def chronos_starter(count):
-    if count > 2:
+    if count > 2 and  not is_process_exists(CHRONOS_MAIN)::
         subprocess.call(["sudo", "python", CHRONOS_STARTER])
         try:
             with open(SYSTEMDOWN, "a") as dataFile:
