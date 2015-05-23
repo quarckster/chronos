@@ -510,20 +510,24 @@ while 1:
        nowTime = time.time()
        timeGap = nowTime-startTime
        if MO_C[chiller] == 0:
-           # if ((mode==1) & ((setPoint2 + parameterX + t1) <= returnTemp)):
-           if mode == 1 and (cur_eff_sp + t1) <= returnTemp: 
-               if ((nCon==p[chiller]) & (timeGap>=CCT) & (nCon < 4)):
+           if (mode == 1) & ((cur_eff_sp + t1) <= returnTemp): 
+               if ((p[chiller]==0) & (timeGap>=CCT) & (nCon < 4)):
                    b[chiller] = 1                 
                    if(nCon==nCmax):
-                      nCmax = nCmax + 1
+                     nCmax = nCmax + 1
                    nCon = nCon + 1
                    startTime = time.time()
-           # elif ((mode==1) & ((setPoint2 + parameterX - t1) > returnTemp)):
-           elif mode == 1 and (cur_eff_sp - t1) > returnTemp:
-               if nCon == 0:
-                   b[chiller] = 0
-                   startTime = time.time()
-               elif (((nCmax-nCon)==p[chiller]) & (timeGap>CCT) & (nCon > 0)):
+                   for h in range(0,4):
+                      if (p[h]==0):
+                        p[h]=3
+                      elif (p[h]==1):
+                        p[h]=0
+                      elif (p[h]==2):
+                        p[h]=1
+                      elif (p[h]==3):
+                        p[h]=2
+           elif ((mode == 1) & ((cur_eff_sp - t1) > returnTemp)):
+               if (((nCmax-nCon+(4-nCmax))==p[chiller]) & (timeGap>CCT) & (nCon > 0)):
                    b[chiller] = 0
                    nCon = nCon - 1
                    startTime = time.time()
@@ -533,7 +537,7 @@ while 1:
            b[chiller] = 1
        elif MO_C[chiller] == 2:
            b[chiller] = 0
-   cur_eff_sp = prev_eff_sp        
+       print chiller, ", ", MO_C[chiller], ", ", p[chiller], ", ", b[chiller], ", ", setPoint2, ", ", parameterX, ", ", nCon, ", ", nCmax, ", ", timeGap     
    if (valveFlag!=valveStatus):
      if(valveFlag == 0):
        GPIO.output(valve1Pin, True)
@@ -542,7 +546,7 @@ while 1:
        GPIO.output(valve2Pin, True)
        GPIO.output(valve1Pin, False)
      valveStatus = valveFlag
-     # time.sleep(120)
+      time.sleep(120)
        
    
    GPIO_change = 0
