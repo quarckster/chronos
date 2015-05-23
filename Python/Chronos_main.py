@@ -123,10 +123,13 @@ except:
     logging.debug('ErrorGPIO')
 
 #-----temp sensors-----
-sensorOutID = '28-00042d4367ff'
-sensorInID = '28-00042c648eff'
-#sensorOutID = '28-00000677d162'
-#sensorInID = '28-00000676e315'
+
+#sensorOutID = '28-00042d4367ff'
+#sensorInID = '28-00042c648eff'
+
+#Chronos1
+sensorOutID = '28-00000677d162'
+sensorInID = '28-00000676e315'
 # os.system('modprobe w1-gpio')
 # os.system('modprobe w1-therm')
 
@@ -152,12 +155,12 @@ except:
    logging.debug('killError2')
 
 try:
-    conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
+    conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
 except Exception, e:
     print "Cannot connect to DB,", str(e)
     time.sleep(5)
     try:
-        conn = MySQLdb.connect(host="localhost",user="raspberry",passwd="estrrado",db="Chronos")
+        conn = MySQLdb.connect(host="localhost",user="root",passwd="estrrado",db="Chronos")
     except Exception, e:
         print "Cannot connect to DB,", str(e)
         raise
@@ -230,7 +233,8 @@ while 1:
       error_T1 = 1
       error_T2 = 1
       for sensors in range (2):
-         base_dir = '/home/pi/fake_sys/'
+#         base_dir = '/home/pi/fake_sys/'
+         base_dir = '/sys/bus/w1/devices/'
          device_folder = glob.glob(base_dir + '28*')[sensors]
          print device_folder
          device_file = device_folder + '/w1_slave'
@@ -505,7 +509,7 @@ while 1:
        a = 1
    elif MO_B == 2 :
        a = 0
-
+   print "chl# mode ordr sta  SetPt   offset  nCon nCmax timeGap"     
    for chiller in range(0,4):
        nowTime = time.time()
        timeGap = nowTime-startTime
@@ -537,16 +541,16 @@ while 1:
            b[chiller] = 1
        elif MO_C[chiller] == 2:
            b[chiller] = 0
-       print chiller, ", ", MO_C[chiller], ", ", p[chiller], ", ", b[chiller], ", ", setPoint2, ", ", parameterX, ", ", nCon, ", ", nCmax, ", ", timeGap     
+       print chiller, ", ", int(MO_C[chiller]), ", ", p[chiller], ", ", b[chiller], ", ", setPoint2, ", ", parameterX, ", ", nCon, ", ", nCmax, ", ", timeGap     
    if (valveFlag!=valveStatus):
-     if(valveFlag == 0):
-       GPIO.output(valve1Pin, True)
-       GPIO.output(valve2Pin, False)
-     elif(valveFlag == 1):
-       GPIO.output(valve2Pin, True)
-       GPIO.output(valve1Pin, False)
-     valveStatus = valveFlag
-      time.sleep(120)
+       if(valveFlag == 0):
+           GPIO.output(valve1Pin, True)
+           GPIO.output(valve2Pin, False)
+       elif(valveFlag == 1):
+           GPIO.output(valve2Pin, True)
+           GPIO.output(valve1Pin, False)
+       valveStatus = valveFlag
+       time.sleep(120)
        
    
    GPIO_change = 0
@@ -601,10 +605,10 @@ while 1:
       cmd_main = ("UPDATE mainTable SET outsideTemp=%s, waterOutTemp=%s, returnTemp=%s, boilerStatus=%s, chiller1Status=%s, chiller2Status=%s, chiller3Status=%s, chiller4Status=%s, setPoint2=%s, windSpeed=%s ORDER BY LID DESC LIMIT 1", (outsideTemp, waterOutTemp, returnTemp, boilerStatus, chillerStatus[0], chillerStatus[1], chillerStatus[2], chillerStatus[3], setPoint2, windSpeed))
       cur.execute(*cmd_main)
       conn.commit()
-   except:
-      print 'Error updating mainTable'
+   except MySQLdb.Error, e:
+      print "Error updating mainTable [%d] : %s" % (e.args[0], e.args[1])
       logging.debug(timeStamp)
-      logging.debug('Error updating mainTable')
+      logging.debug("Error updating mainTable [%d] : %s",e.args[0], e.args[1])
       conn.rollback()
 
    try:
