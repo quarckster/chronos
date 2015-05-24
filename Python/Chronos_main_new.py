@@ -6,7 +6,6 @@ import logging
 import os
 import MySQLdb
 import urllib2
-import sre
 import subprocess
 import signal
 import errno
@@ -123,27 +122,6 @@ sensorInID = "28-00042c648eff"
 # os.system('modprobe w1-gpio')
 # os.system('modprobe w1-therm')
 
-#-----kill related programs-----
-# try:
-#    os.system("sudo kill $(ps aux | grep firmwareUpgrade.py | awk '{print $2 }')")
-# except:
-#    print "killError"
-#    GPIO.output(led_red,True)
-#    time.sleep(0.7)
-#    GPIO.output(led_red,False)
-#    logging.debug(timeStamp)
-#    logging.debug('killError')
-
-# try:
-#    os.system("sudo kill $(ps aux | grep Chronos_starter.py | awk '{print $2 }')")
-# except:
-#    print "killError2"
-#    GPIO.output(led_red,True)
-#    time.sleep(0.7)
-#    GPIO.output(led_red,False)
-#    logging.debug(timeStamp)
-#    logging.debug('killError2')
-
 try:
     conn = MySQLdb.connect(host="localhost",
                            user="raspberry",
@@ -152,7 +130,7 @@ try:
 except MySQLdb.Error as e:
     time.sleep(5)
     logging.exception("Cannot connect to DB: %s" % e)
-    GPIO.cleanup()
+    destructor()
     sys.exit(1)
 
 #-----reset DB values-----
@@ -191,8 +169,7 @@ def manage_system():
     elif powerMode == 20:
         subprocess.call(["shutdown", "now"])
     elif powerMode == 2:
-        subprocess.call(["python", FIRMWARE_UPGRADE])
-     # os.system("sudo python /home/pi/Desktop/Chronos/firmwareUpgrade.py")
+        subprocess.call(["python", "/home/pi/Desktop/Chronos/firmwareUpgrade.py"])
         time.sleep(10)
     elif powerMode == 7:
         subprocess.call(["python", "/home/pi/Desktop/Chronos/Chronos_starter.py"])
@@ -280,7 +257,8 @@ def read_temperature_sensors():
                 returnTemp = read_temp(device_file)
                 print "SensorInID is %s. Temp is %s" % (device_id, returnTemp)
                 error_T1 = 0
-    return waterOutTemp, returnTemp
+    return {"waterOutTemp": waterOutTemp, "returnTemp": returnTemp,
+            "error_T1": error_T1, "error_T2": error_T2}
 
 def blink_leds(waterOutTemp, breather_count):
     if waterOutTemp > temp_thresh:
@@ -346,28 +324,6 @@ def read_values_from_db(waterOutTemp):
 
 
    # CCT = CCT*60
-def get_wind_speed_from_url():
-    """Get wind speed from wx.thomaslivestock.com.
-
-    Use lxml for parsing html.
-    Returns:
-       INT: wind speed
-    """
-    try:
-        content = urllib.urlopen(url)
-    except IOError as e:
-        turn_off_fountain()
-        destructor()
-        sys.exit("Can't retrieve the url: %s" % e)
-    html = content.read()
-    tree = etree.HTML(html)
-    node = tree.xpath(
-        "/html/body/table/tr/td/font/strong/font/small/text()")[1]
-    wind_speed = float(node.split()[2])
-    print("The current windspeed from wx.thomaslivestock.com "
-         "is %d MPH" % wind_speed)
-    return wind_speed
-
 def get_data_from_web(mode):
     "Parsing windChill and windSpeed from wx.thomaslivestock.com."
     error_Web = 0
@@ -459,9 +415,7 @@ def calculate_setpoint(outsideTemp, setPoint2, parameterX):
     elif mode == 1:
         valveFlag = 1
     cur_eff_sp = setPoint2 + parameterX
-    return {"cur_eff_sp": cur_eff_sp, "valveFlag": valveFlag}
-
-def constrain_effective_setpoint(cur_eff_sp):
+    #constrain effective setpoint
     try:
         with open("/usr/local/bin/spMin.txt") as spMinFile:
             buf = spMinFile.readline()
@@ -487,107 +441,122 @@ def constrain_effective_setpoint(cur_eff_sp):
         except Exception as e:
             print "Error opening sp.txt"
             logging.exception("Error opening sp.txt: %s" % e)
-    return cur_eff_sp
+    return {"cur_eff_sp": cur_eff_sp, "valveFlag": valveFlag}
 
-def conditions_check(MO_B, mode, returnTemp, cur_eff_sp, t1):
-   # Conditions Check
-    if MO_B == 0 :
-        if mode == 0 and (returnTemp <= (cur_eff_sp - t1)):
-            a = 1
-        elif mode == 0 and (returnTemp > (cur_eff_sp + t1)):
-            a = 0
-        elif mode == 1:
-            a = 0
-    elif MO_B == 1:
-        a = 1
-    elif MO_B == 2:
-        a = 0
-    return a
+def boiler_switcher(MO_B, mode, returnTemp, cur_eff_sp, t1, boilerStatus):
+    now = datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+    result = {}
+    if MO_B == 0:
+        if boilerStatus == 0 and mode == 0 and returnTemp <= (cur_eff_sp - t1):
+            result["boilerStatus"] = 1
+            result["bTime"] = now
+            GPIO.output(boilerPin, True)
+        elif boilerStatus == 1 and mode == 0 and returnTemp > (cur_eff_sp + t1):
+            result["boilerStatus"] = 0
+            result["bTime"] = now
+            GPIO.output(boilerPin, False)
+        elif boilerStatus == 1 and mode == 1:
+            result["boilerStatus"] = 0
+            result["bTime"] = now
+            GPIO.output(boilerPin, False)
+    elif MO_B == 1 and boilerStatus == 0:
+        result["boilerStatus"] = 1
+        result["bTime"] = now
+        GPIO.output(boilerPin, True)
+    elif MO_B == 2 and boilerStatus == 1:
+        result["boilerStatus"] = 0
+        result["bTime"] = now
+        GPIO.output(boilerPin, False)
+    return result
 
-def chillers_switching(cur_eff_sp, returnTemp, t1, MO_C, CCT, mode):
-    for chiller in range(4):
-        nowTime = time.time()
-        timeGap = nowTime - startTime
-        if MO_C[chiller] == 0:
-            # if ((mode==1) & ((setPoint2 + parameterX + t1) <= returnTemp)):
-            if mode == 1 and (cur_eff_sp + t1) <= returnTemp: 
-                if (nCon == p[chiller]) and (timeGap >= CCT) and (nCon < 4):
-                    b[chiller] = 1                 
-                    if nCon == nCmax:
-                       nCmax = nCmax + 1
-                    nCon = nCon + 1
-                    startTime = time.time()
-            # elif ((mode==1) & ((setPoint2 + parameterX - t1) > returnTemp)):
-            elif mode == 1 and (cur_eff_sp - t1) > returnTemp:
-                if nCon == 0:
-                    b[chiller] = 0
-                    startTime = time.time()
-                elif (((nCmax-nCon)==p[chiller]) & (timeGap>CCT) & (nCon > 0)):
-                   b[chiller] = 0
-                   nCon = nCon - 1
-                   startTime = time.time()
-            elif (mode==0):
-                b[chiller]=0
-        elif MO_C[chiller] == 1:
-            b[chiller] = 1
-        elif MO_C[chiller] == 2:
-            b[chiller] = 0
-     cur_eff_sp = prev_eff_sp        
-     if (valveFlag!=valveStatus):
-      if(valveFlag == 0):
-        GPIO.output(valve1Pin, True)
-        GPIO.output(valve2Pin, False)
-      elif(valveFlag == 1):
-        GPIO.output(valve2Pin, True)
-        GPIO.output(valve1Pin, False)
-      valveStatus = valveFlag
-      # time.sleep(120)
-   GPIO_change = 0
-   boiler_change = 0
-   for i in range (0,4):
-       chillerChange[i] = 0
-   if boilerStatus != a:
-       boilerStatus = a
-       boiler_change = 1
-       GPIO_change = 1
-   for chiller in range (0,4):
-       if chillerStatus[chiller] != b[chiller]:
-           chillerStatus[chiller] = b[chiller]
-           GPIO.output(chillerPin[chiller],chillerStatus[chiller])
-           cTime[chiller] = (time.strftime("%Y-%m-%d "), time.strftime("%H:%M:%S"))
-           startTime=time.time()
-           if (chillerStatus[chiller]==0): 
-              sortTime[chiller] = time.time()
-           cStatus[chiller]=chillerStatus[chiller]
-           chillerChange[chiller] = 1
-           GPIO_change = 1
-           if (nCon==0):
-              curTime = time.time()
-              nCmax = 0
-              for chiller in range(0,4):
-                  sortGap[chiller] = curTime - sortTime[chiller]
-                  p[chiller]=0
-              for i in range(0,4):
-                for j in range (0,(4-i)):
-                  if(sortGap[i]<sortGap[i+j]):
-                                               p[i] = p[i]+1
-                  else:
-                       p[i+j] = p[i+j]+1
-              for i in range(0,4):
-                  p[i] = p[i]-1         
+def chillers_cascade_switcher(cTime, cur_eff_sp, chillerStatus, returnTemp, t1, MO_C, CCT, mode, valveFlag, valveStatus, last_turned_off_index=0,
+                              last_turned_on_index=0, timeGap=0):
+    result = []
+    result_dict = {}
+    now = datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+    # Manual override
+    skip_indexes = []
+    for i, MO_C_item in enumerate(MO_C):
+        if MO_C_item == 1:
+            if chillerStatus[i] == 0:
+                chillerStatus[i] = 1
+                result_dict["index"] = i
+                result_dict["chillerStatus"] = chillerStatus[i]
+                result_dict["cTime"] = now
+                result.append(result_dict)
+                GPIO.output(chillerPin[i], chillerStatus[i])
+            skip_indexes.append(i)
+        elif MO_C_item == 2:
+            if chillerStatus[i] == 1:
+                chillerStatus[i] = 0
+                result_dict["index"] = i
+                result_dict["chillerStatus"] = chillerStatus[i]
+                result_dict["cTime"] = now
+                result.append(result_dict)
+                GPIO.output(chillerPin[i], chillerStatus[i])
+            skip_indexes.append(i)
+    # Turn on chillers
+    if (returnTemp >= (cur_eff_sp + t1)
+        and timeGap >= CCT
+        and mode == 1
+        and 0 in chillerStatus
+        and last_turned_on_index not in skip_indexes):
+        chillerStatus[last_turned_on_index] = 1
+        result_dict["index"] = last_turned_on_index
+        result_dict["chillerStatus"] = chillerStatus[last_turned_on_index]
+        result_dict["cTime"] = now
+        result.append(result_dict)
+        GPIO.output(chillerPin[last_turned_on_index], chillerStatus[last_turned_on_index])
+        if (last_turned_on_index + 1) > len(chillerStatus):
+            last_turned_on_index = 0
+        else:
+            last_turned_on_index += 1
+    # Turn off chillers
+    elif ((returnTemp < (cur_eff_sp - t1)
+           and timeGap >= CCT
+           and 1 in chillerStatus
+           and last_turned_off_index not in skip_indexes) or mode == 0):
+        chillerStatus[last_turned_off_index] = 0
+        result_dict["index"] = last_turned_off_index
+        result_dict["chillerStatus"] = chillerStatus[last_turned_off_index]
+        result_dict["cTime"] = now
+        result.append(result_dict)
+        GPIO.output(chillerPin[last_turned_off_index], chillerStatus[last_turned_off_index])
+        if (last_turned_off_index + 1) > len(chillerStatus):
+            last_turned_off_index = 0
+        else:
+            last_turned_off_index += 1
+    # Turn off chillers when winter
+    elif (mode == 0
+          and 1 in chillerStatus
+          and last_turned_off_index not in skip_indexes):
+        chillerStatus[last_turned_off_index] = 0
+        result_dict["index"] = last_turned_off_index
+        result_dict["chillerStatus"] = chillerStatus[last_turned_off_index]
+        result_dict["cTime"] = now
+        result.append(result_dict)
+        GPIO.output(chillerPin[last_turned_off_index], chillerStatus[last_turned_off_index])
+        if (last_turned_off_index + 1) > len(chillerStatus):
+            last_turned_off_index = 0
+        else:
+            last_turned_off_index += 1    
+    if valveFlag != valveStatus:
+        if valveFlag == 0:
+            GPIO.output(valve1Pin, True)
+            GPIO.output(valve2Pin, False)
+        elif valveFlag == 1:
+            GPIO.output(valve2Pin, True)
+            GPIO.output(valve1Pin, False)
+        valveStatus = valveFlag
+        # time.sleep(120)
+    return {"result": result,
+            "chillerStatus": chillerStatus,
+            "last_turned_off_index": last_turned_off_index,
+            "last_turned_on_index": last_turned_off_index}
 
-   # GPIO control
-   if boiler_change == 1 :
-       if boilerStatus == 1 :
-           GPIO.output(boilerPin,True)
-           bTime = (time.strftime("%Y-%m-%d ") + time.strftime("%H:%M:%S"))
-           bStatus = 1
-       elif boilerStatus == 0 :
-           GPIO.output(boilerPin,False)
-           bTime = (time.strftime("%Y-%m-%d ") + time.strftime("%H:%M:%S"))
-           bStatus = 0
-
-def update_db():
+def update_db(outsideTemp, waterOutTemp, returnTemp, boilerStatus,
+              chillerStatus, setPoint2, windSpeed, error_T1, error_T2,
+              error_Web, error_GPIO, error_DB, bTime, bStatus, cTime, cStatus):
     try:
         with conn:
             cur = conn.cursor()
