@@ -13,13 +13,11 @@ import sys
 import RPi.GPIO as GPIO
 from lxml import etree
 
-LOG_FILENAME = "/home/pi/Desktop/Chronos/Chronos.log"
-logging.basicConfig(#filename=LOG_FILENAME,
-                    stream=sys.stdout,
+LOG_FILENAME = "/var/log/chronos.log"
+logging.basicConfig(filename=LOG_FILENAME,
                     level=logging.DEBUG,
                     datefmt="%Y-%m-%d %H:%M:%S",
                     format="%(asctime)s %(levelname)s:%(message)s")
-timeStamp = datetime.datetime.today().strftime("%Y-%m-%d %H:%M:00")
 logging.debug('Starting script')
 
 # -----variables-----
@@ -254,11 +252,11 @@ def read_temperature_sensors():
                     returnTemp = results[0]
             if device_id == sensorOutID:
                 waterOutTemp = read_temp(device_file)
-                print "SensorOutID is %s. Temp is %s" % (device_id, waterOutTemp)
+                # print "SensorOutID is %s. Temp is %s" % (device_id, waterOutTemp)
                 error_T2 = 0
             elif device_id == sensorInID:
                 returnTemp = read_temp(device_file)
-                print "SensorInID is %s. Temp is %s" % (device_id, returnTemp)
+                # print "SensorInID is %s. Temp is %s" % (device_id, returnTemp)
                 error_T1 = 0
     return {"waterOutTemp": waterOutTemp, "returnTemp": returnTemp,
             "error_T1": error_T1, "error_T2": error_T2}
