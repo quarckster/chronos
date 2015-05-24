@@ -9,13 +9,15 @@ import urllib2
 import subprocess
 import signal
 import errno
-import lxml
+import sys
 import RPi.GPIO as GPIO
+from lxml import etree
 
-LOG_FILENAME = "home/pi/Desktop/Chronos/log_Chronos.out"
-logging.basicConfig(filename=LOG_FILENAME,
+LOG_FILENAME = "/home/pi/Desktop/Chronos/Chronos.log"
+logging.basicConfig(#filename=LOG_FILENAME,
+                    stream=sys.stdout,
                     level=logging.DEBUG,
-                    datefmt="%Y-%m-%d %H:%M:%S"
+                    datefmt="%Y-%m-%d %H:%M:%S",
                     format="%(asctime)s %(levelname)s:%(message)s")
 timeStamp = datetime.datetime.today().strftime("%Y-%m-%d %H:%M:00")
 logging.debug('Starting script')
@@ -24,7 +26,7 @@ logging.debug('Starting script')
 waterOutTemp = 00.00    #Temp sensor values. Also, the values that they...
 returnTemp = 00.00      #    ...fall back to if sensors are not available
 boilerStatus = 0        #ON = 1, OFF = 0
-valveStatus = 0
+#valveStatus = 0
 valveFlag = 0
 
 windChillAvg = 0
@@ -46,7 +48,7 @@ mode = 0                #Winter/Summer mode selector (0 -> Winter, 1 -> Summer)
 powerMode = 0
 temp_thresh = 80.00     #Threshold for breather LED color selection
 led_breather = 22
-breather_count = 0
+# breather_count = 0
 CCT = 5                 #Chiller Cascade Time
 nCon = 0
 nCmax = 0
@@ -133,20 +135,22 @@ except MySQLdb.Error as e:
     destructor()
     sys.exit(1)
 
-#-----reset DB values-----
+timeStamp = datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+
 def reset_db_values():
+    #-----reset DB values-----
     try:
         with conn:
             cur = conn.cursor()
-            sql1 = """UPDATE mainTable SET boilerStatus=%s, chiller1Status=%s,
-                   chiller2Status=%s, chiller3Status=%s, chiller4Status=%s,
-                   MO_B=%s, MO_C1=%s, MO_C2=%s, MO_C3=%s, MO_C4=%s,
-                   powerMode=%s ORDER BY LID DESC LIMIT 1
-                   """ % (boilerStatus, chillerStatus[0], chillerStatus[1],
-                          chillerStatus[2], chillerStatus[3], MO_B, MO_C[0],
-                          MO_C[1], MO_C[2], MO_C[3], powerMode)
-            sql2 = ("UPDATE actStream SET timeStamp=%s, status=%s" %
-                   (timeStamp, boilerStatus))
+            # sql1 = """UPDATE mainTable SET boilerStatus=%s, chiller1Status=%s,
+            #        chiller2Status=%s, chiller3Status=%s, chiller4Status=%s,
+            #        MO_B=%s, MO_C1=%s, MO_C2=%s, MO_C3=%s, MO_C4=%s,
+            #        powerMode=%s ORDER BY LID DESC LIMIT 1
+            #        """ % (boilerStatus, chillerStatus[0], chillerStatus[1],
+            #               chillerStatus[2], chillerStatus[3], MO_B, MO_C[0],
+            #               MO_C[1], MO_C[2], MO_C[3], powerMode)
+            sql1 = ("UPDATE mainTable SET boilerStatus=%s, chiller1Status=%s, chiller2Status=%s, chiller3Status=%s, chiller4Status=%s, MO_B=%s, MO_C1=%s, MO_C2=%s, MO_C3=%s, MO_C4=%s, powerMode=%s ORDER BY LID DESC LIMIT 1" % (boilerStatus, chillerStatus[0], chillerStatus[1], chillerStatus[2], chillerStatus[3], MO_B, MO_C[0], MO_C[1], MO_C[2], MO_C[3], powerMode))
+            sql2 = ("UPDATE actStream SET timeStamp=\"%s\", status=%s" % (timeStamp, 0))
             cur.execute(sql1)
             cur.execute(sql2)
     except MySQLdb.Error as e:
@@ -159,8 +163,7 @@ def reset_db_values():
 print "Starting script..."
 
 # while True:
-time.sleep(2)
-timeStamp = datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+# time.sleep(2)
 
 def manage_system():
     "Check for shutdown, restart, etc."
@@ -189,7 +192,7 @@ def is_process_exists(process_name):
 
 def check_mysql():
     "Check if MySQL service is running."
-    if is_process_exist("mysqld"):
+    if is_process_exists("mysqld"):
         error_DB = 0
     else:
         error_DB = 1
@@ -260,7 +263,7 @@ def read_temperature_sensors():
     return {"waterOutTemp": waterOutTemp, "returnTemp": returnTemp,
             "error_T1": error_T1, "error_T2": error_T2}
 
-def blink_leds(waterOutTemp, breather_count):
+def blink_leds(waterOutTemp, breather_count=0):
     if waterOutTemp > temp_thresh:
         led_breather = led_red
     else:
@@ -279,7 +282,7 @@ def blink_leds(waterOutTemp, breather_count):
         breather_count = 0
     return breather_count
 
-def read_values_from_db(waterOutTemp):
+def read_values_from_db():
     "Read values from DB."
     try:
         with conn:
@@ -288,18 +291,12 @@ def read_values_from_db(waterOutTemp):
             cur.execute(sql)
             result = cur.fetchone()
             boilerStatus = result[5]
-            chillerStatus[0] = result[6]
-            chillerStatus[1] = result[7]
-            chillerStatus[2] = result[8]
-            chillerStatus[3] = result[9]
+            chillerStatus = [result[6], result[7], result[8], result[9]]
             setPoint2 = result[10]
             parameterX = result[11]
             t1 = result[12]
             MO_B = result[13]
-            MO_C[0] = result[14]
-            MO_C[1] = result[15]
-            MO_C[2] = result[16]
-            MO_C[3] = result[17]
+            MO_C = [result[14], result[15], result[16], result[17]]
             mode = result[18]
             powerMode = result[19]
             CCT = result[20]
@@ -310,20 +307,14 @@ def read_values_from_db(waterOutTemp):
         time.sleep(0.7)
         GPIO.output(led_red,False)
     return {"boilerStatus": boilerStatus,
-            "chillerStatus1": chillerStatus[0],
-            "chillerStatus2": chillerStatus[1],
-            "chillerStatus3": chillerStatus[2],
-            "chillerStatus4": chillerStatus[3],
+            "chillerStatus": chillerStatus,
             "setPoint2": setPoint2,
             "parameterX": parameterX,
             "t1": t1, "MO_B": MO_B,
-            "MO_C1": MO_C[0], "MO_C2": MO_C[1],
-            "MO_C3": MO_C[2], "MO_C4": MO_C[3],
-            "mode": mode, "powerMode": powerMode,
+            "MO_C": MO_C, "mode": mode,
+            "powerMode": powerMode,
             "CCT": CCT*60}
 
-
-   # CCT = CCT*60
 def get_data_from_web(mode):
     "Parsing windChill and windSpeed from wx.thomaslivestock.com."
     error_Web = 0
@@ -345,12 +336,12 @@ def get_data_from_web(mode):
                 results = cur.fetchone()
                 outsideTemp = results[0]
                 windSpeed = results[1]
-            except MySQLdb.Error:
-                print 'Unable to get value from DB'
-                print 'Reverting to default value of 65 deg F...'
-                logging.exception("Unable to get value from DB. Reverting to default value of 65 deg F...")
-                outsideTemp = 65.00
-                windSpeed = 0.00
+        except MySQLdb.Error:
+            print 'Unable to get value from DB'
+            print 'Reverting to default value of 65 deg F...'
+            logging.exception("Unable to get value from DB. Reverting to default value of 65 deg F...")
+            outsideTemp = 65.00
+            windSpeed = 0.00
     else:
         html = content.read()
         tree = etree.HTML(html)
@@ -438,76 +429,69 @@ def calculate_setpoint(outsideTemp, setPoint2, parameterX):
         try:
             with open("/usr/local/bin/sp.txt", "w") as dataFile:
                 dataFile.write(str(cur_eff_sp))
-        except Exception as e:
+        except IOError as e:
             print "Error opening sp.txt"
             logging.exception("Error opening sp.txt: %s" % e)
     return {"cur_eff_sp": cur_eff_sp, "valveFlag": valveFlag}
 
 def boiler_switcher(MO_B, mode, returnTemp, cur_eff_sp, t1, boilerStatus):
     now = datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")
-    result = {}
     if MO_B == 0:
         if boilerStatus == 0 and mode == 0 and returnTemp <= (cur_eff_sp - t1):
-            result["boilerStatus"] = 1
-            result["bTime"] = now
+            boilerStatus = 1
             GPIO.output(boilerPin, True)
+            update_actStream_table(now, boilerStatus, 1)
         elif boilerStatus == 1 and mode == 0 and returnTemp > (cur_eff_sp + t1):
-            result["boilerStatus"] = 0
-            result["bTime"] = now
+            boilerStatus = 0
             GPIO.output(boilerPin, False)
+            update_actStream_table(now, boilerStatus, 1)
         elif boilerStatus == 1 and mode == 1:
-            result["boilerStatus"] = 0
-            result["bTime"] = now
+            boilerStatus = 0
             GPIO.output(boilerPin, False)
+            update_actStream_table(now, boilerStatus, 1)
     elif MO_B == 1 and boilerStatus == 0:
-        result["boilerStatus"] = 1
-        result["bTime"] = now
+        boilerStatus = 1
         GPIO.output(boilerPin, True)
+        update_actStream_table(now, boilerStatus, 1)
     elif MO_B == 2 and boilerStatus == 1:
-        result["boilerStatus"] = 0
-        result["bTime"] = now
+        boilerStatus = 0
         GPIO.output(boilerPin, False)
-    return result
+        update_actStream_table(now, boilerStatus, 1)
+    return boilerStatus
 
-def chillers_cascade_switcher(cTime, cur_eff_sp, chillerStatus, returnTemp, t1, MO_C, CCT, mode, valveFlag, valveStatus, last_turned_off_index=0,
-                              last_turned_on_index=0, timeGap=0):
-    result = []
-    result_dict = {}
+def chillers_cascade_switcher(cur_eff_sp, chillerStatus, returnTemp, t1, MO_C, CCT, mode, last_turned_off_index,
+                              last_turned_on_index, last_switch_time):
+    timeGap = time.time() - last_switch_time
     now = datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")
     # Manual override
     skip_indexes = []
+    print chillerStatus
     for i, MO_C_item in enumerate(MO_C):
         if MO_C_item == 1:
             if chillerStatus[i] == 0:
                 chillerStatus[i] = 1
-                result_dict["index"] = i
-                result_dict["chillerStatus"] = chillerStatus[i]
-                result_dict["cTime"] = now
-                result.append(result_dict)
                 GPIO.output(chillerPin[i], chillerStatus[i])
+                update_actStream_table(now, chillerStatus[i], i+2)
             skip_indexes.append(i)
         elif MO_C_item == 2:
             if chillerStatus[i] == 1:
                 chillerStatus[i] = 0
-                result_dict["index"] = i
-                result_dict["chillerStatus"] = chillerStatus[i]
-                result_dict["cTime"] = now
-                result.append(result_dict)
                 GPIO.output(chillerPin[i], chillerStatus[i])
+                update_actStream_table(now, chillerStatus[i], i+2)
             skip_indexes.append(i)
     # Turn on chillers
+    print timeGap, CCT
     if (returnTemp >= (cur_eff_sp + t1)
         and timeGap >= CCT
         and mode == 1
         and 0 in chillerStatus
         and last_turned_on_index not in skip_indexes):
         chillerStatus[last_turned_on_index] = 1
-        result_dict["index"] = last_turned_on_index
-        result_dict["chillerStatus"] = chillerStatus[last_turned_on_index]
-        result_dict["cTime"] = now
-        result.append(result_dict)
+        print chillerStatus[last_turned_on_index]
         GPIO.output(chillerPin[last_turned_on_index], chillerStatus[last_turned_on_index])
-        if (last_turned_on_index + 1) > len(chillerStatus):
+        update_actStream_table(now, chillerStatus[last_turned_on_index], last_turned_on_index+2)
+        last_switch_time = time.time()
+        if (last_turned_on_index + 1) == len(chillerStatus):
             last_turned_on_index = 0
         else:
             last_turned_on_index += 1
@@ -517,12 +501,10 @@ def chillers_cascade_switcher(cTime, cur_eff_sp, chillerStatus, returnTemp, t1, 
            and 1 in chillerStatus
            and last_turned_off_index not in skip_indexes) or mode == 0):
         chillerStatus[last_turned_off_index] = 0
-        result_dict["index"] = last_turned_off_index
-        result_dict["chillerStatus"] = chillerStatus[last_turned_off_index]
-        result_dict["cTime"] = now
-        result.append(result_dict)
         GPIO.output(chillerPin[last_turned_off_index], chillerStatus[last_turned_off_index])
-        if (last_turned_off_index + 1) > len(chillerStatus):
+        update_actStream_table(now, chillerStatus[last_turned_off_index], last_turned_off_index+2)
+        last_switch_time = time.time()
+        if (last_turned_off_index + 1) == len(chillerStatus):
             last_turned_off_index = 0
         else:
             last_turned_off_index += 1
@@ -531,15 +513,19 @@ def chillers_cascade_switcher(cTime, cur_eff_sp, chillerStatus, returnTemp, t1, 
           and 1 in chillerStatus
           and last_turned_off_index not in skip_indexes):
         chillerStatus[last_turned_off_index] = 0
-        result_dict["index"] = last_turned_off_index
-        result_dict["chillerStatus"] = chillerStatus[last_turned_off_index]
-        result_dict["cTime"] = now
-        result.append(result_dict)
         GPIO.output(chillerPin[last_turned_off_index], chillerStatus[last_turned_off_index])
-        if (last_turned_off_index + 1) > len(chillerStatus):
+        update_actStream_table(now, chillerStatus[last_turned_off_index], last_turned_off_index+2)
+        last_switch_time = time.time()
+        if (last_turned_off_index + 1) == len(chillerStatus):
             last_turned_off_index = 0
         else:
-            last_turned_off_index += 1    
+            last_turned_off_index += 1
+    return {"chillerStatus": chillerStatus,
+            "last_turned_off_index": last_turned_off_index,
+            "last_turned_on_index": last_turned_on_index,
+            "last_switch_time": last_switch_time}
+
+def switch_valve(valveFlag, valveStatus):
     if valveFlag != valveStatus:
         if valveFlag == 0:
             GPIO.output(valve1Pin, True)
@@ -548,15 +534,11 @@ def chillers_cascade_switcher(cTime, cur_eff_sp, chillerStatus, returnTemp, t1, 
             GPIO.output(valve2Pin, True)
             GPIO.output(valve1Pin, False)
         valveStatus = valveFlag
-        # time.sleep(120)
-    return {"result": result,
-            "chillerStatus": chillerStatus,
-            "last_turned_off_index": last_turned_off_index,
-            "last_turned_on_index": last_turned_off_index}
+    # time.sleep(120)
+    return valveStatus
 
 def update_db(outsideTemp, waterOutTemp, returnTemp, boilerStatus,
-              chillerStatus, setPoint2, windSpeed, error_T1, error_T2,
-              error_Web, error_GPIO, error_DB, bTime, bStatus, cTime, cStatus):
+              chillerStatus, setPoint2, windSpeed):
     try:
         with conn:
             cur = conn.cursor()
@@ -573,53 +555,25 @@ def update_db(outsideTemp, waterOutTemp, returnTemp, boilerStatus,
                                            chillerStatus[3],
                                            setPoint2,
                                            windSpeed))
-            sql2 = ("""UPDATE errTable SET err_T1=%s, err_T2=%s, err_Web=%s,
-                    err_GPIO=%s, err_DB=%s""" % (error_T1, error_T2,
-                                                 error_Web, error_GPIO,
-                                                 error_DB))
+            # sql2 = ("""UPDATE errTable SET err_T1=%s, err_T2=%s, err_Web=%s,
+                    # err_GPIO=%s, err_DB=%s""" % (error_T1, error_T2,
+                                                 # error_Web, error_GPIO,
+                                                 # error_DB))
             cur.execute(sql1)
-            cur.execute(sql2)
+            # cur.execute(sql2)
     except MySQLdb.Error as e:
         print 'Error updating mainTable'
         logging.exception("Error updating table: %s" % e)
-    if GPIO_change == 1:
-        sql_timeStamp, sql_status = "", ""
-        if boiler_change == 1:
-            sql_timeStamp += "WHEN TID=%s THEN %s\n" % (1, bTime)
-            sql_status += "WHEN TID=%s THEN %s\n" % (1, bStatus)
-        if chillerChange[0] == 1:
-            sql_timeStamp += "WHEN TID=%s THEN %s\n" % (2, (cTime[0][0]+cTime[0][1]))
-            sql_status += "WHEN TID=%s THEN %s\n" % (2, cStatus[0]))
-        if chillerChange[1] == 1:
-            sql_timeStamp += "WHEN TID=%s THEN %s\n" % (3, (cTime[1][0]+cTime[1][1]))
-            sql_status += "WHEN TID=%s THEN %s\n" % (3, cStatus[1]))
-        if chillerChange[2] == 1:
-            sql_timeStamp += "WHEN TID=%s THEN %s\n" % (4, (cTime[2][0]+cTime[2][1]))
-            sql_status += "WHEN TID=%s THEN %s\n" % (4, cStatus[2]))
-        if chillerChange[3] == 1:
-            sql_timeStamp += "WHEN TID=%s THEN %s\n" % (5, (cTime[3][0]+cTime[3][1]))
-            sql_status += "WHEN TID=%s THEN %s\n" % (5, cStatus[3]))
-        s = []
-        if sql_timeStamp:
-            sql1 = "timeStamp=CASE\n"
-            sql1 += sql_timeStamp
-            sql1 += "ELSE timeStamp END"
-            s.append(sql1)
-        if sql_status:
-            sql2 = "status=CASE\n"
-            sql2 += sql_status
-            sql2 = "ELSE status END"
-            s.append(sql2)
-        if s:
-            s = ",\n".join(s)
-            sql = "UPDATE actStream SET\n"
-            sql += s
-            try:
-                with conn:
-                    cur = conn.cursor()
-                    cur.execute(sql)
-            except MySQLdb.Error as e:
-                logging.exception("Error updating table: %s" % e)
+
+def update_actStream_table(timeStamp, status, TID):
+    sql = "UPDATE actStream SET timeStamp=\"%s\", status=%s WHERE TID=%s" % (timeStamp, status, TID)
+    try:
+        with conn:
+            cur = conn.cursor()
+            cur.execute(sql)
+    except MySQLdb.Error as e:
+        logging.exception(sql)
+        logging.exception("Error updating actStream table: %s" % e)
 
 def update_sysStatus(error_T1, error_T2, error_DB, error_Web, error_GPIO):
     errData = [error_T1, error_T2, error_DB, error_Web, error_GPIO]
@@ -631,10 +585,61 @@ def update_sysStatus(error_T1, error_T2, error_DB, error_Web, error_GPIO):
         print "Error opening file to write"
         logging.exception("Error opening file to write: %s" % e)
 
+def sigterm_handler(_signo, _stack_frame):
+    "When sysvinit sends the TERM signal, cleanup before exiting."
+    print("Received signal {}, exiting...".format(_signo))
+    destructor()
+    sys.exit(0)
+
 def destructor():
     if conn:
         conn.close()
     GPIO.cleanup()
 
+signal.signal(signal.SIGTERM, sigterm_handler)
+
 if __name__ == '__main__':
-    
+    breather_count = 0
+    valveStatus = 0
+    last_switch_time = 0
+    last_turned_off_index, last_turned_on_index = 0, 0
+    reset_db_values()
+    try:
+        while True:
+            manage_system()
+            errorDB = check_mysql()
+            sensors_data = read_temperature_sensors()
+            breather_count = blink_leds(sensors_data["waterOutTemp"],
+                                        breather_count)
+            db_data = read_values_from_db()
+            web_data = get_data_from_web(db_data["mode"])
+            setpoint = calculate_setpoint(web_data["outsideTemp"],
+                                          db_data["setPoint2"],
+                                          db_data["parameterX"])
+            boiler_status = boiler_switcher(db_data["MO_B"],
+                                            db_data["mode"],
+                                            sensors_data["returnTemp"],
+                                            setpoint["cur_eff_sp"],
+                                            db_data["t1"],
+                                            db_data["boilerStatus"])
+            chiller_status = chillers_cascade_switcher(setpoint["cur_eff_sp"],
+                                                       db_data["chillerStatus"],
+                                                       sensors_data["returnTemp"],
+                                                       db_data["t1"],
+                                                       db_data["MO_C"],
+                                                       db_data["CCT"],
+                                                       db_data["mode"],
+                                                       last_turned_off_index,
+                                                       last_turned_on_index,
+                                                       last_switch_time)
+            last_switch_time = chiller_status["last_switch_time"]
+            last_turned_off_index = chiller_status["last_turned_off_index"]
+            last_turned_on_index = chiller_status["last_turned_on_index"]
+            print chiller_status["chillerStatus"]
+            valveStatus = switch_valve(setpoint["valveFlag"], valveStatus)
+            update_db(web_data["outsideTemp"], sensors_data["waterOutTemp"],
+                      sensors_data["returnTemp"], boiler_status,
+                      chiller_status["chillerStatus"], setpoint["cur_eff_sp"],
+                      web_data["windSpeed"])
+    except KeyboardInterrupt:
+        destructor()
