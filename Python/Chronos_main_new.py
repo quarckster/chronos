@@ -463,7 +463,6 @@ def chillers_cascade_switcher(cur_eff_sp, chillerStatus, returnTemp, t1, MO_C, C
     now = datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S")
     # Manual override
     skip_indexes = []
-    print chillerStatus
     for i, MO_C_item in enumerate(MO_C):
         if MO_C_item == 1:
             if chillerStatus[i] == 0:
@@ -478,7 +477,6 @@ def chillers_cascade_switcher(cur_eff_sp, chillerStatus, returnTemp, t1, MO_C, C
                 update_actStream_table(now, chillerStatus[i], i+2)
             skip_indexes.append(i)
     # Turn on chillers
-    print timeGap, CCT
     if (returnTemp >= (cur_eff_sp + t1)
         and timeGap >= CCT
         and mode == 1
@@ -633,7 +631,6 @@ if __name__ == '__main__':
             last_switch_time = chiller_status["last_switch_time"]
             last_turned_off_index = chiller_status["last_turned_off_index"]
             last_turned_on_index = chiller_status["last_turned_on_index"]
-            print chiller_status["chillerStatus"]
             valveStatus = switch_valve(setpoint["valveFlag"], valveStatus)
             update_db(web_data["outsideTemp"], sensors_data["waterOutTemp"],
                       sensors_data["returnTemp"], boiler_status,
