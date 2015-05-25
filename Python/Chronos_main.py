@@ -318,7 +318,7 @@ def read_values_from_db():
         time.sleep(0.7)
         GPIO.output(led_red, False)
     return {"boiler_status": boiler_status,
-            "chillerStatus": chiller_status,
+            "chiller_status": chiller_status,
             "setpoint2": setpoint2,
             "parameterX": parameterX,
             "t1": t1,
