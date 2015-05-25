@@ -7,7 +7,6 @@ import MySQLdb
 import urllib2
 import subprocess
 import signal
-import errno
 import sys
 import RPi.GPIO as GPIO
 from lxml import etree
@@ -31,15 +30,12 @@ root_logger.debug("Starting script")
 water_out_temp = 00.00  # Temp sensor values. Also, the values that they...
 return_temp = 00.00  # ...fall back to if sensors are not available
 boiler_status = 0  # ON = 1, OFF = 0
-#valveStatus = 0
 wind_chill_avg = 0
 MO_B = 0  # Manual overrides. AUTO = 0, ON = 1, OFF = 2
 t1 = 0  # Threshold parameters
 mode = 0  # Winter/Summer mode selector (0 -> Winter, 1 -> Summer)
 power_mode = 0
-temp_thresh = 80.00  # Threshold for breather LED color selection
 led_breather = 22
-# breather_count = 0
 CCT = 5  # Chiller Cascade Time
 prev_eff_sp = 0
 cur_eff_sp = 0
@@ -204,8 +200,8 @@ def check_mysql():
             GPIO.output(led_red, True)
             time.sleep(0.7)
             GPIO.output(led_red, False)
+            destructor()
     return error_DB
-
 
 def read_temp(device_file):
     while True:
@@ -242,26 +238,24 @@ def read_temperature_sensors():
                 with open(device_file_ID) as content:
                     device_id = content.read(15)
             except IOError as e:
-                if e.errno == errno.ENOENT:
-                    pass
+                pass
             try:
                 with open(device_file) as content:
                     temp_raw = content.readlines()
             except IOError as e:
-                if e.errno == errno.ENOENT:
-                    root_logger.exception("Temp sensor error: %s" % e)
-                    GPIO.output(led_red, True)
-                    time.sleep(0.7)
-                    GPIO.output(led_red, False)
-                    with conn:
-                        cur = conn.cursor()
-                        sql = """SELECT returnTemp
-                                 FROM mainTable
-                                 ORDER BY LID
-                                 DESC LIMIT 1"""
-                        cur.execute(sql)
-                        results = cur.fetchone()
-                    return_temp = results[0]
+                root_logger.exception("Temp sensor error: %s" % e)
+                GPIO.output(led_red, True)
+                time.sleep(0.7)
+                GPIO.output(led_red, False)
+                with conn:
+                    cur = conn.cursor()
+                    sql = """SELECT returnTemp
+                             FROM mainTable
+                             ORDER BY LID
+                             DESC LIMIT 1"""
+                    cur.execute(sql)
+                    results = cur.fetchone()
+                return_temp = results[0]
             if device_id == sensor_out_id:
                 water_out_temp = read_temp(device_file)
                 error_T2 = 0
@@ -270,11 +264,11 @@ def read_temperature_sensors():
                 error_T1 = 0
     return {"water_out_temp": water_out_temp,
             "return_temp": return_temp,
-            "error_T1": error_T1,
-            "error_T2": error_T2}
+            "errors": [error_T1, error_T2]}
 
 
 def blink_leds(water_out_temp, breather_count):
+    temp_thresh = 80.00  # Threshold for breather LED color selection
     if water_out_temp > temp_thresh:
         led_breather = led_red
     else:
@@ -561,6 +555,19 @@ def chillers_cascade_switcher(cur_eff_sp, chiller_status, return_temp,
             last_turned_off_index = 0
         else:
             last_turned_off_index += 1
+    # if chiller manually overrided then skip it
+    elif (last_turned_on_index in skip_indexes
+          and 0 in chiller_status):
+        if (last_turned_on_index + 1) == len(chiller_status):
+            last_turned_on_index = 0
+        else:
+            last_turned_on_index += 1
+    elif (last_turned_off_index in skip_indexes
+          and 1 in chiller_status):
+        if (last_turned_off_index + 1) == len(chiller_status):
+            last_turned_off_index = 0
+        else:
+            last_turned_off_index += 1
     return {"chiller_status": chiller_status,
             "last_turned_off_index": last_turned_off_index,
             "last_turned_on_index": last_turned_on_index,
@@ -584,7 +591,7 @@ def update_db(outsideTemp, water_out_temp, return_temp, boiler_status,
     try:
         with conn:
             cur = conn.cursor()
-            sql1 = ("""UPDATE mainTable
+            sql = ("""UPDATE mainTable
                        SET outsideTemp=%s,
                            waterOutTemp=%s,
                            returnTemp=%s,
@@ -606,18 +613,7 @@ def update_db(outsideTemp, water_out_temp, return_temp, boiler_status,
                                           chiller_status[3],
                                           setpoint2,
                                           windSpeed))
-            # sql2 = ("""UPDATE errTable
-            # SET err_T1=%s,
-            # err_T2=%s,
-            # err_Web=%s,
-            # err_GPIO=%s,
-            # err_DB=%s""" % (error_T1,
-            #                 error_T2,
-            #                 error_Web,
-            #                 error_GPIO,
-            #                 error_DB))
-            cur.execute(sql1)
-            # cur.execute(sql2)
+            cur.execute(sql)
     except MySQLdb.Error as e:
         root_logger.exception("Error updating table: %s" % e)
 
@@ -632,21 +628,34 @@ def update_actStream_table(timeStamp, status, TID):
             cur = conn.cursor()
             cur.execute(sql)
     except MySQLdb.Error as e:
-        root_logger.exception(sql)
         root_logger.exception("Error updating actStream table: %s" % e)
 
 
-def update_sysStatus(error_T1, error_T2, error_DB, error_Web, error_GPIO):
-    errData = [error_T1, error_T2, error_DB, error_Web, error_GPIO]
+def update_sysStatus(error_sensor, error_DB, error_Web, error_GPIO):
+    errData = [error_sensor[0], error_sensor[1], error_DB, error_Web, error_GPIO]
     try:
         with open("/var/www/sysStatus.txt", "w") as dataFile:
             for item in errData:
                 dataFile.write("%s\n" % str(item))
     except IOError as e:
         root_logger.exception("Error opening file to write: %s" % e)
+    sql = ("""UPDATE errTable
+               SET err_T1=%s,
+                   err_T2=%s,
+                   err_Web=%s,
+                   err_GPIO=%s""" % (error_sensor[0],
+                                     error_sensor[1],
+                                     error_Web,
+                                     error_GPIO))
+    try:
+        with conn:
+            cur = conn.cursor()
+            cur.execute(sql)
+    except MySQLdb.Error as e:
+        root_logger.exception("Error updating actStream table: %s" % e)            
 
 
-def sigterm_handler(_signo, _stack_frame):
+def sigterm_handler():
     "When sysvinit sends the TERM signal, cleanup before exiting."
     destructor()
     sys.exit(0)
@@ -667,12 +676,12 @@ if __name__ == '__main__':
     last_switch_time = 0
     last_turned_off_index, last_turned_on_index = 0, 0
     update_systemUp()
-    set_gpio_pins()
+    error_GPIO = set_gpio_pins()
     reset_db_values()
     try:
         while True:
             manage_system()
-            errorDB = check_mysql()
+            error_DB = check_mysql()
             sensors_data = read_temperature_sensors()
             breather_count = blink_leds(sensors_data["water_out_temp"],
                                         breather_count)
@@ -705,5 +714,9 @@ if __name__ == '__main__':
                       sensors_data["return_temp"], boiler_status,
                       chiller_status["chiller_status"], setpoint,
                       web_data["windSpeed"])
-    except KeyboardInterrupt:
+            update_sysStatus(sensors_data["errors"],
+                             error_DB,
+                             web_data["error_Web"],
+                             error_GPIO)
+    except KeyboardInterrupt, Exception:
         destructor()
