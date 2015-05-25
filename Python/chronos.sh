@@ -15,7 +15,7 @@
 
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 NAME=chronos
-DAEMON=/home/pi/Desktop/Chronos/Chronos_main_new.py
+DAEMON=/home/pi/Desktop/Chronos/Chronos_main.py
 PIDFILE=/var/run/$NAME.pid
 # LOGFILE=/var/log/$NAME.log
 

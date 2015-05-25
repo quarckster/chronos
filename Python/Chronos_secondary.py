@@ -119,9 +119,9 @@ def wind_chill(results):
             dataFile.write(str(windChillAvg))
 
 if __name__ == '__main__':
-    count = get_count()
+    # count = get_count()
     results = db_queries()
-    count = update_systemUp(count)
-    chronos_starter(count)
+    # count = update_systemUp(count)
+    # chronos_starter(count)
     # led_starter()
     wind_chill(results)
