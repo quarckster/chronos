@@ -60,9 +60,9 @@ def db_queries():
         with conn:
             cur = conn.cursor()
             cur.execute(sql1)
-            cur.execute(sql2)
-            results = cur.fetchall()
-        return results
+            # cur.execute(sql2)
+            # results = cur.fetchall()
+        # return results
 
 
 def is_process_exists(process_name):
@@ -124,4 +124,4 @@ if __name__ == '__main__':
     # count = update_systemUp(count)
     # chronos_starter(count)
     # led_starter()
-    wind_chill(results)
+    # wind_chill(results)
