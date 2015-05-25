@@ -10,24 +10,10 @@ import signal
 import sys
 import RPi.GPIO as GPIO
 from lxml import etree
-
-# Configuring loggging
-LOG_FILENAME = "/var/log/chronos.log"
-
-log_formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s",
-                                  "%Y-%m-%d %H:%M:%S")
-root_logger = logging.getLogger()
-root_logger.setLevel(logging.DEBUG)
-file_handler = logging.FileHandler(LOG_FILENAME)
-file_handler.setFormatter(log_formatter)
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setFormatter(log_formatter)
-root_logger.addHandler(console_handler)
-root_logger.addHandler(file_handler)
-
-root_logger.debug("Starting script")
+from logging.handlers import TimedRotatingFileHandler
 
 # Constants
+LOG_FILENAME = "/var/log/chronos.log"
 SYSTEMUP = "/var/www/systemUp.txt"
 WINDCHILL_AVG = "/home/pi/Desktop/Chronos/windChillAvg.txt"
 FIRMWARE_UPGRADE = "/home/pi/Desktop/Chronos/firmwareUpgrade.py"
@@ -51,6 +37,20 @@ sensor_in_id = "28-00042c648eff"
 #sensor_in_id = '28-00000676e315'
 # os.system('modprobe w1-gpio')
 # os.system('modprobe w1-therm')
+
+# Configuring loggging
+log_formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s",
+                                  "%Y-%m-%d %H:%M:%S")
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.DEBUG)
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(log_formatter)
+rotate_logs_handler = TimedRotatingFileHandler(LOG_FILENAME, "midnight")
+rotate_logs_handler.setFormatter(log_formatter)
+root_logger.addHandler(console_handler)
+root_logger.addHandler(rotate_logs_handler)
+
+root_logger.debug("Starting script")
 
 try:
     conn = MySQLdb.connect(host="localhost",
