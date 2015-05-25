@@ -11,6 +11,7 @@ import sys
 import RPi.GPIO as GPIO
 from lxml import etree
 
+# Configuring loggging
 LOG_FILENAME = "/var/log/chronos.log"
 
 log_formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s",
@@ -26,41 +27,24 @@ root_logger.addHandler(file_handler)
 
 root_logger.debug("Starting script")
 
-# -----variables-----
-water_out_temp = 00.00  # Temp sensor values. Also, the values that they...
-return_temp = 00.00  # ...fall back to if sensors are not available
-boiler_status = 0  # ON = 1, OFF = 0
-wind_chill_avg = 0
-MO_B = 0  # Manual overrides. AUTO = 0, ON = 1, OFF = 2
-t1 = 0  # Threshold parameters
-mode = 0  # Winter/Summer mode selector (0 -> Winter, 1 -> Summer)
-power_mode = 0
-led_breather = 22
-CCT = 5  # Chiller Cascade Time
-prev_eff_sp = 0
-cur_eff_sp = 0
-setpoint2 = 00.00
-sp_min = 40.00
-sp_max = 100.00
+# Constants
 SYSTEMUP = "/var/www/systemUp.txt"
 WINDCHILL_AVG = "/home/pi/Desktop/Chronos/windChillAvg.txt"
 FIRMWARE_UPGRADE = "/home/pi/Desktop/Chronos/firmwareUpgrade.py"
-# --------Arrays---------
-chiller_status = [0 for i in xrange(4)]
-MO_C = [0 for i in xrange(4)]
-chiller_pin = [0 for i in xrange(4)]
-# -----Set GPIO pins-----
+# Set GPIO pins
 boiler_pin = 20
+chiller_pin = [0]*4
 chiller_pin[0] = 26
 chiller_pin[1] = 16
 chiller_pin[2] = 19
 chiller_pin[3] = 5
 valve1_pin = 6
 valve2_pin = 12
+led_breather = 22
 led_red = 22
 led_green = 23
 led_blue = 24
-#-----temp sensors-----
+# Temp sensors
 sensor_out_id = "28-00042d4367ff"
 sensor_in_id = "28-00042c648eff"
 #sensor_out_id = '28-00000677d162'
@@ -129,29 +113,19 @@ def reset_db_values():
         with conn:
             cur = conn.cursor()
             sql1 = ("""UPDATE mainTable
-                       SET boilerStatus=%s,
-                           chiller1Status=%s,
-                           chiller2Status=%s,
-                           chiller3Status=%s,
-                           chiller4Status=%s,
-                           MO_B=%s,
-                           MO_C1=%s,
-                           MO_C2=%s,
-                           MO_C3=%s,
-                           MO_C4=%s,
-                           powerMode=%s
+                       SET boilerStatus={0},
+                           chiller1Status={0},
+                           chiller2Status={0},
+                           chiller3Status={0},
+                           chiller4Status={0},
+                           MO_B={0},
+                           MO_C1={0},
+                           MO_C2={0},
+                           MO_C3={0},
+                           MO_C4={0},
+                           powerMode={0}
                        ORDER BY LID
-                       DESC LIMIT 1""" % (boiler_status,
-                                          chiller_status[0],
-                                          chiller_status[1],
-                                          chiller_status[2],
-                                          chiller_status[3],
-                                          MO_B,
-                                          MO_C[0],
-                                          MO_C[1],
-                                          MO_C[2],
-                                          MO_C[3],
-                                          power_mode))
+                       DESC LIMIT 1""".format(0))
             sql2 = ("""UPDATE actStream
                        SET timeStamp=\"%s\",
                            status=%s""" % (timeStamp, 0))
@@ -164,7 +138,7 @@ def reset_db_values():
         GPIO.output(led_red, False)
 
 
-def manage_system():
+def manage_system(power_mode):
     "Check for shutdown, restart, etc."
     if power_mode == 10:
         subprocess.call(["reboot"])
@@ -227,6 +201,7 @@ def read_temperature_sensors():
     "Read Temperature Sensors."
     error_T1 = 1
     error_T2 = 1
+    water_out_temp = 00.00
     DEVICE_DIR = "/home/pi/fake_sys/"
     for directory in os.listdir(DEVICE_DIR):
         if directory in (sensor_in_id, sensor_out_id):
@@ -247,15 +222,18 @@ def read_temperature_sensors():
                 GPIO.output(led_red, True)
                 time.sleep(0.7)
                 GPIO.output(led_red, False)
-                with conn:
-                    cur = conn.cursor()
-                    sql = """SELECT returnTemp
-                             FROM mainTable
-                             ORDER BY LID
-                             DESC LIMIT 1"""
-                    cur.execute(sql)
-                    results = cur.fetchone()
-                return_temp = results[0]
+                try:
+                    with conn:
+                        cur = conn.cursor()
+                        sql = """SELECT returnTemp
+                                 FROM mainTable
+                                 ORDER BY LID
+                                 DESC LIMIT 1"""
+                        cur.execute(sql)
+                        results = cur.fetchone()
+                    return_temp = results[0]
+                except MySQLdb.Error:
+                    return_temp = 00.00
             if device_id == sensor_out_id:
                 water_out_temp = read_temp(device_file)
                 error_T2 = 0
@@ -307,6 +285,16 @@ def read_values_from_db():
             power_mode = result[19]
             CCT = result[20]
     except MySQLdb.Error as e:
+        boiler_status = 0  # ON = 1, OFF = 0
+        chiller_status = [0]*4
+        setpoint2 = 00.00
+        parameterX = 0
+        t1 = 0
+        MO_B = 0  # Manual overrides. AUTO = 0, ON = 1, OFF = 2
+        MO_C = [0]*4
+        mode = 0  # Winter/Summer mode selector (0 -> Winter, 1 -> Summer)
+        power_mode = 0
+        CCT = 5  # Chiller Cascade Time
         root_logger.exception("Error fetching data from DB: %s" % e)
         GPIO.output(led_red, True)
         time.sleep(0.7)
@@ -330,7 +318,7 @@ def get_data_from_web(mode):
         content = urllib2.urlopen('http://wx.thomaslivestock.com')
     except IOError, HTTPError:
         root_logger.exception("""Unable to get data from website.
-                             Reading previous value from DB.""")
+                              Reading previous value from DB.""")
         error_Web = 1
         GPIO.output(led_red, True)
         time.sleep(0.7)
@@ -354,7 +342,7 @@ def get_data_from_web(mode):
     else:
         html = content.read()
         tree = etree.HTML(html)
-        # Wind Chill
+        # Wind chill
         if mode == 0:
             node = tree.xpath(
                 "/html/body/table/tr[10]/td[2]/font/strong/font/small/text()")
@@ -391,6 +379,7 @@ def calculate_setpoint(outsideTemp, setpoint2, parameterX):
             result = cur.fetchone()
             wind_chill_avg = result[0]
     except MySQLdb.Error as e:
+        wind_chill_avg = 0
         root_logger.exception("Unable to get value from DB: %s" % e)
     # try:
     #     with open(WINCHILL_AVG) as windChillFile:
@@ -436,12 +425,14 @@ def calculate_setpoint(outsideTemp, setpoint2, parameterX):
             buf = spMinFile.readline()
             sp_min = float(buf)
     except IOError as e:
+        sp_min = 40.00
         root_logger.exception("Unable to open spMin.txt to read: %s" % e)
     try:
         with open("/usr/local/bin/spMax.txt") as spMaxFile:
             buf = spMaxFile.readline()
             sp_max = float(buf)
     except IOError as e:
+        sp_max = 100.00
         root_logger.exception("Unable to open spMax.txt to read: %s" % e)
     if cur_eff_sp > sp_max:
         cur_eff_sp = sp_max
@@ -680,7 +671,6 @@ if __name__ == '__main__':
     reset_db_values()
     try:
         while True:
-            manage_system()
             error_DB = check_mysql()
             sensors_data = read_temperature_sensors()
             breather_count = blink_leds(sensors_data["water_out_temp"],
@@ -710,13 +700,17 @@ if __name__ == '__main__':
             last_turned_off_index = chiller_status["last_turned_off_index"]
             last_turned_on_index = chiller_status["last_turned_on_index"]
             valveStatus = switch_valve(db_data["mode"], valveStatus)
-            update_db(web_data["outsideTemp"], sensors_data["water_out_temp"],
-                      sensors_data["return_temp"], boiler_status,
-                      chiller_status["chiller_status"], setpoint,
+            update_db(web_data["outsideTemp"],
+                      sensors_data["water_out_temp"],
+                      sensors_data["return_temp"],
+                      boiler_status,
+                      chiller_status["chiller_status"],
+                      setpoint,
                       web_data["windSpeed"])
             update_sysStatus(sensors_data["errors"],
                              error_DB,
                              web_data["error_Web"],
                              error_GPIO)
-    except KeyboardInterrupt, Exception:
+            manage_system(db_data["power_mode"])
+    except KeyboardInterrupt:
         destructor()
