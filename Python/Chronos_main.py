@@ -361,17 +361,15 @@ def get_data_from_web(mode):
             "error_Web": error_Web}
 
 
-def calculate_setpoint(outsideTemp, setpoint2, parameterX):
+def calculate_setpoint(outsideTemp, setpoint2, parameterX, mode):
     "Calculate setpoint from windChill."
     windChill = int(outsideTemp)
-    sql = """SELECT AVG(outsideTemp)
-             FROM mainTable
-             WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR)
-             AND MODE = (SELECT MODE FROM mainTable
-                         ORDER BY LID DESC
-                         LIMIT 1)
-             ORDER BY LID DESC
-             LIMIT 5760"""
+    sql = ("""SELECT AVG(outsideTemp)
+              FROM mainTable
+              WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR)
+              AND MODE = %s
+              ORDER BY LID DESC
+              LIMIT 5760""" % mode)
     try:
         with conn:
             cur = conn.cursor()
@@ -480,8 +478,7 @@ def boiler_switcher(MO_B, mode, return_temp, cur_eff_sp, t1, boiler_status):
 def chillers_cascade_switcher(cur_eff_sp, chiller_status, return_temp,
                               t1, MO_C, CCT, mode, last_turned_off_index,
                               last_turned_on_index, last_switch_time):
-    timeGap = time.time() - last_switch_time
-    now = time.strftime("%Y-%m-%d %H:%M:%S")
+    time_gap = time.time() - last_switch_time
     # Manual override
     skip_indexes = []
     for i, MO_C_item in enumerate(MO_C):
@@ -489,26 +486,25 @@ def chillers_cascade_switcher(cur_eff_sp, chiller_status, return_temp,
             if chiller_status[i] == 0:
                 chiller_status[i] = 1
                 GPIO.output(chiller_pin[i], chiller_status[i])
-                update_actStream_table(now, chiller_status[i], i+2)
+                update_actStream_table(chiller_status[i], i)
             skip_indexes.append(i)
         elif MO_C_item == 2:
             if chiller_status[i] == 1:
                 chiller_status[i] = 0
                 GPIO.output(chiller_pin[i], chiller_status[i])
-                update_actStream_table(now, chiller_status[i], i+2)
+                update_actStream_table(chiller_status[i], i)
             skip_indexes.append(i)
     # Turn on chillers
     if (return_temp >= (cur_eff_sp + t1)
-            and timeGap >= CCT
+            and time_gap >= CCT
             and mode == 1
             and 0 in chiller_status
             and last_turned_on_index not in skip_indexes):
         chiller_status[last_turned_on_index] = 1
         GPIO.output(chiller_pin[last_turned_on_index],
                     chiller_status[last_turned_on_index])
-        update_actStream_table(now,
-                               chiller_status[last_turned_on_index],
-                               last_turned_on_index+2)
+        update_actStream_table(chiller_status[last_turned_on_index],
+                               last_turned_on_index)
         last_switch_time = time.time()
         if (last_turned_on_index + 1) == len(chiller_status):
             last_turned_on_index = 0
@@ -516,16 +512,15 @@ def chillers_cascade_switcher(cur_eff_sp, chiller_status, return_temp,
             last_turned_on_index += 1
     # Turn off chillers
     elif (return_temp < (cur_eff_sp - t1)
-          and timeGap >= CCT
-          and mode == 1
-          and 1 in chiller_status
-          and last_turned_off_index not in skip_indexes):
+            and time_gap >= CCT
+            and mode == 1
+            and 1 in chiller_status
+            and last_turned_off_index not in skip_indexes):
         chiller_status[last_turned_off_index] = 0
         GPIO.output(chiller_pin[last_turned_off_index],
                     chiller_status[last_turned_off_index])
-        update_actStream_table(now,
-                               chiller_status[last_turned_off_index],
-                               last_turned_off_index+2)
+        update_actStream_table(chiller_status[last_turned_off_index],
+                               last_turned_off_index)
         last_switch_time = time.time()
         if (last_turned_off_index + 1) == len(chiller_status):
             last_turned_off_index = 0
@@ -533,14 +528,13 @@ def chillers_cascade_switcher(cur_eff_sp, chiller_status, return_temp,
             last_turned_off_index += 1
     # Turn off chillers when winter
     elif (mode == 0
-          and 1 in chiller_status
-          and last_turned_off_index not in skip_indexes):
+            and 1 in chiller_status
+            and last_turned_off_index not in skip_indexes):
         chiller_status[last_turned_off_index] = 0
         GPIO.output(chiller_pin[last_turned_off_index],
                     chiller_status[last_turned_off_index])
-        update_actStream_table(now,
-                               chiller_status[last_turned_off_index],
-                               last_turned_off_index+2)
+        update_actStream_table(chiller_status[last_turned_off_index],
+                               last_turned_off_index)
         last_switch_time = time.time()
         if (last_turned_off_index + 1) == len(chiller_status):
             last_turned_off_index = 0
@@ -583,37 +577,38 @@ def update_db(outsideTemp, water_out_temp, return_temp, boiler_status,
         with conn:
             cur = conn.cursor()
             sql = ("""UPDATE mainTable
-                       SET outsideTemp=%s,
-                           waterOutTemp=%s,
-                           returnTemp=%s,
-                           boilerStatus=%s,
-                           chiller1Status=%s,
-                           chiller2Status=%s,
-                           chiller3Status=%s,
-                           chiller4Status=%s,
-                           setPoint2=%s,
-                           windSpeed=%s
-                       ORDER BY LID
-                       DESC LIMIT 1""" % (outsideTemp,
-                                          water_out_temp,
-                                          return_temp,
-                                          boiler_status,
-                                          chiller_status[0],
-                                          chiller_status[1],
-                                          chiller_status[2],
-                                          chiller_status[3],
-                                          setpoint2,
-                                          windSpeed))
+                      SET outsideTemp=%s,
+                          waterOutTemp=%s,
+                          returnTemp=%s,
+                          boilerStatus=%s,
+                          chiller1Status=%s,
+                          chiller2Status=%s,
+                          chiller3Status=%s,
+                          chiller4Status=%s,
+                          setPoint2=%s,
+                          windSpeed=%s
+                      ORDER BY LID
+                      DESC LIMIT 1""" % (outsideTemp,
+                                         water_out_temp,
+                                         return_temp,
+                                         boiler_status,
+                                         chiller_status[0],
+                                         chiller_status[1],
+                                         chiller_status[2],
+                                         chiller_status[3],
+                                         setpoint2,
+                                         windSpeed))
             cur.execute(sql)
     except MySQLdb.Error as e:
         root_logger.exception("Error updating table: %s" % e)
 
 
-def update_actStream_table(timeStamp, status, TID):
+def update_actStream_table(status, chiller_id):
+    now = time.strftime("%Y-%m-%d %H:%M:%S")
     sql = ("""UPDATE actStream
               SET timeStamp=\"%s\",
                   status=%s
-              WHERE TID=%s""" % (timeStamp, status, TID))
+              WHERE TID=%s""" % (now, status, chiller_id+2))
     try:
         with conn:
             cur = conn.cursor()
@@ -630,17 +625,17 @@ def update_sysStatus(error_sensor, error_DB, error_Web, error_GPIO):
                 dataFile.write("%s\n" % str(item))
     except IOError as e:
         root_logger.exception("Error opening file to write: %s" % e)
-    sql = ("""UPDATE errTable
-               SET err_T1=%s,
-                   err_T2=%s,
-                   err_Web=%s,
-                   err_GPIO=%s""" % (error_sensor[0],
-                                     error_sensor[1],
-                                     error_Web,
-                                     error_GPIO))
     try:
         with conn:
             cur = conn.cursor()
+            sql = ("""UPDATE errTable
+                      SET err_T1=%s,
+                          err_T2=%s,
+                          err_Web=%s,
+                          err_GPIO=%s""" % (error_sensor[0],
+                                            error_sensor[1],
+                                            error_Web,
+                                            error_GPIO))
             cur.execute(sql)
     except MySQLdb.Error as e:
         root_logger.exception("Error updating actStream table: %s" % e)            
@@ -679,7 +674,8 @@ if __name__ == '__main__':
             web_data = get_data_from_web(db_data["mode"])
             setpoint = calculate_setpoint(web_data["outsideTemp"],
                                           db_data["setpoint2"],
-                                          db_data["parameterX"])
+                                          db_data["parameterX"],
+                                          db_data["mode"])
             boiler_status = boiler_switcher(db_data["MO_B"],
                                             db_data["mode"],
                                             sensors_data["return_temp"],
