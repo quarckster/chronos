@@ -9,6 +9,7 @@ import subprocess
 import signal
 import sys
 import RPi.GPIO as GPIO
+from copy import deepcopy, copy
 from lxml import etree
 from logging.handlers import TimedRotatingFileHandler
 
@@ -108,7 +109,7 @@ def update_systemUp():
 
 
 def reset_db_values():
-    timeStamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    now = time.strftime("%Y-%m-%d %H:%M:%S")
     try:
         with conn:
             cur = conn.cursor()
@@ -128,8 +129,9 @@ def reset_db_values():
                        DESC LIMIT 1""".format(0))
             sql2 = ("""UPDATE actStream
                        SET timeStamp=\"%s\",
-                           status=%s""" % (timeStamp, 0))
-            cur.execute(sql1)
+                           status=%s,
+                           MO=%s""" % (now, 0, 0))
+            # cur.execute(sql1)
             cur.execute(sql2)
     except MySQLdb.Error as e:
         root_logger.exception("Error while resetting DB values: %s" % e)
@@ -271,19 +273,23 @@ def read_values_from_db():
     try:
         with conn:
             cur = conn.cursor()
-            sql = "SELECT * FROM mainTable ORDER BY LID DESC LIMIT 1"
-            cur.execute(sql)
-            result = cur.fetchone()
-            boiler_status = result[5]
-            chiller_status = [result[6], result[7], result[8], result[9]]
-            setpoint2 = result[10]
-            parameterX = result[11]
-            t1 = result[12]
-            MO_B = result[13]
-            MO_C = [result[14], result[15], result[16], result[17]]
-            mode = result[18]
-            power_mode = result[19]
-            CCT = result[20]
+            sql1 = """SELECT setPoint2, parameterX, t1, mode, CCT
+                      FROM mainTable ORDER BY LID DESC LIMIT 1"""
+            cur.execute(sql1)
+            result1 = cur.fetchone()
+            setpoint2 = result1[0]
+            parameterX = result1[1]
+            t1 = result1[2]
+            mode = result1[3]
+            CCT = result1[4]
+            sql2 = "SELECT status, MO FROM actStream"
+            cur.execute(sql2)
+            result2 = cur.fetchall()
+            boiler_status = result2[0][0]
+            chiller_status = [result2[1][0], result2[2][0], result2[3][0], result2[4][0]]
+            MO_B = result2[0][1]
+            MO_C = [result2[1][1], result2[2][1], result2[3][1], result2[4][1]]
+            # power_mode = result[19]
     except MySQLdb.Error as e:
         boiler_status = 0  # ON = 1, OFF = 0
         chiller_status = [0]*4
@@ -307,7 +313,7 @@ def read_values_from_db():
             "MO_B": MO_B,
             "MO_C": MO_C,
             "mode": mode,
-            "power_mode": power_mode,
+            # "power_mode": power_mode,
             "CCT": CCT*60}
 
 
@@ -436,7 +442,6 @@ def calculate_setpoint(outsideTemp, setpoint2, parameterX, mode):
         cur_eff_sp = sp_max
     elif cur_eff_sp < sp_min:
         cur_eff_sp = sp_min
-    # if cur_eff_sp != prev_eff_sp:
     try:
         with open("/usr/local/bin/sp.txt", "w") as dataFile:
             dataFile.write(str(cur_eff_sp))
@@ -447,6 +452,7 @@ def calculate_setpoint(outsideTemp, setpoint2, parameterX, mode):
 
 def boiler_switcher(MO_B, mode, return_temp, cur_eff_sp, t1, boiler_status):
     now = time.strftime("%Y-%m-%d %H:%M:%S")
+    boiler_status = boiler_status
     if MO_B == 0:
         if (boiler_status == 0
                 and mode == 0
@@ -455,8 +461,8 @@ def boiler_switcher(MO_B, mode, return_temp, cur_eff_sp, t1, boiler_status):
             GPIO.output(boiler_pin, True)
             update_actStream_table(now, boiler_status, 1)
         elif (boiler_status == 1
-              and mode == 0
-              and return_temp > (cur_eff_sp + t1)):
+                and mode == 0
+                and return_temp > (cur_eff_sp + t1)):
             boiler_status = 0
             GPIO.output(boiler_pin, False)
             update_actStream_table(now, boiler_status, 1)
@@ -481,6 +487,7 @@ def chillers_cascade_switcher(cur_eff_sp, chiller_status, return_temp,
     time_gap = time.time() - last_switch_time
     # Manual override
     skip_indexes = []
+    chiller_status = chiller_status[:]
     for i, MO_C_item in enumerate(MO_C):
         if MO_C_item == 1:
             if chiller_status[i] == 0:
@@ -571,34 +578,49 @@ def switch_valve(mode, valveStatus):
     return valveStatus
 
 
-def update_db(outsideTemp, water_out_temp, return_temp, boiler_status,
-              chiller_status, setpoint2, windSpeed):
+def update_db(outside_temp, water_out_temp, return_temp, boiler_status,
+              chiller_status, setpoint2, wind_speed):
     try:
         with conn:
             cur = conn.cursor()
-            sql = ("""UPDATE mainTable
-                      SET outsideTemp=%s,
-                          waterOutTemp=%s,
-                          returnTemp=%s,
-                          boilerStatus=%s,
-                          chiller1Status=%s,
-                          chiller2Status=%s,
-                          chiller3Status=%s,
-                          chiller4Status=%s,
-                          setPoint2=%s,
-                          windSpeed=%s
-                      ORDER BY LID
-                      DESC LIMIT 1""" % (outsideTemp,
-                                         water_out_temp,
-                                         return_temp,
-                                         boiler_status,
-                                         chiller_status[0],
-                                         chiller_status[1],
-                                         chiller_status[2],
-                                         chiller_status[3],
-                                         setpoint2,
-                                         windSpeed))
-            cur.execute(sql)
+            sql1 = "SELECT MO FROM actStream"
+            cur.execute(sql1)
+            MO = cur.fetchall()
+            MO = [item for sublist in MO for item in sublist]
+            data = [time.strftime("%Y-%m-%d %H:%M:%S")]
+            args = [outside_temp, water_out_temp, return_temp, boiler_status, chiller_status[0],
+                    chiller_status[1], chiller_status[2], chiller_status[3], setpoint2]
+            data.extend(args)
+            string1 = ",".join(["\"%s\"" % i for i in data])
+            string2 = ",".join(["\"%s\"" % i for i in MO])
+            sql2 = ("""INSERT INTO mainTable (logdatetime,
+                                              outsideTemp,
+                                              waterOutTemp,
+                                              returnTemp,
+                                              boilerStatus,
+                                              chiller1Status,
+                                              chiller2Status,
+                                              chiller3Status,
+                                              chiller4Status,
+                                              setPoint2,
+                                              parameterX,
+                                              t1,
+                                              MO_B,
+                                              MO_C1,
+                                              MO_C2,
+                                              MO_C3,
+                                              MO_C4,
+                                              mode,
+                                              powerMode,
+                                              CCT,
+                                              windSpeed)
+                       SELECT %s,parameterX,t1,%s,mode,powerMode,CCT,\"%s\"
+                       FROM mainTable
+                       ORDER BY LID DESC
+                       LIMIT 1""" % (string1,
+                                     string2,
+                                     wind_speed))
+            cur.execute(sql2)
     except MySQLdb.Error as e:
         root_logger.exception("Error updating table: %s" % e)
 
@@ -649,6 +671,7 @@ def sigterm_handler():
 
 def destructor():
     if conn:
+        time.sleep(1)
         conn.close()
     with open(SYSTEMUP, "w") as dataFile:
         dataFile.write("OFFLINE\n")
@@ -692,21 +715,24 @@ if __name__ == '__main__':
                                                        last_turned_off_index,
                                                        last_turned_on_index,
                                                        last_switch_time)
+            root_logger.debug(chiller_status)
             last_switch_time = chiller_status["last_switch_time"]
             last_turned_off_index = chiller_status["last_turned_off_index"]
             last_turned_on_index = chiller_status["last_turned_on_index"]
             valveStatus = switch_valve(db_data["mode"], valveStatus)
-            update_db(web_data["outsideTemp"],
-                      sensors_data["water_out_temp"],
-                      sensors_data["return_temp"],
-                      boiler_status,
-                      chiller_status["chiller_status"],
-                      setpoint,
-                      web_data["windSpeed"])
+            if (db_data["boiler_status"] != boiler_status
+                or db_data["chiller_status"] != chiller_status["chiller_status"]):
+                update_db(web_data["outsideTemp"],
+                          sensors_data["water_out_temp"],
+                          sensors_data["return_temp"],
+                          boiler_status,
+                          chiller_status["chiller_status"],
+                          setpoint,
+                          web_data["windSpeed"])
             update_sysStatus(sensors_data["errors"],
                              error_DB,
                              web_data["error_Web"],
                              error_GPIO)
-            manage_system(db_data["power_mode"])
+            # manage_system(db_data["power_mode"])
     except KeyboardInterrupt:
         destructor()
