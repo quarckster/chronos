@@ -2,7 +2,7 @@
 header('Location:index.php');
 include('SetConnect.php');
 // $sql="UPDATE mainTable Set MO_C4=0 ORDER BY LID DESC LIMIT 1";
-$sql="UPDATE actStream SET MO_C=0 WHERE TID=5";
+$sql="UPDATE actStream SET MO=0 WHERE TID=5";
 $result=mysqli_query($con,$sql);
 
 ?>
