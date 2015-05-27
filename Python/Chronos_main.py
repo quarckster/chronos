@@ -336,13 +336,13 @@ def get_data_from_web(mode):
                          DESC LIMIT 1"""
                 cur.execute(sql)
                 results = cur.fetchone()
-                outsideTemp = results[0]
-                windSpeed = results[1]
+                outside_temp = results[0]
+                wind_speed = results[1]
         except MySQLdb.Error:
             root_logger.exception("""Unable to get value from DB.
                                  Reverting to default value of 65 deg F""")
-            outsideTemp = 65.00
-            windSpeed = 0.00
+            outside_temp = 65.00
+            wind_speed = 0.00
     else:
         html = content.read()
         tree = etree.HTML(html)
@@ -355,57 +355,50 @@ def get_data_from_web(mode):
             node = tree.xpath(
                 "/html/body/table/tr[3]/td[2]/font/strong/small/font/text()")
         outTemp = node[0].split(u"\xb0F")[0]
-        outsideTemp = float(outTemp)
+        outside_temp = float(outTemp)
         # Wind speed
         node = tree.xpath(
             "/html/body/table/tr[6]/td[2]/font/strong/font/small/text()")
         wind_speed = float(node[0].split()[2])
-    return {"outsideTemp": outsideTemp,
+    return {"outside_temp": outside_temp,
             "windSpeed": wind_speed,
             "error_Web": error_Web}
 
 
-def calculate_setpoint(outsideTemp, setpoint2, parameterX, mode):
+def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
     "Calculate setpoint from windChill."
-    windChill = int(outsideTemp)
-    sql = ("""SELECT AVG(outsideTemp)
-              FROM mainTable
-              WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR)
-              AND MODE = %s
-              ORDER BY LID DESC
-              LIMIT 5760""" % mode)
+    wind_chill = int(outside_temp)
     try:
         with conn:
             cur = conn.cursor()
+            sql = ("""SELECT AVG(outsideTemp)
+                      FROM mainTable
+                      WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR)
+                      AND MODE = %s
+                      ORDER BY LID DESC
+                      LIMIT 5760""" % mode)
             cur.execute(sql)
             result = cur.fetchone()
             wind_chill_avg = result[0]
     except MySQLdb.Error as e:
         wind_chill_avg = 0
         root_logger.exception("Unable to get value from DB: %s" % e)
-    # try:
-    #     with open(WINCHILL_AVG) as windChillFile:
-    #         buf = windChillFile.read(3)
-    #         index = buf.find(".")
-    #         wind_chill_avg = int(buf[0:index])
-    # except IOError as e:
-    #     root_logger.exception("Unable to open file to read: %s" % e)
-    if windChill < 11:
-        setpoint2 = 100
+    if wind_chill < 11:
+         baseline_setpoint = 100
     else:
         try:
             with conn:
                 cur = conn.cursor()
                 sql = ("""SELECT setPoint
                           FROM SetpointLookup
-                          WHERE windChill = %s""" % windChill)
+                          WHERE windChill = %s""" % wind_chill)
                 cur.execute(sql)
                 results = cur.fetchone()
-                setpoint2 = results[0]
+                baseline_setpoint = results[0]
         except MySQLdb.Error as e:
             root_logger.exception("Setpoint error: %s" % e)
     if wind_chill_avg < 71:
-        setpointOffset = 0
+        temperature_history_adjsutment = 0
     else:
         try:
             with conn:
@@ -415,12 +408,12 @@ def calculate_setpoint(outsideTemp, setpoint2, parameterX, mode):
                           WHERE avgWindChill = %s""" % wind_chill_avg)
                 cur.execute(sql)
                 results = cur.fetchone()
-                setpointOffset = results[0]
+                temperature_history_adjsutment = results[0]
         except MySQLdb.Error as e:
-            setpointOffset = 0
+            temperature_history_adjsutment = 0
             root_logger.exception("Setpoint error: %s" % e)
-    setpoint2 -= setpointOffset
-    cur_eff_sp = setpoint2 + parameterX
+    tha_setpoint = baseline_setpoint + temperature_history_adjsutment
+    effective_setpoint = tha_setpoint + parameterX
     # constrain effective setpoint
     try:
         with open("/usr/local/bin/spMin.txt") as spMinFile:
@@ -436,31 +429,32 @@ def calculate_setpoint(outsideTemp, setpoint2, parameterX, mode):
     except IOError as e:
         sp_max = 100.00
         root_logger.exception("Unable to open spMax.txt to read: %s" % e)
-    if cur_eff_sp > sp_max:
-        cur_eff_sp = sp_max
-    elif cur_eff_sp < sp_min:
-        cur_eff_sp = sp_min
+    if effective_setpoint > sp_max:
+        effective_setpoint = sp_max
+    elif effective_setpoint < sp_min:
+        effective_setpoint = sp_min
     try:
         with open("/usr/local/bin/sp.txt", "w") as dataFile:
-            dataFile.write(str(cur_eff_sp))
+            dataFile.write(str(effective_setpoint))
     except IOError as e:
         root_logger.exception("Error opening sp.txt: %s" % e)
-    return cur_eff_sp
+    return {"effective_setpoint": effective_setpoint,
+            "tha_setpoint": tha_setpoint}
 
 
-def boiler_switcher(MO_B, mode, return_temp, cur_eff_sp, t1, boiler_status):
+def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_status):
     now = time.strftime("%Y-%m-%d %H:%M:%S")
     new_boiler_status = boiler_status
     if MO_B == 0:
         if (new_boiler_status == 0
                 and mode == 0
-                and return_temp <= (cur_eff_sp - t1)):
+                and return_temp <= (effective_setpoint - t1)):
             new_boiler_status = 1
             GPIO.output(boiler_pin, True)
             update_actStream_table(now, new_boiler_status, 1)
         elif (new_boiler_status == 1
                 and mode == 0
-                and return_temp > (cur_eff_sp + t1)):
+                and return_temp > (effective_setpoint + t1)):
             new_boiler_status = 0
             GPIO.output(boiler_pin, False)
             update_actStream_table(now, new_boiler_status, 1)
@@ -479,7 +473,7 @@ def boiler_switcher(MO_B, mode, return_temp, cur_eff_sp, t1, boiler_status):
     return new_boiler_status
 
 
-def chillers_cascade_switcher(cur_eff_sp, chiller_status, return_temp,
+def chillers_cascade_switcher(effective_setpoint, chiller_status, return_temp,
                               t1, MO_C, CCT, mode, last_turned_off_index,
                               last_turned_on_index, last_switch_time):
     time_gap = time.time() - last_switch_time
@@ -500,7 +494,7 @@ def chillers_cascade_switcher(cur_eff_sp, chiller_status, return_temp,
                 update_actStream_table(new_chiller_status[i], i)
             skip_indexes.append(i)
     # Turn on chillers
-    if (return_temp >= (cur_eff_sp + t1)
+    if (return_temp >= (effective_setpoint + t1)
             and time_gap >= CCT
             and mode == 1
             and 0 in new_chiller_status
@@ -516,7 +510,7 @@ def chillers_cascade_switcher(cur_eff_sp, chiller_status, return_temp,
         else:
             last_turned_on_index += 1
     # Turn off chillers
-    elif (return_temp < (cur_eff_sp - t1)
+    elif (return_temp < (effective_setpoint - t1)
             and time_gap >= CCT
             and mode == 1
             and 1 in new_chiller_status
@@ -558,6 +552,10 @@ def chillers_cascade_switcher(cur_eff_sp, chiller_status, return_temp,
             last_turned_off_index = 0
         else:
             last_turned_off_index += 1
+    string = ", ".join([str(i) for i in new_chiller_status])
+    root_logger.debug("Chillers: %s; time gap: %d; last switch time: %s" % (string,
+                                                                            time_gap,
+                                                                            time.strftime("%H:%M:%S", time.localtime(last_switch_time))))
     return {"chiller_status": new_chiller_status,
             "last_turned_off_index": last_turned_off_index,
             "last_turned_on_index": last_turned_on_index,
@@ -669,7 +667,7 @@ def sigterm_handler():
 
 def destructor():
     if conn:
-        time.sleep(1)
+        time.sleep(2)
         conn.close()
     with open(SYSTEMUP, "w") as dataFile:
         dataFile.write("OFFLINE\n")
@@ -682,6 +680,7 @@ if __name__ == '__main__':
     valveStatus = 0
     last_switch_time = 0
     last_turned_off_index, last_turned_on_index = 0, 0
+    timer = 0 
     update_systemUp()
     error_GPIO = set_gpio_pins()
     reset_db_values()
@@ -693,17 +692,17 @@ if __name__ == '__main__':
                                         breather_count)
             db_data = read_values_from_db()
             web_data = get_data_from_web(db_data["mode"])
-            setpoint = calculate_setpoint(web_data["outsideTemp"],
+            setpoint = calculate_setpoint(web_data["outside_temp"],
                                           db_data["setpoint2"],
                                           db_data["parameterX"],
                                           db_data["mode"])
             boiler_status = boiler_switcher(db_data["MO_B"],
                                             db_data["mode"],
                                             sensors_data["return_temp"],
-                                            setpoint,
+                                            setpoint["effective_setpoint"],
                                             db_data["t1"],
                                             db_data["boiler_status"])
-            chiller_status = chillers_cascade_switcher(setpoint,
+            chiller_status = chillers_cascade_switcher(setpoint["effective_setpoint"],
                                                        db_data["chiller_status"],
                                                        sensors_data["return_temp"],
                                                        db_data["t1"],
@@ -717,15 +716,16 @@ if __name__ == '__main__':
             last_turned_off_index = chiller_status["last_turned_off_index"]
             last_turned_on_index = chiller_status["last_turned_on_index"]
             valveStatus = switch_valve(db_data["mode"], valveStatus)
-            if (db_data["boiler_status"] != boiler_status
-                or db_data["chiller_status"] != chiller_status["chiller_status"]):
-                update_db(web_data["outsideTemp"],
+            # Update db every minute
+            if time.time() - timer >= 60:
+                update_db(web_data["outside_temp"],
                           sensors_data["water_out_temp"],
                           sensors_data["return_temp"],
                           boiler_status,
                           chiller_status["chiller_status"],
-                          setpoint,
+                          setpoint["tha_setpoint"],
                           web_data["windSpeed"])
+                timer = time.time()
             update_sysStatus(sensors_data["errors"],
                              error_DB,
                              web_data["error_Web"],
