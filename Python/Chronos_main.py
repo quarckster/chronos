@@ -443,7 +443,6 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
 
 
 def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_status):
-    now = time.strftime("%Y-%m-%d %H:%M:%S")
     new_boiler_status = boiler_status
     if MO_B == 0:
         if (new_boiler_status == 0
@@ -451,25 +450,25 @@ def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_stat
                 and return_temp <= (effective_setpoint - t1)):
             new_boiler_status = 1
             GPIO.output(boiler_pin, True)
-            update_actStream_table(now, new_boiler_status, 1)
+            update_actStream_table(new_boiler_status, None, True)
         elif (new_boiler_status == 1
                 and mode == 0
                 and return_temp > (effective_setpoint + t1)):
             new_boiler_status = 0
             GPIO.output(boiler_pin, False)
-            update_actStream_table(now, new_boiler_status, 1)
+            update_actStream_table(new_boiler_status, None, True)
         elif new_boiler_status == 1 and mode == 1:
             new_boiler_status = 0
             GPIO.output(boiler_pin, False)
-            update_actStream_table(now, new_boiler_status, 1)
+            update_actStream_table(new_boiler_status, None, True)
     elif MO_B == 1 and new_boiler_status == 0:
         new_boiler_status = 1
         GPIO.output(boiler_pin, True)
-        update_actStream_table(now, new_boiler_status, 1)
+        update_actStream_table(new_boiler_status, None, True)
     elif MO_B == 2 and new_boiler_status == 1:
         new_boiler_status = 0
         GPIO.output(boiler_pin, False)
-        update_actStream_table(now, new_boiler_status, 1)
+        update_actStream_table(new_boiler_status, None, True)
     return new_boiler_status
 
 
@@ -621,12 +620,16 @@ def update_db(outside_temp, water_out_temp, return_temp, boiler_status,
         root_logger.exception("Error updating table: %s" % e)
 
 
-def update_actStream_table(status, chiller_id):
+def update_actStream_table(status, chiller_id, boiler=False):
+    if boiler:
+        tid = 1
+    else:
+        tid = chiller_id + 2
     now = time.strftime("%Y-%m-%d %H:%M:%S")
     sql = ("""UPDATE actStream
               SET timeStamp=\"%s\",
                   status=%s
-              WHERE TID=%s""" % (now, status, chiller_id+2))
+              WHERE TID=%s""" % (now, status, tid))
     try:
         with conn:
             cur = conn.cursor()
