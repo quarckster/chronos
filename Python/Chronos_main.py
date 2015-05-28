@@ -106,36 +106,49 @@ def update_systemUp():
         root_logger.exception("Can't write to systemUp.txt: %s" % e)
 
 
-def reset_db_values():
-    now = time.strftime("%Y-%m-%d %H:%M:%S")
+def init_values():
     try:
         with conn:
             cur = conn.cursor()
-            sql1 = ("""UPDATE mainTable
-                       SET boilerStatus={0},
-                           chiller1Status={0},
-                           chiller2Status={0},
-                           chiller3Status={0},
-                           chiller4Status={0},
-                           MO_B={0},
-                           MO_C1={0},
-                           MO_C2={0},
-                           MO_C3={0},
-                           MO_C4={0},
-                           powerMode={0}
-                       ORDER BY LID
-                       DESC LIMIT 1""".format(0))
-            sql2 = ("""UPDATE actStream
-                       SET timeStamp=\"%s\",
-                           status=%s,
-                           MO=%s""" % (now, 0, 0))
-            # cur.execute(sql1)
-            cur.execute(sql2)
+            sql = """SELECT status, timeStamp
+                     FROM actStream"""
+            cur.execute(sql)
+            result = cur.fetchall()
+            chiller_status = [result[1][0], result[2][0], result[3][0], result[4][0]]
+            time_stamps = [result[1][1], result[2][1], result[3][1], result[4][1]]
+            last_switch_time = max(time_stamps)
+            first_switch_time = min(time_stamps)
+            last_switched_chiller = time_stamps.index(last_switch_time)
+            first_switched_chiller = time_stamps.index(first_switch_time)
+
+            if chiller_status[last_switched_chiller] == 1:
+                last_turned_on_index = last_switched_chiller
+                # This is ugly but works (I hope)
+                ones = []
+                for i, chiller in enumerate(chiller_status):
+                    if chiller == 1:
+                        ones.append(time_stamps[i])
+                if ones:
+                    last_turned_off_index = time_stamps.index(min(ones)) - 1
+            elif chiller_status[last_switched_chiller] == 0:
+                last_turned_off_index = last_switched_chiller
+                zeroes = []
+                for i, chiller in enumerate(chiller_status):
+                    if chiller == 0:
+                        zeroes.append(time_stamps[i])
+                if zeroes:
+                    last_turned_on_index = time_stamps.index(min(zeroes)) - 1
+            # This need when actStream table is resetted
+            if len(set(time_stamps)) == 1:
+                last_turned_off_index, last_turned_on_index = 3, 3
     except MySQLdb.Error as e:
-        root_logger.exception("Error while resetting DB values: %s" % e)
+        root_logger.exception("DB error: %s" % e)
         GPIO.output(led_red, True)
         time.sleep(0.7)
         GPIO.output(led_red, False)
+    return {"last_turned_on_index": last_turned_on_index,
+            "last_turned_off_index": last_turned_off_index,
+            "last_switch_time": time.mktime(last_switch_time.timetuple())}
 
 
 def manage_system(power_mode):
@@ -374,7 +387,7 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
             sql = ("""SELECT AVG(outsideTemp)
                       FROM mainTable
                       WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR)
-                      AND MODE = %s
+                      AND mode = %s
                       ORDER BY LID DESC
                       LIMIT 5760""" % mode)
             cur.execute(sql)
@@ -498,46 +511,47 @@ def chillers_cascade_switcher(effective_setpoint, chiller_status, return_temp,
             and mode == 1
             and 0 in new_chiller_status
             and last_turned_on_index not in skip_indexes):
+        # root_logger.debug((last_turned_on_index, last_turned_off_index))
+        if (last_turned_on_index + 1) == len(new_chiller_status):
+            last_turned_on_index = 0
+        else:
+            last_turned_on_index += 1
         new_chiller_status[last_turned_on_index] = 1
         GPIO.output(chiller_pin[last_turned_on_index],
                     new_chiller_status[last_turned_on_index])
         update_actStream_table(new_chiller_status[last_turned_on_index],
                                last_turned_on_index)
         last_switch_time = time.time()
-        if (last_turned_on_index + 1) == len(new_chiller_status):
-            last_turned_on_index = 0
-        else:
-            last_turned_on_index += 1
     # Turn off chillers
     elif (return_temp < (effective_setpoint - t1)
             and time_gap >= CCT
             and mode == 1
             and 1 in new_chiller_status
             and last_turned_off_index not in skip_indexes):
+        if (last_turned_off_index + 1) == len(new_chiller_status):
+            last_turned_off_index = 0
+        else:
+            last_turned_off_index += 1
         new_chiller_status[last_turned_off_index] = 0
         GPIO.output(chiller_pin[last_turned_off_index],
                     new_chiller_status[last_turned_off_index])
         update_actStream_table(new_chiller_status[last_turned_off_index],
                                last_turned_off_index)
         last_switch_time = time.time()
-        if (last_turned_off_index + 1) == len(new_chiller_status):
-            last_turned_off_index = 0
-        else:
-            last_turned_off_index += 1
     # Turn off chillers when winter
     elif (mode == 0
             and 1 in new_chiller_status
             and last_turned_off_index not in skip_indexes):
+        if (last_turned_off_index + 1) == len(new_chiller_status):
+            last_turned_off_index = 0
+        else:
+            last_turned_off_index += 1
         new_chiller_status[last_turned_off_index] = 0
         GPIO.output(chiller_pin[last_turned_off_index],
                     new_chiller_status[last_turned_off_index])
         update_actStream_table(new_chiller_status[last_turned_off_index],
                                last_turned_off_index)
         last_switch_time = time.time()
-        if (last_turned_off_index + 1) == len(new_chiller_status):
-            last_turned_off_index = 0
-        else:
-            last_turned_off_index += 1
     # if chiller manually overrided then skip it
     elif (last_turned_on_index in skip_indexes
           and 0 in new_chiller_status):
@@ -681,12 +695,15 @@ signal.signal(signal.SIGTERM, sigterm_handler)
 if __name__ == '__main__':
     breather_count = 0
     valveStatus = 0
-    last_switch_time = 0
-    last_turned_off_index, last_turned_on_index = 0, 0
+    # last_switch_time = 0
+    # last_turned_off_index, last_turned_on_index = 0, 0
     timer = 0 
     update_systemUp()
     error_GPIO = set_gpio_pins()
-    reset_db_values()
+    init_values = init_values()
+    last_switch_time = init_values["last_switch_time"]
+    last_turned_on_index = init_values["last_turned_on_index"]
+    last_turned_off_index = init_values["last_turned_off_index"]
     try:
         while True:
             error_DB = check_mysql()
