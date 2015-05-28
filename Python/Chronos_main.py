@@ -117,30 +117,28 @@ def init_values():
             chiller_status = [result[1][0], result[2][0], result[3][0], result[4][0]]
             time_stamps = [result[1][1], result[2][1], result[3][1], result[4][1]]
             last_switch_time = max(time_stamps)
-            first_switch_time = min(time_stamps)
             last_switched_chiller = time_stamps.index(last_switch_time)
-            first_switched_chiller = time_stamps.index(first_switch_time)
-
             if chiller_status[last_switched_chiller] == 1:
                 last_turned_on_index = last_switched_chiller
-                # This is ugly but works (I hope)
-                ones = []
-                for i, chiller in enumerate(chiller_status):
-                    if chiller == 1:
-                        ones.append(time_stamps[i])
+                # This is ugly but works (I hope). To find last turned off chiller
+                # we need find first turned on chiller. Last turned off chiller
+                # will be on the left of that chiller.
+                # So here we are filtering chillers which are turned on
+                ones = [time_stamps[i] for i, chiller in enumerate(chiller_status) if chiller == 1]
                 if ones:
+                    # Here we are finding index of the chiller which has
+                    # a minimal timestamp. Than we move to the left
+                    # of it deducting 1.
                     last_turned_off_index = time_stamps.index(min(ones)) - 1
             elif chiller_status[last_switched_chiller] == 0:
                 last_turned_off_index = last_switched_chiller
-                zeroes = []
-                for i, chiller in enumerate(chiller_status):
-                    if chiller == 0:
-                        zeroes.append(time_stamps[i])
+                zeroes = [time_stamps[i] for i, chiller in enumerate(chiller_status) if chiller == 0]
                 if zeroes:
                     last_turned_on_index = time_stamps.index(min(zeroes)) - 1
-            # This need when actStream table is resetted
+            # This need when actStream table is resetted. 
+            # If there is one timestamp for all chillers then table is resetted.
             if len(set(time_stamps)) == 1:
-                last_turned_off_index, last_turned_on_index = 3, 3
+                last_turned_off_index, last_turned_on_index = -1, -1
     except MySQLdb.Error as e:
         root_logger.exception("DB error: %s" % e)
         GPIO.output(led_red, True)
