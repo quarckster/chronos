@@ -440,13 +440,6 @@ def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_stat
         update_actStream_table(new_boiler_status, None, True)
     return new_boiler_status
 
-def increase_last_turn_index(index):
-    if (index + 1) == 4:
-        index = 0
-    else:
-        index += 1
-    return index
-
 def find_chiller_index_to_switch(time_stamps, MO_C, chiller_status, status):
     min_date = time.time()
     switch_index = None
