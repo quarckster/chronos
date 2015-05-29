@@ -494,20 +494,14 @@ def switch_valve(mode, valveStatus):
     return valveStatus
 
 
-def update_db(outside_temp, water_out_temp, return_temp, boiler_status,
+def update_db(MO, outside_temp, water_out_temp, return_temp, boiler_status,
               chiller_status, setpoint2, wind_speed):
     try:
         with conn:
             cur = conn.cursor()
-            sql1 = "SELECT MO FROM actStream"
-            cur.execute(sql1)
-            MO = cur.fetchall()
-            MO = [item for sublist in MO for item in sublist]
-            data = [time.strftime("%Y-%m-%d %H:%M:%S")]
             args = [outside_temp, water_out_temp, return_temp, boiler_status, chiller_status[0],
                     chiller_status[1], chiller_status[2], chiller_status[3], setpoint2]
-            data.extend(args)
-            string1 = ",".join(["\"%s\"" % i for i in data])
+            string1 = ",".join(["\"%s\"" % i for i in args])
             string2 = ",".join(["\"%s\"" % i for i in MO])
             sql2 = ("""INSERT INTO mainTable (logdatetime,
                                               outsideTemp,
@@ -530,7 +524,7 @@ def update_db(outside_temp, water_out_temp, return_temp, boiler_status,
                                               powerMode,
                                               CCT,
                                               windSpeed)
-                       SELECT %s,parameterX,t1,%s,mode,powerMode,CCT,\"%s\"
+                       SELECT NOW(),%s,parameterX,t1,%s,mode,powerMode,CCT,\"%s\"
                        FROM mainTable
                        ORDER BY LID DESC
                        LIMIT 1""" % (string1,
@@ -546,13 +540,13 @@ def update_actStream_table(status, chiller_id, boiler=False):
         tid = 1
     else:
         tid = chiller_id + 2
-    sql = ("""UPDATE actStream
-              SET timeStamp=NOW(),
-                  status=%s
-              WHERE TID=%s""" % (status, tid))
     try:
         with conn:
             cur = conn.cursor()
+            sql = ("""UPDATE actStream
+                      SET timeStamp=NOW(),
+                          status=%s
+                      WHERE TID=%s""" % (status, tid))
             cur.execute(sql)
     except MySQLdb.Error as e:
         root_logger.exception("Error updating actStream table: %s" % e)
@@ -634,7 +628,11 @@ if __name__ == '__main__':
             valveStatus = switch_valve(db_data["mode"], valveStatus)
             # Update db every minute
             if time.time() - timer >= 60:
-                update_db(web_data["outside_temp"],
+                MO = []
+                MO.append(db_data["MO_B"])
+                MO.extend(db_data["MO_C"])
+                update_db(MO,
+                          web_data["outside_temp"],
                           sensors_data["water_out_temp"],
                           sensors_data["return_temp"],
                           boiler_status,
