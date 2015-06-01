@@ -1,7 +1,7 @@
 <?php
 function manage_pin($pin, $state) {
     $output = array();
-    exec('rpio -i '.$pin, $output);
+    exec('rpio -i '.$pin.' 2>&1', $output);
     $output = explode(" ", $output[0]);
     if $output[2] != 'OUTPUT' {
         exec('rpio --setoutput='.$pin);
