@@ -476,15 +476,19 @@ include('SetConnect.php');
              <td>Avg Outdoor Temp (96 hrs)&nbsp;&nbsp;&nbsp;&nbsp; </td>
 					<td>
 					<?php
-					$myFileWC =fopen("/home/pi/Desktop/Chronos/windChillAvg.txt","r") or die("Unable to open File");
-					$members = array();
-					while(!feof($myFileWC)){
-						$members[]=fgets($myFileWC);
+                    if($result1){
+                        echo $row1['avgOutsideTemp'];
+                    }
+					// $myFileWC =fopen("/home/pi/Desktop/Chronos/windChillAvg.txt","r") or die("Unable to open File");
+					// $members = array();
+					// while(!feof($myFileWC)){
+					// 	$members[]=fgets($myFileWC);
 						
-					}
-						echo $members[0];
+					// }
+					// 	echo $members[0];
 				
-					fclose($myFileWC);
+					// fclose($myFileWC);
+
 				?> &deg;F</td>
           </tr>
           </table></h5>	

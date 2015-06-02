@@ -49,7 +49,7 @@ rotate_logs_handler.setFormatter(log_formatter)
 root_logger.addHandler(console_handler)
 root_logger.addHandler(rotate_logs_handler)
 
-root_logger.debug("Starting script")
+root_logger.info("Starting script")
 
 try:
     conn = MySQLdb.connect(host="localhost",
@@ -408,7 +408,8 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
     except IOError as e:
         root_logger.exception("Error opening sp.txt: %s" % e)
     return {"effective_setpoint": effective_setpoint,
-            "tha_setpoint": tha_setpoint}
+            "tha_setpoint": tha_setpoint,
+            "wind_chill_avg": wind_chill_avg}
 
 
 def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_status):
@@ -495,7 +496,7 @@ def switch_valve(mode, valveStatus):
 
 
 def update_db(MO, outside_temp, water_out_temp, return_temp, boiler_status,
-              chiller_status, setpoint2, wind_speed):
+              chiller_status, setpoint2, wind_speed, avgOutsideTemp):
     try:
         with conn:
             cur = conn.cursor()
@@ -523,13 +524,15 @@ def update_db(MO, outside_temp, water_out_temp, return_temp, boiler_status,
                                               mode,
                                               powerMode,
                                               CCT,
-                                              windSpeed)
-                       SELECT NOW(),%s,parameterX,t1,%s,mode,powerMode,CCT,\"%s\"
+                                              windSpeed,
+                                              avgOutsideTemp)
+                       SELECT NOW(),%s,parameterX,t1,%s,mode,powerMode,CCT,\"%s\",\"%s\"
                        FROM mainTable
                        ORDER BY LID DESC
                        LIMIT 1""" % (string1,
                                      string2,
-                                     wind_speed))
+                                     wind_speed,
+                                     avgOutsideTemp))
             cur.execute(sql2)
     except MySQLdb.Error as e:
         root_logger.exception("Error updating table: %s" % e)
@@ -638,7 +641,8 @@ if __name__ == '__main__':
                           boiler_status,
                           chiller_status,
                           setpoint["tha_setpoint"],
-                          web_data["windSpeed"])
+                          web_data["windSpeed"],
+                          setpoint["wind_chill_avg"])
                 timer = time.time()
             update_sysStatus(sensors_data["errors"],
                              error_DB,
