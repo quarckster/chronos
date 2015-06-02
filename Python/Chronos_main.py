@@ -34,8 +34,15 @@ sensor_out_id = "28-00042d4367ff"
 sensor_in_id = "28-00042c648eff"
 #sensor_out_id = '28-00000677d162'
 #sensor_in_id = '28-00000676e315'
+#Chr2 (production)
+#sensor_out_id = '28-0000067841b0'
+#sensor_in_id = '28-00000677d509'
+
+
 # os.system('modprobe w1-gpio')
 # os.system('modprobe w1-therm')
+
+
 
 # Configuring loggging
 log_formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s",
