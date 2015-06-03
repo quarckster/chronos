@@ -479,16 +479,6 @@ include('SetConnect.php');
                     if($result1){
                         echo $row1['avgOutsideTemp'];
                     }
-					// $myFileWC =fopen("/home/pi/Desktop/Chronos/windChillAvg.txt","r") or die("Unable to open File");
-					// $members = array();
-					// while(!feof($myFileWC)){
-					// 	$members[]=fgets($myFileWC);
-						
-					// }
-					// 	echo $members[0];
-				
-					// fclose($myFileWC);
-
 				?> &deg;F</td>
           </tr>
           </table></h5>	
@@ -530,14 +520,16 @@ include('SetConnect.php');
 						<td align=center>Chiller 1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
 						<td align=left><?php
 						
-						$sql="SELECT timeStamp from actStream where TID=2";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-								$oldFormat = date_create($row['timeStamp']);
-								$new_date = date_format($oldFormat,'F j, g:ia');
-								echo $new_date ; 
+						$sql="SELECT * from actStream";
+						$query3=mysqli_query($con,$sql);
+                        $result3 = array();
+						if($query3){
+							while($row=mysqli_fetch_array($query3,MYSQLI_ASSOC)){
+                                $result3[] = $row;
 							}
+                            $oldFormat = date_create($result3[1]['timeStamp']);
+                            $new_date = date_format($oldFormat,'F j, g:ia');
+                            echo $new_date; 
 						}
 					?></td><!--Dynamic Content-->
 						
@@ -546,15 +538,10 @@ include('SetConnect.php');
 						<td align=center>Chiller 2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
 
 						<td align=left><?php
-						
-						$sql="SELECT timeStamp from actStream where TID=3";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							$oldFormat = date_create($row['timeStamp']);
-								$new_date = date_format($oldFormat,'F j, g:ia');
-								echo $new_date ;
-							}
+						if($query3){
+							$oldFormat = date_create($result3[2]['timeStamp']);
+                            $new_date = date_format($oldFormat,'F j, g:ia');
+                            echo $new_date; 
 						}
 					?></td><!--Dynamic Content-->
 						
@@ -563,15 +550,10 @@ include('SetConnect.php');
 						<td align=center>Chiller 3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
 
 						<td align=left><?php
-						
-						$sql="SELECT timeStamp from actStream where TID=4";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							$oldFormat = date_create($row['timeStamp']);
-								$new_date = date_format($oldFormat,'F j, g:ia ');
-								echo $new_date ;
-							}
+						if($query3){
+                            $oldFormat = date_create($result3[3]['timeStamp']);
+                            $new_date = date_format($oldFormat,'F j, g:ia');
+                            echo $new_date; 
 						}
 					?></td><!--Dynamic Content-->
 						
@@ -580,15 +562,10 @@ include('SetConnect.php');
 						<td align=center>Chiller 4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
 
 						<td align=left><?php
-						
-						$sql="SELECT timeStamp from actStream where TID=5";
-						$result=mysqli_query($con,$sql);
-						if($result){
-							while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-							$oldFormat = date_create($row['timeStamp']);
-								$new_date = date_format($oldFormat,'F j, g:ia');
-								echo $new_date ;
-							}
+						if($result3){
+                            $oldFormat = date_create($result3[4]['timeStamp']);
+                            $new_date = date_format($oldFormat,'F j, g:ia');
+                            echo $new_date;
 						}
 					?></td><!--Dynamic Content-->
 						
@@ -987,12 +964,12 @@ include('SetConnect.php');
 							
 						</div>
 						<div style="background-image:url('<?php
-						if($result1){
-							if($row1['MO_B']==0)
+						if($query3){
+							if($result3[0]['MO']==0)
 								echo "images/Icons/Manual/Auto.png";
-							else if($row1['MO_B']==1)
+							else if($result3[0]['MO']==1)
 								echo "images/Icons/Manual/ON.png";
-							else if($row1['MO_B']==2)
+							else if($result3[0]['MO']==2)
 								echo "images/Icons/Manual/OFF.png";
 						}
 					?>'); 	background-repeat: no-repeat; min-height:100px; min-width:110px; font-size:10px; color:#FFFFFF; float:left;">
@@ -1053,12 +1030,12 @@ include('SetConnect.php');
 							
 						</div>
 						<div style="background-image:url('<?php
-						if($result1){
-							if($row1['MO_C1']==0)
+						if($query3){
+							if($result3[1]['MO']==0)
 								echo "images/Icons/Manual/Auto.png";
-							else if($row1['MO_C1']==1)
+							else if($result3[1]['MO']==1)
 								echo "images/Icons/Manual/ON.png";
-							else if($row1['MO_C1']==2)
+							else if($result3[1]['MO']==2)
 								echo "images/Icons/Manual/OFF.png";
 						}
 					?>'); 	background-repeat: no-repeat; min-height:100px; min-width:110px; font-size:10px; color:#FFFFFF; float:left;">
@@ -1119,12 +1096,12 @@ include('SetConnect.php');
 						</div>
 						<div style="background-image:url('<?php
 						
-						if($result1){
-							if($row1['MO_C2']==0)
+						if($query3){
+							if($result3[2]['MO']==0)
 								echo "images/Icons/Manual/Auto.png";
-							else if($row1['MO_C2']==1)
+							else if($result3[2]['MO']==1)
 								echo "images/Icons/Manual/ON.png";
-							else if($row1['MO_C2']==2)
+							else if($result3[2]['MO']==2)
 								echo "images/Icons/Manual/OFF.png";
 						}
 					?>'); 	background-repeat: no-repeat; min-height:100px; min-width:110px; font-size:10px; color:#FFFFFF; float:left;">
@@ -1185,12 +1162,12 @@ include('SetConnect.php');
 						</div>
                       <div style="background-image:url('<?php
 						
-						if($result1){
-							if($row1['MO_C3']==0)
+						if($query3){
+							if($result3[3]['MO']==0)
 								echo "images/Icons/Manual/Auto.png";
-							else if($row1['MO_C3']==1)
+							else if($result3[3]['MO']==1)
 								echo "images/Icons/Manual/ON.png";
-							else if($row1['MO_C3']==2)
+							else if($result3[3]['MO']==2)
 								echo "images/Icons/Manual/OFF.png";
 						}
 					?>'); 	background-repeat: no-repeat; min-height:100px; min-width:110px; font-size:10px; color:#FFFFFF; float:left;">
@@ -1251,12 +1228,12 @@ include('SetConnect.php');
 						</div>
                       <div style="background-image:url('<?php
 						
-						if($result1){
-							if($row1['MO_C4']==0)
+						if($query3){
+							if($result3[4]['MO']==0)
 								echo "images/Icons/Manual/Auto.png";
-							else if($row1['MO_C4']==1)
+							else if($result3[4]['MO']==1)
 								echo "images/Icons/Manual/ON.png";
-							else if($row1['MO_C4']==2)
+							else if($result3[4]['MO']==2)
 								echo "images/Icons/Manual/OFF.png";
 						}
 					?>'); 	background-repeat: no-repeat; min-height:100px; min-width:110px; font-size:10px; color:#FFFFFF; float:left;">
