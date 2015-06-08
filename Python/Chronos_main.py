@@ -13,6 +13,7 @@ from lxml import etree
 from logging.handlers import TimedRotatingFileHandler
 
 # Constants
+DEVICE_DIR = "/home/pi/fake_sys/"
 LOG_FILENAME = "/var/log/chronos.log"
 SYSTEMUP = "/var/www/chronosreal/systemUp.txt"
 FIRMWARE_UPGRADE = "/home/pi/Desktop/Chronos/firmwareUpgrade.py"
@@ -30,8 +31,19 @@ led_red = 22
 led_green = 23
 led_blue = 24
 # Temp sensors
-sensor_out_id = "28-00042d4367ff"
-sensor_in_id = "28-00042c648eff"
+try:
+    config_dir = os.path.dirname(os.path.realpath(__file__))
+    config_path = os.path.join(config_dir, "sensors.config")
+    with open(config_path) as sensors_config:
+        for line in sensors_config:
+            if "sensor_out_id" in line:
+                sensor_out_id = line.split()[1]
+            if "sensor_in_id" in line:
+                sensor_in_id = line.split()[1]
+except IOError as e:
+    sys.exit("Sensors config file not found.")
+# sensor_out_id = "28-00042d4367ff"
+# sensor_in_id = "28-00042c648eff"
 #sensor_out_id = '28-00000677d162'
 #sensor_in_id = '28-00000676e315'
 #Chr2 (production)
@@ -176,7 +188,6 @@ def read_temperature_sensors():
     error_T1 = 1
     error_T2 = 1
     water_out_temp = 00.00
-    DEVICE_DIR = "/home/pi/fake_sys/"
     for directory in os.listdir(DEVICE_DIR):
         if directory in (sensor_in_id, sensor_out_id):
             device_folder = os.path.join(DEVICE_DIR, directory)
@@ -343,7 +354,7 @@ def get_data_from_web(mode):
 
 def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
     "Calculate setpoint from windChill."
-    wind_chill = int(outside_temp)
+    wind_chill = int(round(outside_temp))
     try:
         with conn:
             cur = conn.cursor()
@@ -355,7 +366,7 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
                       LIMIT 5760""" % mode)
             cur.execute(sql)
             result = cur.fetchone()
-            wind_chill_avg = result[0]
+            wind_chill_avg = int(round(result[0]))
     except MySQLdb.Error as e:
         wind_chill_avg = 0
         root_logger.exception("Unable to get value from DB: %s" % e)
