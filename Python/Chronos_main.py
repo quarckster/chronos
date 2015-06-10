@@ -77,8 +77,7 @@ try:
                            db="Chronos")
 except MySQLdb.Error as e:
     root_logger.exception("Cannot connect to DB: %s" % e)
-    conn = None
-    destructor()
+    GPIO.cleanup()
     sys.exit(1)
 
 
@@ -399,7 +398,7 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
         except MySQLdb.Error as e:
             temperature_history_adjsutment = 0
             root_logger.exception("Setpoint error: %s" % e)
-    tha_setpoint = baseline_setpoint + temperature_history_adjsutment
+    tha_setpoint = baseline_setpoint - temperature_history_adjsutment
     effective_setpoint = tha_setpoint + parameterX
     # constrain effective setpoint
     try:
