@@ -3,6 +3,8 @@ $host  = $_SERVER['HTTP_HOST'];
 $uri   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 $extra = 'winter.php';
 $home='index.php';
+include('bstat.php');
+$bstat = parse_bstat_output();
                         include('SetConnect.php');
                         $sql="SELECT mode from mainTable order by LID desc limit 1";
                         $result=mysqli_query($con,$sql);
@@ -533,71 +535,31 @@ $home='index.php';
                 <tr>
                         <td width=170px align=left>System Supply Temp</td>
                         <td width=80px><?php
-                    $myFileMod =fopen("modbusData.txt","r") or die("Unable to open File");
-                    $members = array();
-                    while(!feof($myFileMod)){
-                        $members[]=fgets($myFileMod);
-                        
-                    }
-                        echo $members[0];
-                
-                    fclose($myFileMod);
+                        echo $bstat["system_supply_temp"];
                 ?> &deg;F</td><!--Dynamic Content-->
                         </tr>
                 <tr>
                         <td width=170px align=left>Outlet Temp</td>
                         <td width=80px><?php
-                    $myFileMod =fopen("modbusData.txt","r") or die("Unable to open File");
-                    $members = array();
-                    while(!feof($myFileMod)){
-                        $members[]=fgets($myFileMod);
-                        
-                    }
-                        echo $members[1];
-                
-                    fclose($myFileMod);
+                        echo $bstat["outlet_temp"];
                 ?> &deg;F</td><!--Dynamic Content-->
                         </tr>
                 <tr>
                         <td width=170px align=left>Inlet Temp</td>
                         <td width=80px><?php
-                    $myFileMod =fopen("modbusData.txt","r") or die("Unable to open File");
-                    $members = array();
-                    while(!feof($myFileMod)){
-                        $members[]=fgets($myFileMod);
-                        
-                    }
-                        echo $members[2];
-                
-                    fclose($myFileMod);
+                        echo $bstat["inlet_temp"];
                 ?> &deg;F</td><!--Dynamic Content-->
                         </tr>      
                         <tr>
                         <td width=170px align=left>Cascade Power</td>
                         <td width=80px><?php
-                    $myFileMod =fopen("modbusData.txt","r") or die("Unable to open File");
-                    $members = array();
-                    while(!feof($myFileMod)){
-                        $members[]=fgets($myFileMod);
-                        
-                    }
-                        echo $members[3];
-                
-                    fclose($myFileMod);
+                        echo $bstat["cascade_current_power"];
                 ?> %</td><!--Dynamic Content-->
                         </tr>
                         <tr>
                         <td align=left>Lead Firing Rate</td>
                         <td><?php
-                    $myFileMod =fopen("modbusData.txt","r") or die("Unable to open File");
-                    $members = array();
-                    while(!feof($myFileMod)){
-                        $members[]=fgets($myFileMod);
-                        
-                    }
-                        echo $members[4];
-                
-                    fclose($myFileMod);
+                        echo $bstat["lead_firing_rate"];
                 ?> %</td><!--Dynamic Content-->
                         </tr>
                         
@@ -712,29 +674,13 @@ $home='index.php';
                     ?>" style="z-index:-1; position:static;" />
           <p style="margin-top:-180px; color:#000000; font-size:15px;"><b>Cascade Fire</b><br/>
           <?php
-                    $myFileMod =fopen("modbusData.txt","r") or die("Unable to open File");
-                    $members = array();
-                    while(!feof($myFileMod)){
-                        $members[]=fgets($myFileMod);
-                        
-                    }
-                        echo $members[3];
-                
-                    fclose($myFileMod);
+                        echo $bstat["cascade_current_power"];
                 ?> %
              <br/>
              <br/>
              <b>Lead Fire</b><br/>
           <?php
-                    $myFileMod =fopen("modbusData.txt","r") or die("Unable to open File");
-                    $members = array();
-                    while(!feof($myFileMod)){
-                        $members[]=fgets($myFileMod);
-                        
-                    }
-                        echo $members[4];
-                
-                    fclose($myFileMod);
+                        echo $bstat["lead_firing_rate"];
                 ?> %
           </p>
           </td>
@@ -744,26 +690,10 @@ $home='index.php';
                         </table></div>
                 <div width=100px style="float:left;">
                 <br/><br/><br/><br/><br/><?php
-                    $myFileMod =fopen("modbusData.txt","r") or die("Unable to open File");
-                    $members = array();
-                    while(!feof($myFileMod)){
-                        $members[]=fgets($myFileMod);
-                        
-                    }
-                        echo $members[1];
-                
-                    fclose($myFileMod);
+                        echo $bstat["outlet_temp"];
                 ?> &deg;F    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           <?php
-                    $myFileMod =fopen("modbusData.txt","r") or die("Unable to open File");
-                    $members = array();
-                    while(!feof($myFileMod)){
-                        $members[]=fgets($myFileMod);
-                        
-                    }
-                        echo $members[0];
-                
-                    fclose($myFileMod);
+                        echo $bstat["system_supply_temp"];
                 ?> &deg;F
           <br/>
                 <img src="images/Icons/Boiler/arrow4.png" /><br/>
@@ -778,15 +708,7 @@ $home='index.php';
                         }
                     ?> &deg;F
              <br/><br/><br/><br/><br/><?php
-                    $myFileMod =fopen("modbusData.txt","r") or die("Unable to open File");
-                    $members = array();
-                    while(!feof($myFileMod)){
-                        $members[]=fgets($myFileMod);
-                        
-                    }
-                        echo $members[2];
-                
-                    fclose($myFileMod);
+                        echo $bstat["inlet_temp"];
                 ?> &deg;F &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br/>
                 <img src="images/Icons/Boiler/arrow3.png" /><br/>
                 <?php
