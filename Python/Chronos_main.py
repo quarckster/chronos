@@ -8,53 +8,32 @@ import urllib2
 import subprocess
 import signal
 import sys
-import RPi.GPIO as GPIO
+import serial
+from config_parser import cfg
 from lxml import etree
 from logging.handlers import TimedRotatingFileHandler
 
 # Constants
-DEVICE_DIR = "/home/pi/fake_sys/"
-LOG_FILENAME = "/var/log/chronos.log"
-SYSTEMUP = "/var/www/chronosreal/systemUp.txt"
-FIRMWARE_UPGRADE = "/home/pi/Desktop/Chronos/firmwareUpgrade.py"
-# Set GPIO pins
-boiler_pin = 20
+DEVICE_DIR = cfg.files.sys_devices_dir
+LOG_FILENAME = cfg.files.log_path
+SYSTEMUP = cfg.files.systemup_path
+FIRMWARE_UPGRADE = cfg.files.firmware_upgrade
+# Set relay numbers
+boiler_pin = cfg.relay.boiler
 chiller_pin = [0]*4
-chiller_pin[0] = 26
-chiller_pin[1] = 16
-chiller_pin[2] = 19
-chiller_pin[3] = 5
-valve1_pin = 6
-valve2_pin = 12
-led_breather = 22
-led_red = 22
-led_green = 23
-led_blue = 24
+chiller_pin[0] = cfg.relay.chiller1
+chiller_pin[1] = cfg.relay.chiller2
+chiller_pin[2] = cfg.relay.chiller3
+chiller_pin[3] = cfg.relay.chiller4
+valve1_pin = cfg.relay.valve1
+valve2_pin = cfg.relay.valve2
+led_breather = cfg.relay.led_breather
+led_red = cfg.relay.led_red
+led_green = cfg.relay.led_green
+led_blue = cfg.relay.led_blue
 # Temp sensors
-try:
-    config_dir = os.path.dirname(os.path.realpath(__file__))
-    config_path = os.path.join(config_dir, "sensors.config")
-    with open(config_path) as sensors_config:
-        for line in sensors_config:
-            if "sensor_out_id" in line:
-                sensor_out_id = line.split()[1]
-            if "sensor_in_id" in line:
-                sensor_in_id = line.split()[1]
-except IOError as e:
-    sys.exit("Sensors config file not found.")
-# sensor_out_id = "28-00042d4367ff"
-# sensor_in_id = "28-00042c648eff"
-#sensor_out_id = '28-00000677d162'
-#sensor_in_id = '28-00000676e315'
-#Chr2 (production)
-#sensor_out_id = '28-0000067841b0'
-#sensor_in_id = '28-00000677d509'
-
-
-# os.system('modprobe w1-gpio')
-# os.system('modprobe w1-therm')
-
-
+sensor_out_id = cfg.sensors.out_id 
+sensor_in_id = cfg.sensors.in_id
 
 # Configuring loggging
 log_formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s",
@@ -71,49 +50,22 @@ root_logger.addHandler(rotate_logs_handler)
 root_logger.info("Starting script")
 
 try:
-    conn = MySQLdb.connect(host="localhost",
-                           user="raspberry",
-                           passwd="estrrado",
-                           db="Chronos")
+    conn = MySQLdb.connect(host=cfg.db.host,
+                           user=cfg.db.user,
+                           passwd=cfg.db.password,
+                           db=cfg.db.name)
 except MySQLdb.Error as e:
     root_logger.exception("Cannot connect to DB: %s" % e)
-    GPIO.cleanup()
     sys.exit(1)
 
-
-def set_gpio_pins():
-    error_GPIO = 0
-    try:
-        # GPIO.setwarnings(False)
-        GPIO.cleanup()
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(boiler_pin, GPIO.OUT)
-        GPIO.setup(chiller_pin[0], GPIO.OUT)
-        GPIO.setup(chiller_pin[1], GPIO.OUT)
-        GPIO.setup(chiller_pin[2], GPIO.OUT)
-        GPIO.setup(chiller_pin[3], GPIO.OUT)
-        GPIO.setup(valve1_pin, GPIO.OUT)
-        GPIO.setup(valve2_pin, GPIO.OUT)
-        GPIO.output(boiler_pin, False)
-        GPIO.output(chiller_pin[0], False)
-        GPIO.output(chiller_pin[1], False)
-        GPIO.output(chiller_pin[2], False)
-        GPIO.output(chiller_pin[3], False)
-        GPIO.output(valve1_pin, False)
-        GPIO.output(valve2_pin, False)
-        GPIO.setup(led_red, GPIO.OUT)
-        GPIO.setup(led_green, GPIO.OUT)
-        GPIO.setup(led_blue, GPIO.OUT)
-        GPIO.output(led_red, False)
-        GPIO.output(led_green, False)
-        GPIO.output(led_blue, False)
-    except Exception as e:
-        error_GPIO = 1
-        GPIO.output(led_red, True)
-        time.sleep(0.7)
-        GPIO.output(led_red, False)
-        root_logger.exception("ErrorGPIO: %s" % e)
-    return error_GPIO
+# Check availability of the serial port
+try:
+    serPort = serial.Serial(cfg.serial.portname,
+                            cfg.serial.baudr,
+                            timeout=1)
+except serial.SerialException as e:
+    root_logger.exception("Serial port error: %s" % e)
+    sys.exit(1)
 
 
 def update_systemUp():
@@ -122,6 +74,12 @@ def update_systemUp():
             dataFile.write("ONLINE\n")
     except IOError as e:
         root_logger.exception("Can't write to systemUp.txt: %s" % e)
+
+
+def switch_relay(number, command):
+    with serPort:
+        serPort.write("relay %s %s\n\r" % (command, number))
+
 
 def manage_system(power_mode):
     "Check for shutdown, restart, etc."
@@ -133,8 +91,8 @@ def manage_system(power_mode):
         subprocess.call(["python", FIRMWARE_UPGRADE])
         time.sleep(10)
     elif power_mode == 7:
-        subprocess.call(
-            ["python", "/home/pi/Desktop/Chronos/Chronos_starter.py"])
+        subprocess.call(["python",
+                         "/home/pi/Desktop/Chronos/Chronos_starter.py"])
         time.sleep(10)
 
 
@@ -147,18 +105,18 @@ def check_mysql():
     except IOError as e:
         error_DB = 1
         root_logger.exception("Can't read mysql pid file: %s" % e)
-        GPIO.output(led_red, True)
+        switch_relay(led_red, "on")
         time.sleep(0.7)
-        GPIO.output(led_red, False)
+        switch_relay(led_red, "off")
     else:
         try:
             os.kill(pid, 0)
         except OSError:
             error_DB = 1
             root_logger.exception("MySQL is not running")
-            GPIO.output(led_red, True)
+            switch_relay(led_red, "on")
             time.sleep(0.7)
-            GPIO.output(led_red, False)
+            switch_relay(led_red, "off")
             destructor()
     return error_DB
 
@@ -203,9 +161,9 @@ def read_temperature_sensors():
                     temp_raw = content.readlines()
             except IOError as e:
                 root_logger.exception("Temp sensor error: %s" % e)
-                GPIO.output(led_red, True)
+                switch_relay(led_red, "on")
                 time.sleep(0.7)
-                GPIO.output(led_red, False)
+                switch_relay(led_red, "off")
                 try:
                     with conn:
                         cur = conn.cursor()
@@ -236,13 +194,13 @@ def blink_leds(water_out_temp, breather_count):
     else:
         led_breather = led_blue
     if breather_count == 0:
-        GPIO.output(led_breather, True)
+        switch_relay(led_breather, "on")
         time.sleep(0.1)
-        GPIO.output(led_breather, False)
+        switch_relay(led_breather, "off")
         time.sleep(0.1)
-        GPIO.output(led_breather, True)
+        switch_relay(led_breather, "on")
         time.sleep(0.1)
-        GPIO.output(led_breather, False)
+        switch_relay(led_breather, "off")
         time.sleep(0.1)
         breather_count += 1
     else:
@@ -285,9 +243,9 @@ def read_values_from_db():
         power_mode = 0
         CCT = 5  # Chiller Cascade Time
         root_logger.exception("Error fetching data from DB: %s" % e)
-        GPIO.output(led_red, True)
+        switch_relay(led_red, "on")
         time.sleep(0.7)
-        GPIO.output(led_red, False)
+        switch_relay(led_red, "off")
     return {"boiler_status": boiler_status,
             "chiller_status": chiller_status,
             "time_stamps": time_stamps,
@@ -310,9 +268,9 @@ def get_data_from_web(mode):
         root_logger.exception("""Unable to get data from website.
                               Reading previous value from DB.""")
         error_Web = 1
-        GPIO.output(led_red, True)
+        switch_relay(led_red, "on")
         time.sleep(0.7)
-        GPIO.output(led_red, False)
+        switch_relay(led_red, "off")
         try:
             with conn:
                 cur = conn.cursor()
@@ -436,25 +394,25 @@ def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_stat
                 and mode == 0
                 and return_temp <= (effective_setpoint - t1)):
             new_boiler_status = 1
-            GPIO.output(boiler_pin, True)
+            switch_relay(boiler_pin, "on")
             update_actStream_table(new_boiler_status, None, True)
         elif (new_boiler_status == 1
                 and mode == 0
                 and return_temp > (effective_setpoint + t1)):
             new_boiler_status = 0
-            GPIO.output(boiler_pin, False)
+            switch_relay(boiler_pin, "off")
             update_actStream_table(new_boiler_status, None, True)
         elif new_boiler_status == 1 and mode == 1:
             new_boiler_status = 0
-            GPIO.output(boiler_pin, False)
+            switch_relay(boiler_pin, "off")
             update_actStream_table(new_boiler_status, None, True)
     elif MO_B == 1 and new_boiler_status == 0:
         new_boiler_status = 1
-        GPIO.output(boiler_pin, True)
+        switch_relay(boiler_pin, "on")
         update_actStream_table(new_boiler_status, None, True)
     elif MO_B == 2 and new_boiler_status == 1:
         new_boiler_status = 0
-        GPIO.output(boiler_pin, False)
+        switch_relay(boiler_pin, "off")
         update_actStream_table(new_boiler_status, None, True)
     return new_boiler_status
 
@@ -480,7 +438,7 @@ def chillers_cascade_switcher(effective_setpoint, time_stamps, chiller_status,
             and mode == 1
             and turn_on_index is not None):
         new_chiller_status[turn_on_index] = 1
-        GPIO.output(chiller_pin[turn_on_index], 1)
+        switch_relay(chiller_pin[turn_on_index], "on")
         update_actStream_table(1, turn_on_index)
     # Turn off chillers
     elif (return_temp < (effective_setpoint - t1)
@@ -488,12 +446,12 @@ def chillers_cascade_switcher(effective_setpoint, time_stamps, chiller_status,
             and mode == 1
             and turn_off_index is not None):
         new_chiller_status[turn_off_index] = 0
-        GPIO.output(chiller_pin[turn_off_index], 0)
+        switch_relay(chiller_pin[turn_off_index], "off")
         update_actStream_table(0, turn_off_index)
     # Turn off chillers when winter
     elif mode == 0 and turn_off_index is not None:
         new_chiller_status[turn_off_index] = 0
-        GPIO.output(chiller_pin[turn_off_index], 0)
+        switch_relay(chiller_pin[turn_off_index], "off")
         update_actStream_table(0, turn_off_index)
     string = ", ".join([str(i) for i in new_chiller_status])
     root_logger.debug("Chillers: %s; time gap: %d" % (string, time_gap))
@@ -502,13 +460,12 @@ def chillers_cascade_switcher(effective_setpoint, time_stamps, chiller_status,
 
 def switch_valve(mode, valveStatus):
     if mode == 0 and valveStatus != mode:
-        GPIO.output(valve1_pin, True)
-        GPIO.output(valve2_pin, False)
+        switch_relay(valve1_pin, "on")
+        switch_relay(valve2_pin, "off")
     elif mode == 1 and valveStatus != mode:
-        GPIO.output(valve2_pin, True)
-        GPIO.output(valve1_pin, False)
+        switch_relay(valve2_pin, "on")
+        switch_relay(valve1_pin, "off")
     valveStatus = mode
-    # time.sleep(120)
     return valveStatus
 
 
@@ -572,7 +529,7 @@ def update_actStream_table(status, chiller_id, boiler=False):
         root_logger.exception("Error updating actStream table: %s" % e)
 
 
-def update_sysStatus(error_sensor, error_DB, error_Web, error_GPIO):
+def update_sysStatus(error_sensor, error_DB, error_Web):
     errData = [error_sensor[0], error_sensor[1], error_DB, error_Web, error_GPIO]
     try:
         with open("/var/www/sysStatus.txt", "w") as dataFile:
@@ -586,11 +543,9 @@ def update_sysStatus(error_sensor, error_DB, error_Web, error_GPIO):
             sql = ("""UPDATE errTable
                       SET err_T1=%s,
                           err_T2=%s,
-                          err_Web=%s,
-                          err_GPIO=%s""" % (error_sensor[0],
-                                            error_sensor[1],
-                                            error_Web,
-                                            error_GPIO))
+                          err_Web=%s""" % (error_sensor[0],
+                                           error_sensor[1],
+                                           error_Web))
             cur.execute(sql)
     except MySQLdb.Error as e:
         root_logger.exception("Error updating actStream table: %s" % e)            
@@ -606,19 +561,19 @@ def destructor():
     if conn:
         conn.commit()
         conn.close()
+    if serPort:
+        serPort.close()
     with open(SYSTEMUP, "w") as dataFile:
         dataFile.write("OFFLINE\n")
         root_logger.info("Chronos_main shutted down")
-    GPIO.cleanup()
 
 signal.signal(signal.SIGTERM, sigterm_handler)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     breather_count = 0
     valveStatus = 0
     timer = 0 
     update_systemUp()
-    error_GPIO = set_gpio_pins()
     try:
         while True:
             error_DB = check_mysql()

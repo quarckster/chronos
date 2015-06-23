@@ -1,0 +1,35 @@
+{
+	"serial": {
+		"baudr": 19200,
+		"portname": "/dev/ttyACM0"
+	},
+	"sensors": {
+		"out_id": "28-00042d4367ff",
+		"in_id": "28-00042c648eff"
+	},
+	"files": {
+		"sys_devices_dir": "/home/pi/fake_sys/",
+		"log_path": "/var/log/chronos.log",
+		"firmware_upgrade": "/home/pi/Desktop/Chronos/firmwareUpgrade.py",
+		"systemup_path": "/var/www/chronosreal/systemUp.txt"
+	},
+	"relay": {
+		"boiler": 0,
+		"chiller1": 1,
+		"chiller2": 2,
+		"chiller3": 3,
+		"chiller4": 4,
+		"valve1": 5,
+		"valve2": 6,
+		"led_breather": 7,
+		"led_red": 8,
+		"led_green": 9,
+		"led_blue": 10
+	},
+	"db": {
+		"host": "localhost",
+		"user": "raspberry",
+		"password": "estrrado",
+		"name": "Chronos"
+	}
+}

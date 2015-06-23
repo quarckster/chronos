@@ -18,7 +18,7 @@ function parse_bstat_output() {
              "outlet_temp" => $outlet_temp,
              "inlet_temp" => $inlet_temp,
              "flue_temp" => $flue_temp,
-             "  cascade_current_power" => $cascade_current_power,
+             "cascade_current_power" => $cascade_current_power,
              "lead_firing_rate" => $lead_firing_rate];
     return $data;
 }
