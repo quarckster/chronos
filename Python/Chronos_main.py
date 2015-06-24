@@ -58,16 +58,6 @@ except MySQLdb.Error as e:
     root_logger.exception("Cannot connect to DB: %s" % e)
     sys.exit(1)
 
-# Check availability of the serial port
-try:
-    serPort = serial.Serial(cfg.serial.portname,
-                            cfg.serial.baudr,
-                            timeout=1)
-except serial.SerialException as e:
-    root_logger.exception("Serial port error: %s" % e)
-    sys.exit(1)
-
-
 def update_systemUp():
     try:
         with open(SYSTEMUP, "w") as dataFile:
@@ -77,8 +67,15 @@ def update_systemUp():
 
 
 def switch_relay(number, command):
-    with serPort:
-        serPort.write("relay %s %s\n\r" % (command, number))
+    # Check availability of the serial port
+    try:
+        with serial.Serial(cfg.serial.portname,
+                           cfg.serial.baudr,
+                           timeout=1) as ser_port:
+            ser_port.write("relay %s %s\n\r" % (command, number))
+    except serial.SerialException as e:
+        root_logger.exception("Serial port error: %s" % e)
+        sys.exit(1)
 
 
 def manage_system(power_mode):
@@ -323,7 +320,10 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
                       LIMIT 5760""" % mode)
             cur.execute(sql)
             result = cur.fetchone()
-            wind_chill_avg = int(round(result[0]))
+            if result[0]:
+                wind_chill_avg = int(round(result[0]))
+            else:
+                wind_chill_avg = wind_chill
     except MySQLdb.Error as e:
         wind_chill_avg = 0
         root_logger.exception("Unable to get value from DB: %s" % e)
@@ -530,7 +530,7 @@ def update_actStream_table(status, chiller_id, boiler=False):
 
 
 def update_sysStatus(error_sensor, error_DB, error_Web):
-    errData = [error_sensor[0], error_sensor[1], error_DB, error_Web, error_GPIO]
+    errData = [error_sensor[0], error_sensor[1], error_DB, error_Web]
     try:
         with open("/var/www/sysStatus.txt", "w") as dataFile:
             for item in errData:
@@ -561,8 +561,6 @@ def destructor():
     if conn:
         conn.commit()
         conn.close()
-    if serPort:
-        serPort.close()
     with open(SYSTEMUP, "w") as dataFile:
         dataFile.write("OFFLINE\n")
         root_logger.info("Chronos_main shutted down")
@@ -618,8 +616,7 @@ if __name__ == "__main__":
                 timer = time.time()
             update_sysStatus(sensors_data["errors"],
                              error_DB,
-                             web_data["error_Web"],
-                             error_GPIO)
+                             web_data["error_Web"])
             # manage_system(db_data["power_mode"])
     except KeyboardInterrupt:
         destructor()
