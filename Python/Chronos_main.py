@@ -541,7 +541,7 @@ def destructor():
         conn.commit()
         conn.close()
     # turn off all relays
-    for i in vars(cfg.relays).values:
+    for i in vars(cfg.relays).values():
         switch_relay(i, "off")
     with open(SYSTEMUP, "w") as dataFile:
         dataFile.write("OFFLINE\n")
