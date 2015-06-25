@@ -1,4 +1,6 @@
 import json
+import os
+import sys
 
 class Struct(object):
 
@@ -12,5 +14,8 @@ class Struct(object):
         else:
             return Struct(value) if isinstance(value, dict) else value
 
-with open("chronos_config.json") as config:
+config_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
+config_path = os.path.join(config_dir, "chronos_config.json")
+
+with open(config_path) as config:
     cfg = json.load(config, object_hook=Struct)
