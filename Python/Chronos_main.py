@@ -102,18 +102,12 @@ def check_mysql():
     except IOError as e:
         error_DB = 1
         root_logger.exception("Can't read mysql pid file: %s" % e)
-        switch_relay(led_red, "on")
-        time.sleep(0.7)
-        switch_relay(led_red, "off")
     else:
         try:
             os.kill(pid, 0)
         except OSError:
             error_DB = 1
             root_logger.exception("MySQL is not running")
-            switch_relay(led_red, "on")
-            time.sleep(0.7)
-            switch_relay(led_red, "off")
             destructor()
     return error_DB
 
@@ -158,9 +152,6 @@ def read_temperature_sensors():
                     temp_raw = content.readlines()
             except IOError as e:
                 root_logger.exception("Temp sensor error: %s" % e)
-                switch_relay(led_red, "on")
-                time.sleep(0.7)
-                switch_relay(led_red, "off")
                 try:
                     with conn:
                         cur = conn.cursor()
@@ -240,9 +231,6 @@ def read_values_from_db():
         power_mode = 0
         CCT = 5  # Chiller Cascade Time
         root_logger.exception("Error fetching data from DB: %s" % e)
-        switch_relay(led_red, "on")
-        time.sleep(0.7)
-        switch_relay(led_red, "off")
     return {"boiler_status": boiler_status,
             "chiller_status": chiller_status,
             "time_stamps": time_stamps,
@@ -265,9 +253,6 @@ def get_data_from_web(mode):
         root_logger.exception("""Unable to get data from website.
                               Reading previous value from DB.""")
         error_Web = 1
-        switch_relay(led_red, "on")
-        time.sleep(0.7)
-        switch_relay(led_red, "off")
         try:
             with conn:
                 cur = conn.cursor()
@@ -551,21 +536,19 @@ def update_sysStatus(error_sensor, error_DB, error_Web):
         root_logger.exception("Error updating actStream table: %s" % e)            
 
 
-def sigterm_handler():
-    "When sysvinit sends the TERM signal, cleanup before exiting."
-    destructor()
-    sys.exit(0)
-
-
 def destructor():
     if conn:
         conn.commit()
         conn.close()
+    # turn off all relays
+    for i in vars(cfg.relays).values:
+        switch_relay(i, "off")
     with open(SYSTEMUP, "w") as dataFile:
         dataFile.write("OFFLINE\n")
         root_logger.info("Chronos_main shutted down")
+    sys.exit(0)
 
-signal.signal(signal.SIGTERM, sigterm_handler)
+signal.signal(signal.SIGTERM, destructor())
 
 if __name__ == "__main__":
     breather_count = 0
@@ -576,8 +559,8 @@ if __name__ == "__main__":
         while True:
             error_DB = check_mysql()
             sensors_data = read_temperature_sensors()
-            breather_count = blink_leds(sensors_data["water_out_temp"],
-                                        breather_count)
+            # breather_count = blink_leds(sensors_data["water_out_temp"],
+                                        # breather_count)
             db_data = read_values_from_db()
             web_data = get_data_from_web(db_data["mode"])
             setpoint = calculate_setpoint(web_data["outside_temp"],
