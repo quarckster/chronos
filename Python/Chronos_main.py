@@ -548,7 +548,7 @@ def destructor():
         root_logger.info("Chronos_main shutted down")
     sys.exit(0)
 
-signal.signal(signal.SIGTERM, destructor())
+signal.signal(signal.SIGTERM, destructor)
 
 if __name__ == "__main__":
     breather_count = 0
