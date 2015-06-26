@@ -541,8 +541,7 @@ def update_sysStatus(error_sensor, error_DB, error_Web):
 
 def destructor():
     if conn:
-        conn.commit()
-        conn.close()
+        conn.rollback()
     # turn off all relays
     for i in vars(cfg.relay).values():
         switch_relay(i, "off")
@@ -553,20 +552,22 @@ def destructor():
 
 signal.signal(signal.SIGTERM, destructor)
 
-def init():
+def initialize_chronos_state():
     relays = [cfg.relay.boiler,
               cfg.relay.chiller1,
               cfg.relay.chiller2,
               cfg.relay.chiller3,
               cfg.relay.chiller4]
     db_data = read_values_from_db()
-    relays_statuses = db_data["boiler_status"].append(db_data["chiller_status"])
-    relays_mo_statuses = db_data["MO_B"].append(db_data["MO_C"])
-    for relay,
-        relay_status,
-        relay_mo_status in zip(relays,
-                               relays_statuses,
-                               relays_mo_statuses):
+    relays_statuses = []
+    relays_statuses.append(db_data["boiler_status"])
+    relays_statuses.extend(db_data["chiller_status"])
+    relays_mo_statuses = []
+    relays_mo_statuses.append(db_data["MO_B"])
+    relays_mo_statuses.extend(db_data["MO_C"])
+    for relay, relay_status, relay_mo_status in zip(relays,
+                                                    relays_statuses,
+                                                    relays_mo_statuses):
         if relay_mo_status == 1:
             switch_relay(relay, "on")
         elif relay_mo_status == 2:
@@ -579,7 +580,7 @@ if __name__ == "__main__":
     valveStatus = 0
     timer = 0 
     update_systemUp()
-    init()
+    initialize_chronos_state()
     try:
         while True:
             error_DB = check_mysql()
