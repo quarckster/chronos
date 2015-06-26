@@ -27,7 +27,6 @@ chiller_pin[2] = cfg.relay.chiller3
 chiller_pin[3] = cfg.relay.chiller4
 valve1_pin = cfg.relay.valve1
 valve2_pin = cfg.relay.valve2
-led_breather = cfg.relay.led_breather
 led_red = cfg.relay.led_red
 led_green = cfg.relay.led_green
 led_blue = cfg.relay.led_blue
@@ -67,6 +66,10 @@ def update_systemUp():
 
 
 def switch_relay(number, command):
+    if command in [1, True]:
+        command = "on"
+    elif command in [0, False]:
+        command = "off"
     # Check availability of the serial port
     try:
         with serial.Serial(cfg.serial.portname,
@@ -550,11 +553,33 @@ def destructor():
 
 signal.signal(signal.SIGTERM, destructor)
 
+def init():
+    relays = [cfg.relay.boiler,
+              cfg.relay.chiller1,
+              cfg.relay.chiller2,
+              cfg.relay.chiller3,
+              cfg.relay.chiller4]
+    db_data = read_values_from_db()
+    relays_statuses = db_data["boiler_status"].append(db_data["chiller_status"])
+    relays_mo_statuses = db_data["MO_B"].append(db_data["MO_C"])
+    for relay,
+        relay_status,
+        relay_mo_status in zip(relays,
+                               relays_statuses,
+                               relays_mo_statuses):
+        if relay_mo_status == 1:
+            switch_relay(relay, "on")
+        elif relay_mo_status == 2:
+            switch_relay(relay, "off")
+        elif relay_mo_status == 0:
+            switch_relay(relay, relay_status)
+
 if __name__ == "__main__":
     breather_count = 0
     valveStatus = 0
     timer = 0 
     update_systemUp()
+    init()
     try:
         while True:
             error_DB = check_mysql()
@@ -603,3 +628,5 @@ if __name__ == "__main__":
             # manage_system(db_data["power_mode"])
     except KeyboardInterrupt:
         destructor()
+    except Exception as e:
+        root_logger.exception(e)
