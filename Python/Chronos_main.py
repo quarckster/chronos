@@ -539,7 +539,7 @@ def update_sysStatus(error_sensor, error_DB, error_Web):
         root_logger.exception("Error updating actStream table: %s" % e)            
 
 
-def destructor():
+def destructor(signum=None, frame=None):
     if conn:
         conn.rollback()
     # turn off all relays
