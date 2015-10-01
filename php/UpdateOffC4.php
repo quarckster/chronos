@@ -4,5 +4,5 @@ include('SetConnect.php');
 include('manage_relay.php');
 $sql="UPDATE actStream SET MO=2, status=0 WHERE TID=5";
 $result=mysqli_query($con,$sql);
-manage_relay(4, "off");
+manage_relay("chiller4", "off");
 ?>

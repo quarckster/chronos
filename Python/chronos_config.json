@@ -15,16 +15,15 @@
 	},
 	"relay": {
 		"boiler": 0,
-		"chiller1": 1,
-		"chiller2": 2,
-		"chiller3": 3,
-		"chiller4": 4,
+		"chiller1": 4,
+		"chiller2": 3,
+		"chiller3": 2,
+		"chiller4": 1,
 		"valve1": 5,
 		"valve2": 6,
-		"led_breather": 7,
-		"led_red": 8,
-		"led_green": 9,
-		"led_blue": 10
+		"led_red": 7,
+		"led_green": 8,
+		"led_blue": 9
 	},
 	"db": {
 		"host": "localhost",
