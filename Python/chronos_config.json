@@ -9,7 +9,7 @@
 	},
 	"files": {
 		"sys_devices_dir": "/home/pi/fake_sys/",
-		"log_path": "/var/log/chronos.log",
+		"log_path": "/tmp/chronos.log",
 		"firmware_upgrade": "/home/pi/Desktop/Chronos/firmwareUpgrade.py",
 		"systemup_path": "/var/www/chronosreal/systemUp.txt"
 	},
