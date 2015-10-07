@@ -1,22 +1,10 @@
 <?php
-$host  = $_SERVER['HTTP_HOST'];
-$uri   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
-$extra = 'winter.php';
-$home='index.php';
 include('bstat.php');
 $bstat = parse_bstat_output();
-                        include('SetConnect.php');
-                        $sql="SELECT mode from mainTable order by LID desc limit 1";
-                        $result=mysqli_query($con,$sql);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            if($row['mode']==1){
-                                header("Location: http://$host$uri/$home");
-                                                          }
-                            
-                            }
-                        }
-                    ?>
+include('SetConnect.php');
+$sql = "SELECT mode from mainTable order by LID desc limit 1";
+$result = mysqli_query($con,$sql);
+?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -26,7 +14,6 @@ $bstat = parse_bstat_output();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="images/Icons/Logo.png">
     <title>Chronos : Home Page</title>
-    
     <!-- Bootstrap -->
     <script src="amcharts/amcharts.js" type="text/javascript"></script>
     <script src="amcharts/serial.js" type="text/javascript"></script>   
@@ -35,27 +22,27 @@ $bstat = parse_bstat_output();
         setInterval("my_function();",1700);
         function my_function()
         {
-            $("#updateSetpoint").load("index.php #inside");
+            $("#updateSetpoint").load("winter.php #inside");
         }
         setInterval("my_functionImage();",1800);
         function my_functionImage()
         {
-            $("#updateImage").load("index.php #insideImage");
+            $("#updateImage").load("winter.php #insideImage");
         }
         setInterval("my_functionInterface();",1900);
         function my_functionInterface()
         {
-            $("#updateInterface").load("index.php #insideInterface");
+            $("#updateInterface").load("winter.php #insideInterface");
         }
         setInterval("my_functionSetpoint();",2500);
         function my_functionSetpoint()
         {
-            $("#updateSetpointtwo").load("index.php #insidetwo");
+            $("#updateSetpointtwo").load("winter.php #insidetwo");
         }
         setInterval("my_functionSetpointTwo();",6100);
         function my_functionSetpointTwo()
         {
-            $("#updateSetpointThree").load("index.php #insideThree");
+            $("#updateSetpointThree").load("winter.php #insideThree");
         }
    $(function () { 
     $("[data-toggle='tooltip']").tooltip(); 
@@ -505,7 +492,8 @@ $bstat = parse_bstat_output();
                         $result=mysqli_query($con,$sql);
                         if($result){
                             while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            echo $row['outsideTemp']; 
+                                $outside_temp = $row['outsideTemp'];
+                                echo $row['outsideTemp']; 
                             }
                         }
                     ?> &deg;F</td></tr>
@@ -514,15 +502,25 @@ $bstat = parse_bstat_output();
              <td>Avg Wind Chill (96 hrs)&nbsp;&nbsp;&nbsp;&nbsp; </td>
                     <td>
                 <?php
-                    $myFileWC =fopen("/home/pi/Desktop/Chronos/windChillAvg.txt","r") or die("Unable to open File");
-                    $members = array();
-                    while(!feof($myFileWC)){
-                        $members[]=fgets($myFileWC);
-                        
+                    $sql = "SELECT AVG(outsideTemp) FROM mainTable WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR) AND mode = 1 ORDER BY LID DESC LIMIT 5760";
+                    $result=mysqli_query($con,$sql);
+                    $row = mysqli_fetch_array($result,MYSQLI_NUM);
+                    if ($row['outsideTemp']) {
+                        $wind_chill_avg = round($row['outsideTemp']);
                     }
-                        echo $members[0];
+                    else {
+                        $wind_chill_avg = $outside_temp;
+                    }
+                    echo $wind_chill_avg;
+                    // $myFileWC =fopen("/home/pi/Desktop/Chronos/windChillAvg.txt","r") or die("Unable to open File");
+                    // $members = array();
+                    // while(!feof($myFileWC)){
+                    //     $members[]=fgets($myFileWC);
+                        
+                    // }
+                    //     echo $members[0];
                 
-                    fclose($myFileWC);
+                    // fclose($myFileWC);
                 ?> &deg;F</td>
           </tr>
           </table></h5> 
