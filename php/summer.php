@@ -1,7 +1,17 @@
 <?php
+$host  = $_SERVER['HTTP_HOST'];
+$uri   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+$extra = 'winter.php';
+$home = 'summer.php';
 include('SetConnect.php');
-$sql1 = "SELECT * from mainTable order by LID desc limit 1";
-$result1 = mysqli_query($con, $sql1);
+$sql1="SELECT * from mainTable order by LID desc limit 1";
+$result1=mysqli_query($con,$sql1);
+if($result1){
+  $row1=mysqli_fetch_array($result1,MYSQLI_ASSOC);
+  if($row1['mode'] == 0) {
+    header("Location: http://$host$uri/$extra");
+  }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -383,22 +393,15 @@ $result1 = mysqli_query($con, $sql1);
 				<div class="col-md-3" style="text-align:center; color:#FFFFFF; background-color:#1E3839; padding:10px 10px;">
 					<h4><b>CHRONOS</b></h4>
 					<h5>SYSTEM - <?php
-					$myFileSys = fopen("/var/run/chronos.pid","r");
-                    if !$myFileSys {
-                        echo "OFFLINE";
-                    } else {
-                        $members = array();
-                        while(!feof($myFileSys)){
-                            $members[]=fgets($myFileSys);   
-                        }
-                        $chronos_pid = $members[0];
-                        if posix_kill($chronos_pid, 0) {
-                            echo "ONLINE";
-                        } else {
-                            echo "OFFLINE";
-                        }
-                        fclose($myFileSys);
-                    }
+					$myFileSys =fopen("systemUp.txt","r") or die("Unable to open File");
+					$members = array();
+					while(!feof($myFileSys)){
+						$members[]=fgets($myFileSys);
+						
+					}
+						echo $members[0];
+				
+					fclose($myFileSys);
 				?></h5><!--Dynamic Content-->
 				</div>
 				<div class="col-md-6" style="text-align:center; color:#FFFFFF;">

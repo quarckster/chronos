@@ -1,9 +1,19 @@
 <?php
+$host  = $_SERVER['HTTP_HOST'];
+$uri   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+$extra = 'summer.php';
+$home = 'winter.php';
+include('SetConnect.php');
+$sql1="SELECT * from mainTable order by LID desc limit 1";
+$result1=mysqli_query($con,$sql1);
+if($result1){
+  $row1=mysqli_fetch_array($result1,MYSQLI_ASSOC);
+  if($row1['mode'] == 1) {
+    header("Location: http://$host$uri/$extra");
+  }
+}
 include('bstat.php');
 $bstat = parse_bstat_output();
-include('SetConnect.php');
-$sql = "SELECT mode from mainTable order by LID desc limit 1";
-$result = mysqli_query($con,$sql);
 ?>
 <!DOCTYPE html>
 <html lang="en">
