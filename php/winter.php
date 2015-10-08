@@ -791,15 +791,21 @@ $bstat = parse_bstat_output();
            </tr><tr> 
                     <td align=left>Effective Setpoint</td>
           <td>  <?php
-                    $myFileSP =fopen("/usr/local/bin/sp.txt","r") or die("Unable to open File");
-                    $members = array();
-                    while(!feof($myFileSP)){
-                        $members[]=fgets($myFileSP);
-                        
+                    $sql4 = "SELECT * FROM setpoints";
+                    $result4 = mysqli_query($con, $sql4);
+                    if($result4){
+                        $row4 = mysqli_fetch_array($result4, MYSQLI_ASSOC);
+                        echo $row4['sp'];
                     }
-                        echo $members[0];
+                    // $myFileSP =fopen("/usr/local/bin/sp.txt","r") or die("Unable to open File");
+                    // $members = array();
+                    // while(!feof($myFileSP)){
+                    //     $members[]=fgets($myFileSP);
+                        
+                    // }
+                    //     echo $members[0];
                 
-                    fclose($myFileSP);
+                    // fclose($myFileSP);
                 ?>&deg;F </small></td>
         </tr>
         

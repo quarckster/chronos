@@ -348,28 +348,44 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
     effective_setpoint = tha_setpoint + parameterX
     # constrain effective setpoint
     try:
-        with open("/usr/local/bin/spMin.txt") as spMinFile:
-            buf = spMinFile.readline()
-            sp_min = float(buf)
-    except IOError as e:
+        # with open("/usr/local/bin/spMin.txt") as spMinFile:
+        #     buf = spMinFile.readline()
+        #     sp_min = float(buf)
+        with conn:
+            cur = conn.cursor()
+            sql = "SELECT spMin FROM setpoints"
+            cur.execute(sql)
+            results = cur.fetchone()
+            sp_min =  results[0]
+    except MySQLdb.Error as e:
         sp_min = 40.00
-        root_logger.exception("Unable to open spMin.txt to read: %s" % e)
+        root_logger.exception("Unable to read spMin: %s" % e)
     try:
-        with open("/usr/local/bin/spMax.txt") as spMaxFile:
-            buf = spMaxFile.readline()
-            sp_max = float(buf)
-    except IOError as e:
+        # with open("/usr/local/bin/spMax.txt") as spMaxFile:
+        #     buf = spMaxFile.readline()
+        #     sp_max = float(buf)
+        with conn:
+            cur = conn.cursor()
+            sql = "SELECT spMax FROM setpoints"
+            cur.execute(sql)
+            results = cur.fetchone()
+            sp_max =  results[0]
+    except MySQLdb.Error as e:
         sp_max = 100.00
-        root_logger.exception("Unable to open spMax.txt to read: %s" % e)
+        root_logger.exception("Unable to read spMax: %s" % e)
     if effective_setpoint > sp_max:
         effective_setpoint = sp_max
     elif effective_setpoint < sp_min:
         effective_setpoint = sp_min
     try:
-        with open("/usr/local/bin/sp.txt", "w") as dataFile:
-            dataFile.write(str(effective_setpoint))
-    except IOError as e:
-        root_logger.exception("Error opening sp.txt: %s" % e)
+        with conn:
+            cur = conn.cursor()
+            sql = "UPDATE setpoints SET sp=%s" % effective_setpoint
+            cur.execute(sql)
+        # with open("/usr/local/bin/sp.txt", "w") as dataFile:
+        #     dataFile.write(str(effective_setpoint))
+    except MySQLdb.Error as e:
+        root_logger.exception("Unable to update sp: %s" % e)
     return {"effective_setpoint": effective_setpoint,
             "tha_setpoint": tha_setpoint,
             "wind_chill_avg": wind_chill_avg}
