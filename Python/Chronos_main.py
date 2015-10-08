@@ -348,9 +348,6 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
     effective_setpoint = tha_setpoint + parameterX
     # constrain effective setpoint
     try:
-        # with open("/usr/local/bin/spMin.txt") as spMinFile:
-        #     buf = spMinFile.readline()
-        #     sp_min = float(buf)
         with conn:
             cur = conn.cursor()
             sql = "SELECT spMin FROM setpoints"
@@ -361,9 +358,6 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
         sp_min = 40.00
         root_logger.exception("Unable to read spMin: %s" % e)
     try:
-        # with open("/usr/local/bin/spMax.txt") as spMaxFile:
-        #     buf = spMaxFile.readline()
-        #     sp_max = float(buf)
         with conn:
             cur = conn.cursor()
             sql = "SELECT spMax FROM setpoints"
@@ -382,8 +376,6 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
             cur = conn.cursor()
             sql = "UPDATE setpoints SET sp=%s" % effective_setpoint
             cur.execute(sql)
-        # with open("/usr/local/bin/sp.txt", "w") as dataFile:
-        #     dataFile.write(str(effective_setpoint))
     except MySQLdb.Error as e:
         root_logger.exception("Unable to update sp: %s" % e)
     return {"effective_setpoint": effective_setpoint,
@@ -418,6 +410,7 @@ def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_stat
         new_boiler_status = 0
         switch_relay(boiler_pin, "off")
         update_actStream_table(new_boiler_status, None, True)
+    root_logger.debug("Boiler: %s" % new_boiler_status)
     return new_boiler_status
 
 def find_chiller_index_to_switch(time_stamps, MO_C, chiller_status, status):
