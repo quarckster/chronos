@@ -1,16 +1,16 @@
 <?php
-$host  = $_SERVER['HTTP_HOST'];
-$uri   = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+$host = $_SERVER['HTTP_HOST'];
+$uri = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 $extra = 'summer.php';
 $home = 'winter.php';
 include('SetConnect.php');
-$sql1="SELECT * from mainTable order by LID desc limit 1";
-$result1=mysqli_query($con,$sql1);
+$sql1 = "SELECT * from mainTable order by LID desc limit 1";
+$result1 = mysqli_query($con,$sql1);
 if($result1){
-  $row1=mysqli_fetch_array($result1,MYSQLI_ASSOC);
-  if($row1['mode'] == 1) {
-    header("Location: http://$host$uri/$extra");
-  }
+  $row1 = mysqli_fetch_array($result1,MYSQLI_ASSOC);
+  // if($row1['mode'] == 1) {
+  //   header("Location: http://$host$uri/$extra");
+  // }
 }
 include('bstat.php');
 $bstat = parse_bstat_output();
@@ -444,15 +444,12 @@ $bstat = parse_bstat_output();
                         <div style="min-width:80px; font-size:10px; color:#FFFFFF; float:left; text-align=center;">
                         <img src="<?php
                         
-                        $sql="SELECT mode from mainTable order by LID desc limit 1";
-                        $result=mysqli_query($con,$sql);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            if($row['mode']==0)
+                        if($result1){
+                            if($row1['mode'] == 0 or $row1['mode'] == 2) {
                                 echo "images/Icons/WinterSummer/WOn.png";
-                            else if($row['mode']==1)
+                            }
+                            else if($row1['mode'] == 1 or $row1['mode'] == 3){
                                 echo "images/Icons/WinterSummer/WOff.png";
-                            
                             }
                         }
                     ?>" /><br/><a href="updateModeOn.php" font-size:10px;">Winter</a>
@@ -460,16 +457,12 @@ $bstat = parse_bstat_output();
                     
                     <div style="min-width:80px; font-size:10px; color:"#FFFFFF"; float:"left"; text-align="center";">
                         <img src="<?php
-                        
-                        $sql="SELECT mode from mainTable order by LID desc limit 1";
-                        $result=mysqli_query($con,$sql);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            if($row['mode']==0)
+                        if($result1){
+                            if($row1['mode'] == 0 or $row1['mode'] == 2){
                                 echo "images/Icons/WinterSummer/SOff.png";
-                            else if($row['mode']==1)
+                            }
+                            else if($row1['mode'] == 1 or $row1['mode'] == 3){
                                 echo "images/Icons/WinterSummer/SOn.png";
-                            
                             }
                         }
                     ?>" /><br/><a href="updateModeOff.php" style="color:#FFFFFF; font-size:10px;">Summer</a>
@@ -611,16 +604,11 @@ $bstat = parse_bstat_output();
                 </div>
                 <!-- <div id=Just data-toggle="tooltip" data-placement="down" data-original-title="<?php
                         
-                        $sql="SELECT mode from mainTable order by LID desc limit 1";
-                        $result=mysqli_query($con,$sql);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            if($row['mode']==0)
+                        if($result1){
+                            if($row1['mode'] == 0 or $row1['mode'] == 2)
                                 echo "Effective Setpoint = Dynamic Setpoint + Boiler Offset";
-                            else if($row['mode']==1)
+                            else if($row1['mode'] == 1 or $row1['mode'] == 3)
                                 echo "Effective Setpoint = Dynamic Setpoint + Chiller1 Offset";
-                            
-                            }
                         }
                     ?>" style="position:absolute; z-index:100; right:180px; top:270px; min-height:40px; min-width:60px;">
             

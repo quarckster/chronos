@@ -1,8 +1,3 @@
-<?php
-include('SetConnect.php');
-$sql="UPDATE mainTable Set mode=0 ORDER BY LID DESC LIMIT 1";
-$result=mysqli_query($con,$sql);
-?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -65,15 +60,25 @@ $result=mysqli_query($con,$sql);
             <div id="CountDownTimer" data-timer="120" style="width: 1000px; height: 250px;"></div>
         </div>
         <script>
+            function makeAjaxRequest(mode) {
+                $.ajax({
+                   type: "GET",
+                   url: "switch_mode.php?mode=" + mode
+                });
+            }
+            makeAjaxRequest(2);
             $("#CountDownTimer").TimeCircles({ time: { Days: { show: false }, Hours: { show: false } },
                              animation: "ticks",
                              count_past_zero: false
             })
             .addListener(function(unit, value, total) {
-            if(total <= 0) {
-                window.location.replace("winter.php");
-            }
-        });
+                if(total <= 1) {
+                    makeAjaxRequest(0);
+                }
+                if(total <= 0) {
+                    window.location.replace("winter.php");
+                }
+            });
         </script>       
     </body>
 </html>

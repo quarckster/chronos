@@ -223,14 +223,20 @@ def read_values_from_db():
             time_stamps = [result2[1][2], result2[2][2], result2[3][2], result2[4][2]]
             # power_mode = result[19]
     except MySQLdb.Error as e:
-        boiler_status = 0  # ON = 1, OFF = 0
+        # ON = 1, OFF = 0
+        boiler_status = 0
         chiller_status = [0]*4
         setpoint2 = 00.00
         parameterX = 0
         t1 = 0
-        MO_B = 0  # Manual overrides. AUTO = 0, ON = 1, OFF = 2
+        # Manual overrides. AUTO = 0, ON = 1, OFF = 2
+        MO_B = 0
         MO_C = [0]*4
-        mode = 0  # Winter/Summer mode selector (0 -> Winter, 1 -> Summer)
+        # Winter/Summer mode selector (0 -> Winter, 1 -> Summer)
+        # Also we need some intermediate modes when valve is switching
+        # Let mode will be 2 when summer to winter switching
+        # and mode will be 3 when winter to summer
+        mode = 0
         power_mode = 0
         CCT = 5  # Chiller Cascade Time
         root_logger.exception("Error fetching data from DB: %s" % e)
@@ -276,11 +282,11 @@ def get_data_from_web(mode):
         html = content.read()
         tree = etree.HTML(html)
         # Wind chill
-        if mode == 0:
+        if mode in (0, 2):
             node = tree.xpath(
                 "/html/body/table/tr[10]/td[2]/font/strong/font/small/text()")
         # Temperature
-        elif mode == 1:
+        elif mode in (1, 3):
             node = tree.xpath(
                 "/html/body/table/tr[3]/td[2]/font/strong/small/font/text()")
         outTemp = node[0].split(u"\xb0F")[0]
@@ -300,12 +306,15 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
     try:
         with conn:
             cur = conn.cursor()
+            # It needs for correct calculation setpoint when
+            # valve is switching
+            mode_map = {0: 0, 1: 1, 2: 0, 3: 1}
             sql = ("""SELECT AVG(outsideTemp)
                       FROM mainTable
                       WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR)
                       AND mode = %s
                       ORDER BY LID DESC
-                      LIMIT 5760""" % mode)
+                      LIMIT 5760""" % mode_map[mode])
             cur.execute(sql)
             result = cur.fetchone()
             if result[0]:
@@ -398,7 +407,7 @@ def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_stat
             new_boiler_status = 0
             switch_relay(boiler_pin, "off")
             update_actStream_table(new_boiler_status, None, True)
-        elif new_boiler_status == 1 and mode == 1:
+        elif new_boiler_status == 1 and mode in (1, 3):
             new_boiler_status = 0
             switch_relay(boiler_pin, "off")
             update_actStream_table(new_boiler_status, None, True)
@@ -410,7 +419,7 @@ def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_stat
         new_boiler_status = 0
         switch_relay(boiler_pin, "off")
         update_actStream_table(new_boiler_status, None, True)
-    root_logger.debug("Boiler: %s" % new_boiler_status)
+    root_logger.debug("Boiler: %s; mode: %s" % (new_boiler_status, mode))
     return new_boiler_status
 
 def find_chiller_index_to_switch(time_stamps, MO_C, chiller_status, status):
@@ -445,13 +454,13 @@ def chillers_cascade_switcher(effective_setpoint, time_stamps, chiller_status,
         new_chiller_status[turn_off_index] = 0
         switch_relay(chiller_pin[turn_off_index], "off")
         update_actStream_table(0, turn_off_index)
-    # Turn off chillers when winter
-    elif mode == 0 and turn_off_index is not None:
+    # Turn off chillers when winter or valve is switching
+    elif mode in (0, 2) and turn_off_index is not None:
         new_chiller_status[turn_off_index] = 0
         switch_relay(chiller_pin[turn_off_index], "off")
         update_actStream_table(0, turn_off_index)
     string = ", ".join([str(i) for i in new_chiller_status])
-    root_logger.debug("Chillers: %s; time gap: %d" % (string, time_gap))
+    root_logger.debug("Chillers: %s; time gap: %d; mode: %s" % (string, time_gap, mode))
     return new_chiller_status
 
 
@@ -460,8 +469,8 @@ def switch_valve(mode, valveStatus):
         switch_relay(valve1_pin, "on")
         switch_relay(valve2_pin, "off")
     elif mode == 1 and valveStatus != mode:
-        switch_relay(valve2_pin, "on")
         switch_relay(valve1_pin, "off")
+        switch_relay(valve2_pin, "on")
     valveStatus = mode
     return valveStatus
 
