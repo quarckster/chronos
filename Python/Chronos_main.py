@@ -12,6 +12,7 @@ import serial
 from config_parser import cfg
 from lxml import etree
 from logging.handlers import TimedRotatingFileHandler
+from pymodbus.client.sync import ModbusSerialClient as ModbusClient
 
 # Constants
 DEVICE_DIR = cfg.files.sys_devices_dir
@@ -534,6 +535,47 @@ def update_actStream_table(status, chiller_id, boiler=False):
     except MySQLdb.Error as e:
         root_logger.exception("Error updating actStream table: %s" % e)
 
+def get_boiler_stats():
+    client = ModbusClient(method="rtu",
+                          baudrate=9600,
+                          parity="E",
+                          port="/dev/ttyUSB0",
+                          timeout=1)
+    client.connect()
+    c_to_f = lambda t: round(((9.0/5.0)*t + 32.0), 1)
+    hregs = client.read_holding_registers(0, 7, unit=1)
+    iregs = client.read_input_registers(3, 9, unit=1)
+    try:
+        boiler_stats = {"system_supply_temp": c_to_f(hregs.getRegister(6)/10.0),
+                        "outlet_temp": c_to_f(iregs.getRegister(5)/10.0),
+                        "inlet_temp": c_to_f(iregs.getRegister(6)/10.0),
+                        "flue_temp": c_to_f(iregs.getRegister(7)/10.0),
+                        "cascade_current_power": float(iregs.getRegister(3)),
+                        "lead_firing_rate": float(iregs.getRegister(8))}
+    except AttributeError, IndexError:
+        boiler_stats = False
+    return boiler_stats
+
+def update_boilerStats_table(system_supply_temp, outlet_temp, inlet_temp,
+                             flue_temp, cascade_current_power, lead_firing_rate):
+    try:
+        with conn:
+            cur = conn.cursor()
+            sql = ("""UPDATE boilerStats
+                      SET system_supply_temp=%s,
+                          outlet_temp=%s,
+                          inlet_temp=%s,
+                          flue_temp=%s,
+                          cascade_current_power=%s,
+                          lead_firing_rate=%s""" % (system_supply_temp,
+                                                    outlet_temp,
+                                                    inlet_temp,
+                                                    flue_temp,
+                                                    cascade_current_power,
+                                                    lead_firing_rate))
+            cur.execute(sql)
+    except MySQLdb.Error as e:
+        root_logger.exception("Error updating boilerStats table: %s" % e)     
 
 def update_sysStatus(error_sensor, error_DB, error_Web):
     errData = [error_sensor[0], error_sensor[1], error_DB, error_Web]
@@ -625,6 +667,7 @@ if __name__ == "__main__":
                                                        db_data["MO_C"],
                                                        db_data["CCT"],
                                                        db_data["mode"])
+            boiler_stats = get_boiler_stats()
             valveStatus = switch_valve(db_data["mode"], valveStatus)
             # Update db every minute
             if time.time() - timer >= 60:
@@ -640,6 +683,13 @@ if __name__ == "__main__":
                           setpoint["tha_setpoint"],
                           web_data["windSpeed"],
                           setpoint["wind_chill_avg"])
+                if boiler_stats:
+                    update_boilerStats_table(boiler_stats["system_supply_temp"],
+                                             boiler_stats["outlet_temp"],
+                                             boiler_stats["inlet_temp"],
+                                             boiler_stats["flue_temp"],
+                                             boiler_stats["cascade_current_power"],
+                                             boiler_stats["lead_firing_rate"])
                 timer = time.time()
             update_sysStatus(sensors_data["errors"],
                              error_DB,
