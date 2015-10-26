@@ -395,7 +395,14 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
 
 def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_status):
     new_boiler_status = boiler_status
-    if MO_B == 0:
+    if mode in (2, 3):
+        new_boiler_status = 0
+        switch_relay(boiler_pin, "off")
+        # when the user switches between summer/winter modes,
+        # all five devices are switched to the manual "off" state
+        # and stay off until the user turns them back to "on" or "auto".
+        update_actStream_table(new_boiler_status, None, True, MO=2)
+    elif MO_B == 0:
         if (new_boiler_status == 0
                 and mode == 0
                 and return_temp <= (effective_setpoint - t1)):
@@ -405,10 +412,6 @@ def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_stat
         elif (new_boiler_status == 1
                 and mode == 0
                 and return_temp > (effective_setpoint + t1)):
-            new_boiler_status = 0
-            switch_relay(boiler_pin, "off")
-            update_actStream_table(new_boiler_status, None, True)
-        elif new_boiler_status == 1 and mode in (1, 3):
             new_boiler_status = 0
             switch_relay(boiler_pin, "off")
             update_actStream_table(new_boiler_status, None, True)
@@ -456,10 +459,13 @@ def chillers_cascade_switcher(effective_setpoint, time_stamps, chiller_status,
         switch_relay(chiller_pin[turn_off_index], "off")
         update_actStream_table(0, turn_off_index)
     # Turn off chillers when winter or valve is switching
-    elif mode in (0, 2) and turn_off_index is not None:
+    elif mode in (2, 3) and turn_off_index is not None:
         new_chiller_status[turn_off_index] = 0
         switch_relay(chiller_pin[turn_off_index], "off")
-        update_actStream_table(0, turn_off_index)
+        # when the user switches between summer/winter modes,
+        # all five devices are switched to the manual "off" state
+        # and stay off until the user turns them back to "on" or "auto".
+        update_actStream_table(0, turn_off_index, MO=2)
     string = ", ".join([str(i) for i in new_chiller_status])
     root_logger.debug("Chillers: %s; time gap: %d; mode: %s" % (string, time_gap, mode))
     return new_chiller_status
@@ -519,7 +525,7 @@ def update_db(MO, outside_temp, water_out_temp, return_temp, boiler_status,
         root_logger.exception("Error updating table: %s" % e)
 
 
-def update_actStream_table(status, chiller_id, boiler=False):
+def update_actStream_table(status, chiller_id, boiler=False, MO=False):
     if boiler:
         tid = 1
     else:
@@ -527,10 +533,17 @@ def update_actStream_table(status, chiller_id, boiler=False):
     try:
         with conn:
             cur = conn.cursor()
-            sql = ("""UPDATE actStream
-                      SET timeStamp=NOW(),
-                          status=%s
-                      WHERE TID=%s""" % (status, tid))
+            if MO:
+                sql = ("""UPDATE actStream
+                          SET timeStamp=NOW(),
+                              status=%s,
+                              MO=%s
+                          WHERE TID=%s""" % (status, tid, MO))
+            else:
+                sql = ("""UPDATE actStream
+                          SET timeStamp=NOW(),
+                              status=%s
+                          WHERE TID=%s""" % (status, tid))
             cur.execute(sql)
     except MySQLdb.Error as e:
         root_logger.exception("Error updating actStream table: %s" % e)
