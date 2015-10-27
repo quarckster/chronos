@@ -14,7 +14,7 @@ function manage_relay($relay, $command) {
 
     $serial->deviceOpen();
 
-    $serial->sendMessage("relay ".$command." ".$json->{'relay'}->{$relay}."\n\r");
+    $serial->sendMessage("relay ".$command." ".$json['relay'][$relay]."\n\r");
 
     $serial->deviceClose();
 }
