@@ -1,0 +1,4 @@
+SELECT SUM(data_free)/1024/1024 
+FROM information_schema.TABLES
+GROUP BY table_schema
+LIMIT 1
