@@ -35,7 +35,7 @@ led_blue = cfg.relay.led_blue
 sensor_out_id = cfg.sensors.out_id 
 sensor_in_id = cfg.sensors.in_id
 
-# Configuring loggging
+# Configuring logging
 log_formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s",
                                   "%Y-%m-%d %H:%M:%S")
 root_logger = logging.getLogger()
@@ -49,6 +49,7 @@ root_logger.addHandler(rotate_logs_handler)
 
 root_logger.info("Starting script")
 
+# Connecting to DB
 try:
     conn = MySQLdb.connect(host=cfg.db.host,
                            user=cfg.db.user,
@@ -57,6 +58,17 @@ try:
 except MySQLdb.Error as e:
     root_logger.exception("Cannot connect to DB: %s" % e)
     sys.exit(1)
+
+# Connecting to boiler via modbus protocol
+try:
+    modbus_client = ModbusClient(method=cfg.modbus.method,
+                                 baudrate=cfg.modbus.baudr,
+                                 parity=cfg.modbus.parity,
+                                 port=cfg.modbus.portname,
+                                 timeout=cfg.modbus.timeout)
+    modbus_client.connect()
+except pymodbus.exceptions.ModbusException as e:
+    root_logger.exception("Cannot connect to modbus: %s" % e)
 
 def update_systemUp():
     try:
@@ -114,6 +126,7 @@ def check_mysql():
             root_logger.exception("MySQL is not running")
             destructor()
     return error_DB
+
 
 def read_temp(device_file):
     while True:
@@ -259,7 +272,7 @@ def get_data_from_web(mode):
     error_Web = 0
     try:
         content = urllib2.urlopen('http://wx.thomaslivestock.com')
-    except IOError, HTTPError:
+    except IOError, urllib2.HTTPError:
         root_logger.exception("""Unable to get data from website.
                               Reading previous value from DB.""")
         error_Web = 1
@@ -549,23 +562,25 @@ def update_actStream_table(status, chiller_id, boiler=False, MO=False):
         root_logger.exception("Error updating actStream table: %s" % e)
 
 def get_boiler_stats():
-    client = ModbusClient(method="rtu",
-                          baudrate=9600,
-                          parity="E",
-                          port="/dev/ttyUSB0",
-                          timeout=1)
-    client.connect()
     c_to_f = lambda t: round(((9.0/5.0)*t + 32.0), 1)
-    hregs = client.read_holding_registers(0, 7, unit=1)
-    iregs = client.read_input_registers(3, 9, unit=1)
     try:
-        boiler_stats = {"system_supply_temp": c_to_f(hregs.getRegister(6)/10.0),
+        # Read one register from 40006 address to get System Supply Temperature
+        # Memory map for the boiler is here on page 8:
+        # http://www.lochinvar.com/_linefiles/SYNC-MODB%20REV%20H.pdf
+        hregs = client.read_holding_registers(6, count=1, unit=cfg.modbus.unit)
+        # Read 9 registers from 30003 address
+        iregs = client.read_input_registers(3, count=9, unit=cfg.modbus.unit)
+        boiler_stats = {"system_supply_temp": c_to_f(hregs.getRegister(0)/10.0),
                         "outlet_temp": c_to_f(iregs.getRegister(5)/10.0),
                         "inlet_temp": c_to_f(iregs.getRegister(6)/10.0),
                         "flue_temp": c_to_f(iregs.getRegister(7)/10.0),
                         "cascade_current_power": float(iregs.getRegister(3)),
                         "lead_firing_rate": float(iregs.getRegister(8))}
-    except AttributeError, IndexError:
+    except serial.SerialException as e:
+        root_logger.exception("Modbus error: %s" % e)
+        boiler_stats = False
+    except AttributeError, IndexError as e:
+        root_logger.exception("Modbus answer is empty: %s" % e)
         boiler_stats = False
     return boiler_stats
 
@@ -615,6 +630,8 @@ def update_sysStatus(error_sensor, error_DB, error_Web):
 def destructor(signum=None, frame=None):
     if conn:
         conn.rollback()
+    # close modbus connection
+    modbus_client.close()
     # turn off all relays
     for i in vars(cfg.relay).values():
         switch_relay(i, "off")
