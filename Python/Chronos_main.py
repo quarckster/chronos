@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import time
-import logging
+# import logging
 import os
 import MySQLdb
 import urllib2
@@ -9,6 +9,7 @@ import subprocess
 import signal
 import sys
 import serial
+from root_logger import root_logger
 from config_parser import cfg
 from lxml import etree
 from logging.handlers import TimedRotatingFileHandler
@@ -36,18 +37,16 @@ sensor_out_id = cfg.sensors.out_id
 sensor_in_id = cfg.sensors.in_id
 
 # Configuring logging
-log_formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s",
-                                  "%Y-%m-%d %H:%M:%S")
-root_logger = logging.getLogger()
-root_logger.setLevel(logging.DEBUG)
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setFormatter(log_formatter)
-rotate_logs_handler = TimedRotatingFileHandler(LOG_FILENAME, when="midnight", backupCount=3)
-rotate_logs_handler.setFormatter(log_formatter)
-root_logger.addHandler(console_handler)
-root_logger.addHandler(rotate_logs_handler)
-
-root_logger.info("Starting script")
+# log_formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s",
+#                                   "%Y-%m-%d %H:%M:%S")
+# root_logger = logging.getLogger()
+# root_logger.setLevel(logging.DEBUG)
+# console_handler = logging.StreamHandler(sys.stdout)
+# console_handler.setFormatter(log_formatter)
+# rotate_logs_handler = TimedRotatingFileHandler(LOG_FILENAME, when="midnight", backupCount=3)
+# rotate_logs_handler.setFormatter(log_formatter)
+# root_logger.addHandler(console_handler)
+# root_logger.addHandler(rotate_logs_handler)
 
 # Connecting to DB
 try:
@@ -666,6 +665,7 @@ def initialize_chronos_state():
             switch_relay(relay, relay_status)
 
 if __name__ == "__main__":
+    root_logger.info("Starting script")
     breather_count = 0
     valveStatus = 0
     timer = 0 
