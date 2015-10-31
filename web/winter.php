@@ -417,7 +417,7 @@ $row2 = mysqli_fetch_array($result2,MYSQLI_ASSOC);
                 <div class="col-md-3" style="text-align:center; color:#FFFFFF; background-color:#1E3839; padding:10px 10px;">
                     <h4><b>CHRONOS</b></h4>
                     <h5>SYSTEM - <?php
-                    $myFileSys =fopen("systemUp.txt","r") or die("Unable to open File");
+                    $myFileSys =fopen("/tmp/systemUp.txt","r") or die("Unable to open File");
                     $members = array();
                     while(!feof($myFileSys)){
                         $members[]=fgets($myFileSys);
