@@ -15,21 +15,20 @@ client = ModbusClient(method="rtu",
                       port="/dev/ttyUSB0",
                       timeout=0.5)
 client.connect()
-registers = False
-while not registers:
-    rr = client.read_holding_registers(0, 7, unit=1)
-    print(dir(rr))
-    if hasattr(rr, "registers"):
-        registers = True
-    else:
+while True:
+    try:
+        rr = client.read_holding_registers(0, 7, unit=1)
+        print(dir(rr))
+        print("Reg40001: {}".format(rr.getRegister(0)));
+        print("Reg40002: {}".format(rr.getRegister(1)));
+        print("Reg40003: {}".format(rr.getRegister(2)));
+        print("Reg40004: {}".format(rr.getRegister(3)));
+        print("Reg40005: {}".format(rr.getRegister(4)));
+        print("Reg40006: {}".format(rr.getRegister(5)));
+    except (AttributeError, IndexError):
         time.sleep(1)
-
-print("Reg40001: {}".format(rr.getRegister(0)));
-print("Reg40002: {}".format(rr.getRegister(1)));
-print("Reg40003: {}".format(rr.getRegister(2)));
-print("Reg40004: {}".format(rr.getRegister(3)));
-print("Reg40005: {}".format(rr.getRegister(4)));
-print("Reg40006: {}".format(rr.getRegister(5)));
+    else:
+        break
 
 setpoint = int(-101.4856 + 1.7363171*int(sys.argv[1]))
 
