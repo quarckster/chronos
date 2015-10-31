@@ -10,9 +10,7 @@ try:
                                  	   baudrate=cfg.modbus.baudr,
                                        parity=cfg.modbus.parity,
                                        port=cfg.modbus.portname,
-                                       timeout=cfg.modbus.timeout,
-                                       retry_on_empty=True,
-                                       retries=3)
+                                       timeout=cfg.modbus.timeout)
     modbus_client.connect()
 except (ModbusException, OSError) as e:
     root_logger.exception("Cannot connect to the boiler via modbus: %s" % e)

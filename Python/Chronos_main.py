@@ -526,25 +526,29 @@ def update_actStream_table(status, chiller_id, boiler=False, MO=False):
 
 def get_boiler_stats():
     c_to_f = lambda t: round(((9.0/5.0)*t + 32.0), 1)
-    try:
-        # Read one register from 40006 address to get System Supply Temperature
-        # Memory map for the boiler is here on page 8:
-        # http://www.lochinvar.com/_linefiles/SYNC-MODB%20REV%20H.pdf
-        hregs = modbus_client.read_holding_registers(6, count=1, unit=cfg.modbus.unit)
-        # Read 9 registers from 30003 address
-        iregs = modbus_client.read_input_registers(3, count=9, unit=cfg.modbus.unit)
-        boiler_stats = {"system_supply_temp": c_to_f(hregs.getRegister(0)/10.0),
-                        "outlet_temp": c_to_f(iregs.getRegister(5)/10.0),
-                        "inlet_temp": c_to_f(iregs.getRegister(6)/10.0),
-                        "flue_temp": c_to_f(iregs.getRegister(7)/10.0),
-                        "cascade_current_power": float(iregs.getRegister(3)),
-                        "lead_firing_rate": float(iregs.getRegister(8))}
-    except (serial.SerialException, OSError) as e:
-        root_logger.exception("Modbus error: %s" % e)
-        boiler_stats = False
-    except (AttributeError, IndexError) as e:
-        root_logger.exception("Modbus answer is empty: %s" % e)
-        boiler_stats = False
+    while True:
+        try:
+            # Read one register from 40006 address to get System Supply Temperature
+            # Memory map for the boiler is here on page 8:
+            # http://www.lochinvar.com/_linefiles/SYNC-MODB%20REV%20H.pdf
+            hregs = modbus_client.read_holding_registers(6, count=1, unit=cfg.modbus.unit)
+            # Read 9 registers from 30003 address
+            iregs = modbus_client.read_input_registers(3, count=9, unit=cfg.modbus.unit)
+            boiler_stats = {"system_supply_temp": c_to_f(hregs.getRegister(0)/10.0),
+                            "outlet_temp": c_to_f(iregs.getRegister(5)/10.0),
+                            "inlet_temp": c_to_f(iregs.getRegister(6)/10.0),
+                            "flue_temp": c_to_f(iregs.getRegister(7)/10.0),
+                            "cascade_current_power": float(iregs.getRegister(3)),
+                            "lead_firing_rate": float(iregs.getRegister(8))}
+        except (AttributeError, IndexError):
+            root_logger.exception("Modbus answer is empty, retrying.")
+            time.sleep(1)
+        except (serial.SerialException, OSError) as e:
+            root_logger.exception("Modbus error: %s" % e)
+            boiler_stats = False
+            break
+        else:
+            break
     return boiler_stats
 
 def update_boilerStats_table(system_supply_temp, outlet_temp, inlet_temp,
@@ -591,6 +595,7 @@ def update_sysStatus(error_sensor, error_DB, error_Web):
 
 
 def destructor(signum=None, frame=None):
+    # close db connection
     if conn:
         conn.rollback()
     # close modbus connection
