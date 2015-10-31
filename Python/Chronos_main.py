@@ -662,6 +662,13 @@ if __name__ == "__main__":
                                                        db_data["CCT"],
                                                        db_data["mode"])
             boiler_stats = get_boiler_stats()
+            if boiler_stats:
+                update_boilerStats_table(boiler_stats["system_supply_temp"],
+                                         boiler_stats["outlet_temp"],
+                                         boiler_stats["inlet_temp"],
+                                         boiler_stats["flue_temp"],
+                                         boiler_stats["cascade_current_power"],
+                                         boiler_stats["lead_firing_rate"])
             valveStatus = switch_valve(db_data["mode"], valveStatus)
             # Update db every minute
             if time.time() - timer >= 60:
@@ -677,13 +684,6 @@ if __name__ == "__main__":
                           setpoint["tha_setpoint"],
                           web_data["windSpeed"],
                           setpoint["wind_chill_avg"])
-                if boiler_stats:
-                    update_boilerStats_table(boiler_stats["system_supply_temp"],
-                                             boiler_stats["outlet_temp"],
-                                             boiler_stats["inlet_temp"],
-                                             boiler_stats["flue_temp"],
-                                             boiler_stats["cascade_current_power"],
-                                             boiler_stats["lead_firing_rate"])
                 timer = time.time()
             update_sysStatus(sensors_data["errors"],
                              error_DB,
