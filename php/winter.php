@@ -12,11 +12,11 @@ if($result1){
   //   header("Location: http://$host$uri/$extra");
   // }
 }
-$sql2 = "SELECT * from boilerStats";
-$result2 = mysqli_query($con,$sql2);
-$row2 = mysqli_fetch_array($result2,MYSQLI_ASSOC);
-// include('bstat.php');
-// $bstat = parse_bstat_output();
+// $sql2 = "SELECT * from boilerStats";
+// $result2 = mysqli_query($con,$sql2);
+// $row2 = mysqli_fetch_array($result2,MYSQLI_ASSOC);
+include('bstat.php');
+$bstat = parse_bstat_output();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -539,31 +539,31 @@ $row2 = mysqli_fetch_array($result2,MYSQLI_ASSOC);
                 <tr>
                         <td width=170px align=left>System Supply Temp</td>
                         <td width=80px><?php
-                        echo $row2["system_supply_temp"];
+                        echo $bstat["system_supply_temp"];
                 ?> &deg;F</td><!--Dynamic Content-->
                         </tr>
                 <tr>
                         <td width=170px align=left>Outlet Temp</td>
                         <td width=80px><?php
-                        echo $row2["outlet_temp"];
+                        echo $bstat["outlet_temp"];
                 ?> &deg;F</td><!--Dynamic Content-->
                         </tr>
                 <tr>
                         <td width=170px align=left>Inlet Temp</td>
                         <td width=80px><?php
-                        echo $row2["inlet_temp"];
+                        echo $bstat["inlet_temp"];
                 ?> &deg;F</td><!--Dynamic Content-->
                         </tr>      
                         <tr>
                         <td width=170px align=left>Cascade Power</td>
                         <td width=80px><?php
-                        echo $row2["cascade_current_power"];
+                        echo $bstat["cascade_current_power"];
                 ?> %</td><!--Dynamic Content-->
                         </tr>
                         <tr>
                         <td align=left>Lead Firing Rate</td>
                         <td><?php
-                        echo $row2["lead_firing_rate"];
+                        echo $bstat["lead_firing_rate"];
                 ?> %</td><!--Dynamic Content-->
                         </tr>
                         
@@ -673,13 +673,13 @@ $row2 = mysqli_fetch_array($result2,MYSQLI_ASSOC);
                     ?>" style="z-index:-1; position:static;" />
           <p style="margin-top:-180px; color:#000000; font-size:15px;"><b>Cascade Fire</b><br/>
           <?php
-                        echo $row2["cascade_current_power"];
+                        echo $bstat["cascade_current_power"];
                 ?> %
              <br/>
              <br/>
              <b>Lead Fire</b><br/>
           <?php
-                        echo $row2["lead_firing_rate"];
+                        echo $bstat["lead_firing_rate"];
                 ?> %
           </p>
           </td>
@@ -689,10 +689,10 @@ $row2 = mysqli_fetch_array($result2,MYSQLI_ASSOC);
                         </table></div>
                 <div width=100px style="float:left;">
                 <br/><br/><br/><br/><br/><?php
-                        echo $row2["outlet_temp"];
+                        echo $bstat["outlet_temp"];
                 ?> &deg;F    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           <?php
-                        echo $row2["system_supply_temp"];
+                        echo $bstat["system_supply_temp"];
                 ?> &deg;F
           <br/>
                 <img src="images/Icons/Boiler/arrow4.png" /><br/>
@@ -707,7 +707,7 @@ $row2 = mysqli_fetch_array($result2,MYSQLI_ASSOC);
                         }
                     ?> &deg;F
              <br/><br/><br/><br/><br/><?php
-                        echo $row2["inlet_temp"];
+                        echo $bstat["inlet_temp"];
                 ?> &deg;F &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br/>
                 <img src="images/Icons/Boiler/arrow3.png" /><br/>
                 <?php
