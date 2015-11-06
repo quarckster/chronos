@@ -235,7 +235,7 @@ def get_data_from_web(mode):
     error_Web = 0
     try:
         content = urllib2.urlopen('http://wx.thomaslivestock.com')
-    except IOError, urllib2.HTTPError:
+    except IOError, urllib2.HTTPError, urllib2.URLError:
         root_logger.exception("""Unable to get data from website.
                               Reading previous value from DB.""")
         error_Web = 1
