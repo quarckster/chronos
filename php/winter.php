@@ -4,19 +4,6 @@ $uri = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 $extra = 'summer.php';
 $home = 'winter.php';
 include('SetConnect.php');
-$sql1 = "SELECT * from mainTable order by LID desc limit 1";
-$result1 = mysqli_query($con,$sql1);
-if($result1){
-  $row1 = mysqli_fetch_array($result1,MYSQLI_ASSOC);
-  // if($row1['mode'] == 1) {
-  //   header("Location: http://$host$uri/$extra");
-  // }
-}
-// $sql2 = "SELECT * from boilerStats";
-// $result2 = mysqli_query($con,$sql2);
-// $row2 = mysqli_fetch_array($result2,MYSQLI_ASSOC);
-include('bstat.php');
-$bstat = parse_bstat_output();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -32,31 +19,35 @@ $bstat = parse_bstat_output();
     <script src="amcharts/serial.js" type="text/javascript"></script>   
     <script src="http://code.jquery.com/jquery-latest.js" type="text/javascript"></script>
     <script type="text/javascript">
-        setInterval("my_function();",1700);
-        function my_function()
-        {
-            $("#updateSetpoint").load("winter.php #inside");
-        }
-        setInterval("my_functionImage();",1800);
-        function my_functionImage()
-        {
-            $("#updateImage").load("winter.php #insideImage");
-        }
-        setInterval("my_functionInterface();",1900);
-        function my_functionInterface()
-        {
-            $("#updateInterface").load("winter.php #insideInterface");
-        }
-        setInterval("my_functionSetpoint();",2500);
-        function my_functionSetpoint()
-        {
-            $("#updateSetpointtwo").load("winter.php #insidetwo");
-        }
-        setInterval("my_functionSetpointTwo();",6100);
-        function my_functionSetpointTwo()
-        {
-            $("#updateSetpointThree").load("winter.php #insideThree");
-        }
+        $(document).ready(
+            function() {
+                setInterval(function() {
+                    $.get("winter_queries.php", function(data) {
+                        $(".system_supply_temp").text(data.system_supply_temp);
+                        $(".outlet_temp").text(data.outlet_temp);
+                        $(".inlet_temp").text(data.inlet_temp);
+                        $(".flue_temp").text(data.flue_temp);
+                        $(".cascade_current_power").text(data.cascade_current_power);
+                        $(".lead_firing_rate").text(data.lead_firing_rate);
+                        $("#outsideTemp").text(data.outsideTemp);
+                        $(".returnTemp").text(data.returnTemp);
+                        $(".waterOutTemp").text(data.waterOutTemp);
+                        $("#setPoint2").text(data.setPoint2);
+                        $("#parameterX").text(data.parameterX);
+                        $("#t1").text(data.t1);
+                        $("#baselineSetPoint").text(data.baselineSetPoint);
+                        $("#avgOutsideTemp").text(data.avgOutsideTemp);
+                        $("#effectiveSetPoint").text(data.sp);
+                        if (data.mode == 0 || data.mode == 2) {
+                            $("#winterStatus").attr("src", "images/Icons/WinterSummer/WOn.png");
+                            $("#summerStatus").attr("src", "images/Icons/WinterSummer/SOff.png");
+                        } else if (data.mode == 1 || data.mode == 3) {
+                            $("#winterStatus").attr("src", "images/Icons/WinterSummer/WOff.png");
+                            $("#summerStatus").attr("src", "images/Icons/WinterSummer/SOn.png");
+                        }
+                    }, "json" );
+                }, 2000);
+            });
    $(function () { 
     $("[data-toggle='tooltip']").tooltip(); 
     });
@@ -445,30 +436,11 @@ $bstat = parse_bstat_output();
                         &nbsp;
                         </div>
                         <div style="min-width:80px; font-size:10px; color:#FFFFFF; float:left; text-align=center;">
-                        <img src="<?php
-                        
-                        if($result1){
-                            if($row1['mode'] == 0 or $row1['mode'] == 2) {
-                                echo "images/Icons/WinterSummer/WOn.png";
-                            }
-                            else if($row1['mode'] == 1 or $row1['mode'] == 3){
-                                echo "images/Icons/WinterSummer/WOff.png";
-                            }
-                        }
-                    ?>" /><br/><a href="updateModeOn.php" font-size:10px;">Winter</a>
+                        <img id="winterStatus" src=""/><br/><a href="updateModeOn.php" font-size:10px;">Winter</a>
                         </div>
                     
                     <div style="min-width:80px; font-size:10px; color:"#FFFFFF"; float:"left"; text-align="center";">
-                        <img src="<?php
-                        if($result1){
-                            if($row1['mode'] == 0 or $row1['mode'] == 2){
-                                echo "images/Icons/WinterSummer/SOff.png";
-                            }
-                            else if($row1['mode'] == 1 or $row1['mode'] == 3){
-                                echo "images/Icons/WinterSummer/SOn.png";
-                            }
-                        }
-                    ?>" /><br/><a href="updateModeOff.php" style="color:#FFFFFF; font-size:10px;">Summer</a>
+                        <img id="summerStatus" src=""/><br/><a href="updateModeOff.php" style="color:#FFFFFF; font-size:10px;">Summer</a>
                     </div>
 
                     
@@ -492,42 +464,11 @@ $bstat = parse_bstat_output();
           <table align=center>
           <tr>
           <td align=left>Wind Chill</td>
-                    <td><?php
-                        
-                        $sql="SELECT outsideTemp from mainTable order by LID desc limit 1";
-                        $result=mysqli_query($con,$sql);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                                $outside_temp = $row['outsideTemp'];
-                                echo $row['outsideTemp']; 
-                            }
-                        }
-                    ?> &deg;F</td></tr>
+                    <td><span id="outsideTemp"></span> &deg;F</td></tr>
           <tr></tr>   
           <tr>      
              <td>Avg Wind Chill (96 hrs)&nbsp;&nbsp;&nbsp;&nbsp; </td>
-                    <td>
-                <?php
-                    $sql = "SELECT AVG(outsideTemp) FROM mainTable WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR) AND mode = 1 ORDER BY LID DESC LIMIT 5760";
-                    $result=mysqli_query($con,$sql);
-                    $row = mysqli_fetch_array($result,MYSQLI_NUM);
-                    if ($row['outsideTemp']) {
-                        $wind_chill_avg = round($row['outsideTemp']);
-                    }
-                    else {
-                        $wind_chill_avg = $outside_temp;
-                    }
-                    echo $wind_chill_avg;
-                    // $myFileWC =fopen("/home/pi/Desktop/Chronos/windChillAvg.txt","r") or die("Unable to open File");
-                    // $members = array();
-                    // while(!feof($myFileWC)){
-                    //     $members[]=fgets($myFileWC);
-                        
-                    // }
-                    //     echo $members[0];
-                
-                    // fclose($myFileWC);
-                ?> &deg;F</td>
+                    <td><span id="avgOutsideTemp"></span> &deg;F</td>
           </tr>
           </table></h5> 
     
@@ -538,33 +479,23 @@ $bstat = parse_bstat_output();
                     <table  align=center border=0>
                 <tr>
                         <td width=170px align=left>System Supply Temp</td>
-                        <td width=80px><?php
-                        echo $bstat["system_supply_temp"];
-                ?> &deg;F</td><!--Dynamic Content-->
+                        <td width=80px><span class="system_supply_temp"></span>  &deg;F</td><!--Dynamic Content-->
                         </tr>
                 <tr>
                         <td width=170px align=left>Outlet Temp</td>
-                        <td width=80px><?php
-                        echo $bstat["outlet_temp"];
-                ?> &deg;F</td><!--Dynamic Content-->
+                        <td width=80px><span class="outlet_temp"></span>  &deg;F</td><!--Dynamic Content-->
                         </tr>
                 <tr>
                         <td width=170px align=left>Inlet Temp</td>
-                        <td width=80px><?php
-                        echo $bstat["inlet_temp"];
-                ?> &deg;F</td><!--Dynamic Content-->
+                        <td width=80px><span class="inlet_temp"></span>  &deg;F</td><!--Dynamic Content-->
                         </tr>      
                         <tr>
                         <td width=170px align=left>Cascade Power</td>
-                        <td width=80px><?php
-                        echo $bstat["cascade_current_power"];
-                ?> %</td><!--Dynamic Content-->
+                        <td width=80px><span class="cascade_current_power"></span> %</td><!--Dynamic Content-->
                         </tr>
                         <tr>
                         <td align=left>Lead Firing Rate</td>
-                        <td><?php
-                        echo $bstat["lead_firing_rate"];
-                ?> %</td><!--Dynamic Content-->
+                        <td><span class="lead_firing_rate"></span> %</td><!--Dynamic Content-->
                         </tr>
                         
                     </table>
@@ -573,29 +504,11 @@ $bstat = parse_bstat_output();
                     <table  align=center border=0>
                         <tr>
                         <td width=170px align=left>Inlet</td>
-                        <td width=80px><?php
-                        
-                        $sql="SELECT returnTemp from mainTable order by LID desc limit 1";
-                        $result=mysqli_query($con,$sql);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            echo $row['returnTemp']; 
-                            }
-                        }
-                    ?> &deg;F</td><!--Dynamic Content-->
+                        <td width=80px><span class="returnTemp"></span> &deg;F</td><!--Dynamic Content-->
                         </tr>
                         <tr>
                         <td align=left>Outlet</td>
-                        <td><?php
-                        
-                        $sql="SELECT waterOutTemp from mainTable order by LID desc limit 1";
-                        $result=mysqli_query($con,$sql);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            echo $row['waterOutTemp']; 
-                            }
-                        }
-                    ?> &deg;F</td><!--Dynamic Content-->
+                        <td><span class="waterOutTemp"></span> &deg;F</td><!--Dynamic Content-->
                         </tr>
                         
                     </table>
@@ -672,15 +585,11 @@ $bstat = parse_bstat_output();
                         }
                     ?>" style="z-index:-1; position:static;" />
           <p style="margin-top:-180px; color:#000000; font-size:15px;"><b>Cascade Fire</b><br/>
-          <?php
-                        echo $bstat["cascade_current_power"];
-                ?> %
+          <span class="cascade_current_power"></span> %
              <br/>
              <br/>
              <b>Lead Fire</b><br/>
-          <?php
-                        echo $bstat["lead_firing_rate"];
-                ?> %
+          <span class="lead_firing_rate"></span> %
           </p>
           </td>
                                 
@@ -688,38 +597,14 @@ $bstat = parse_bstat_output();
                         </tr>
                         </table></div>
                 <div width=100px style="float:left;">
-                <br/><br/><br/><br/><br/><?php
-                        echo $bstat["outlet_temp"];
-                ?> &deg;F    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          <?php
-                        echo $bstat["system_supply_temp"];
-                ?> &deg;F
+                <br/><br/><br/><br/><br/><span class="outlet_temp"></span> &deg;F    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                <span class="system_supply_temp"></span> &deg;F
           <br/>
                 <img src="images/Icons/Boiler/arrow4.png" /><br/>
-                <?php
-                        
-                        $sql="SELECT waterOutTemp from mainTable order by LID desc limit 1";
-                        $result=mysqli_query($con,$sql);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            echo $row['waterOutTemp']; 
-                            }
-                        }
-                    ?> &deg;F
-             <br/><br/><br/><br/><br/><?php
-                        echo $bstat["inlet_temp"];
-                ?> &deg;F &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br/>
+                <span class="waterOutTemp"></span> &deg;F
+             <br/><br/><br/><br/><br/><span class="inlet_temp"></span> &deg;F &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br/>
                 <img src="images/Icons/Boiler/arrow3.png" /><br/>
-                <?php
-                        
-                        $sql="SELECT returnTemp from mainTable order by LID desc limit 1";
-                        $result=mysqli_query($con,$sql);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            echo $row['returnTemp']; 
-                            }
-                        }
-                    ?> &deg;F 
+                <span class="returnTemp"></span> &deg;F 
                      </div>     
                     </div>
                     
@@ -741,63 +626,21 @@ $bstat = parse_bstat_output();
               <br/>
           <table align=center border=0><tr>
           <td align=left width=180px>Baseline Setpoint &nbsp;</td>
-                    <td><?php
-                        
-                        $sql="SELECT outsideTemp from mainTable order by LID desc limit 1";
-                        $result=mysqli_query($con,$sql);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            $temp = $row['outsideTemp']; 
-                            }
-                        }
-              $temp = intval($temp);
-            $sql1="SELECT setPoint from SetpointLookup where windChill = '$temp'";
-            $result=mysqli_query($con,$sql1);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            echo $row['setPoint']; 
-                            }
-                        }
-                    ?> &deg;F</td>      <!--Dynamic Content-->
+                    <td><span id="baselineSetPoint"></span> &deg;F</td>      <!--Dynamic Content-->
            </tr>
            <tr>
            <td>&nbsp;</td>
            <td></td>
            </tr><tr>  
                     <td align=left>THA Setpoint</td>
-          <td> <?php
-                        
-                        $sql="SELECT setPoint2 from mainTable order by LID desc limit 1";
-                        $result=mysqli_query($con,$sql);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            echo $row['setPoint2']; 
-                            }
-                        }
-                    ?> &deg;F</td>
+          <td> <span id="setPoint2"></span> &deg;F</td>
             </tr>
             <tr>
            <td>&nbsp;</td>
            <td></td>
            </tr><tr> 
                     <td align=left>Effective Setpoint</td>
-          <td>  <?php
-                    $sql4 = "SELECT * FROM setpoints";
-                    $result4 = mysqli_query($con, $sql4);
-                    if($result4){
-                        $row4 = mysqli_fetch_array($result4, MYSQLI_ASSOC);
-                        echo $row4['sp'];
-                    }
-                    // $myFileSP =fopen("/usr/local/bin/sp.txt","r") or die("Unable to open File");
-                    // $members = array();
-                    // while(!feof($myFileSP)){
-                    //     $members[]=fgets($myFileSP);
-                        
-                    // }
-                    //     echo $members[0];
-                
-                    // fclose($myFileSP);
-                ?>&deg;F </small></td>
+          <td>  <span id="effectiveSetPoint"></span> &deg;F </small></td>
         </tr>
         
         </table></h5>
@@ -820,16 +663,7 @@ $bstat = parse_bstat_output();
                         <tr>
                         <td>Setpoint Offset</td>
                         <td width=5%></td>
-                        <td><?php
-                        
-                        $sql="SELECT parameterX from mainTable order by LID desc limit 1";
-                        $result=mysqli_query($con,$sql);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            echo $row['parameterX']; 
-                            }
-                        }
-                    ?> &deg;F</td>
+                        <td><span id="parameterX"></span> &deg;F</td>
             <td width=10px></td>
                         <td style="color:#000000;"><input type="text" name="parameterX" size=2></td><!--Dynamic Content-->
                         <td width=3%></td>
@@ -838,16 +672,7 @@ $bstat = parse_bstat_output();
             <tr>
                         <td>Tolerance</td>
                         <td width=5%></td>
-                        <td><?php
-                        
-                        $sql="SELECT t1 from mainTable order by LID desc limit 1";
-                        $result=mysqli_query($con,$sql);
-                        if($result){
-                            while($row=mysqli_fetch_array($result,MYSQLI_ASSOC)){
-                            echo $row['t1']; 
-                            }
-                        }
-                    ?> &deg;F</td><td ></td>
+                        <td><span id="t1"></span> &deg;F</td><td ></td>
                         <td style="color:#000000;"><input type="text" name="t1" size=2></td><!--Dynamic Content-->
                         <td width=3%></td>
                         <td><input type="Submit" value="Update" style="color:#000000;"></td>
