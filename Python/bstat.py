@@ -13,12 +13,13 @@ timeout = 0.3
 
 # Connecting to boiler via modbus protocol
 def get_boiler_stats():
-    boiler_stats = {"system_supply_temp": 0,
-                    "outlet_temp": 0,
-                    "inlet_temp": 0,
-                    "flue_temp": 0,
-                    "cascade_current_power": 0,
-                    "lead_firing_rate": 0}
+    # boiler_stats = {"system_supply_temp": 0,
+    #                 "outlet_temp": 0,
+    #                 "inlet_temp": 0,
+    #                 "flue_temp": 0,
+    #                 "cascade_current_power": 0,
+    #                 "lead_firing_rate": 0}
+    boiler_stats = [0, 0, 0, 0, 0, 0]
     try:
         modbus_client = ModbusSerialClient(method=method,
                                            baudrate=baudrate,
@@ -38,12 +39,12 @@ def get_boiler_stats():
             hregs = modbus_client.read_holding_registers(6, count=1, unit=1)
             # Read 9 registers from 30003 address
             iregs = modbus_client.read_input_registers(3, count=9, unit=1)
-            boiler_stats = {"system_supply_temp": c_to_f(hregs.getRegister(0)/10.0),
-                            "outlet_temp": c_to_f(iregs.getRegister(5)/10.0),
-                            "inlet_temp": c_to_f(iregs.getRegister(6)/10.0),
-                            "flue_temp": c_to_f(iregs.getRegister(7)/10.0),
-                            "cascade_current_power": float(iregs.getRegister(3)),
-                            "lead_firing_rate": float(iregs.getRegister(8))}
+            boiler_stats = [c_to_f(hregs.getRegister(0)/10.0),
+                            c_to_f(iregs.getRegister(5)/10.0),
+                            c_to_f(iregs.getRegister(6)/10.0),
+                            c_to_f(iregs.getRegister(7)/10.0),
+                            float(iregs.getRegister(3)),
+                            float(iregs.getRegister(8))]
         except (OSError, serial.SerialException, ModbusException, AttributeError, IndexError) as e:
             time.sleep(0.7)
         else:
@@ -52,4 +53,4 @@ def get_boiler_stats():
     return boiler_stats
 
 if __name__ == '__main__':
-    print(";".join([str(v) for v in get_boiler_stats().values()]))
+    print(";".join(["{0:.1f}".format(v) for v in get_boiler_stats()]))
