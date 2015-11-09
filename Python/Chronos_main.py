@@ -458,6 +458,16 @@ def switch_valve(mode, valveStatus):
     return valveStatus
 
 
+def change_sp(setpoint):
+    setpoint = int(-101.4856 + 1.7363171*int(setpoint))
+    try:
+        assert(setpoint > 0 and setpoint < 100)
+        modbus_client.write_register(0, 4, unit=cfg.modbus.unit)
+        modbus_client.write_register(2, setpoint, unit=cfg.modbus.unit)
+    except (AssertionError, ModbusException) as e:
+        root_logger.exception(e)
+
+
 def update_db(MO, outside_temp, water_out_temp, return_temp, boiler_status,
               chiller_status, setpoint2, wind_speed, avgOutsideTemp):
     try:
@@ -604,6 +614,7 @@ if __name__ == "__main__":
                                           db_data["setpoint2"],
                                           db_data["parameterX"],
                                           db_data["mode"])
+            change_sp(setpoint)
             boiler_status = boiler_switcher(db_data["MO_B"],
                                             db_data["mode"],
                                             sensors_data["return_temp"],
