@@ -4,7 +4,7 @@ $sqls = array("SELECT outsideTemp,returnTemp,waterOutTemp,mode,setPoint2,paramet
               "SELECT spl.setPoint AS baselineSetPoint FROM SetpointLookup AS spl INNER JOIN (SELECT outsideTemp FROM mainTable ORDER BY LID DESC LIMIT 1) AS mt ON spl.windChill = ROUND(mt.outsideTemp, 0)",
               "SELECT status from actStream where TID=1",
               "SELECT sp FROM setpoints",
-              "SELECT ROUND(AVG(outsideTemp), 2) AS avgOutsideTemp FROM mainTable WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR) AND mode = 1 ORDER BY LID DESC LIMIT 5760");
+              "SELECT ROUND(AVG(outsideTemp), 2) AS avgOutsideTemp FROM mainTable WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR) ORDER BY LID DESC LIMIT 5760");
 
 $rows = array();
 foreach ($sqls as $value) {
