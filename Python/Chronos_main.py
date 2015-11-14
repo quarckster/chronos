@@ -10,7 +10,7 @@ import serial
 from lxml import etree
 from root_logger import root_logger
 from config_parser import cfg
-from modbus_client import modbus_client
+from modbus_client import modbus_client, ModbusException
 from db_conn import conn, MySQLdb_error
 
 # Constants
@@ -235,7 +235,7 @@ def get_data_from_web(mode):
     error_Web = 0
     try:
         content = urllib2.urlopen('http://wx.thomaslivestock.com')
-    except IOError, urllib2.HTTPError, urllib2.URLError:
+    except (IOError, urllib2.HTTPError, urllib2.URLError):
         root_logger.exception("""Unable to get data from website.
                               Reading previous value from DB.""")
         error_Web = 1
@@ -460,12 +460,16 @@ def switch_valve(mode, valveStatus):
 
 def change_sp(setpoint):
     setpoint = int(-101.4856 + 1.7363171*int(setpoint))
-    try:
-        assert(setpoint > 0 and setpoint < 100)
-        modbus_client.write_register(0, 4, unit=cfg.modbus.unit)
-        modbus_client.write_register(2, setpoint, unit=cfg.modbus.unit)
-    except (AssertionError, ModbusException) as e:
-        root_logger.exception(e)
+    for i in range(3):
+        try:
+            assert(setpoint > 0 and setpoint < 100)
+            modbus_client.write_register(0, 4, unit=cfg.modbus.unit)
+            modbus_client.write_register(2, setpoint, unit=cfg.modbus.unit)
+        except (AssertionError, ModbusException, serial.SerialException) as e:
+            root_logger.exception(e)
+            time.sleep(0.5)
+        else:
+            break
 
 
 def update_db(MO, outside_temp, water_out_temp, return_temp, boiler_status,
@@ -614,7 +618,7 @@ if __name__ == "__main__":
                                           db_data["setpoint2"],
                                           db_data["parameterX"],
                                           db_data["mode"])
-            change_sp(setpoint)
+            change_sp(setpoint["effective_setpoint"])
             boiler_status = boiler_switcher(db_data["MO_B"],
                                             db_data["mode"],
                                             sensors_data["return_temp"],
