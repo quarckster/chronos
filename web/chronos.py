@@ -28,11 +28,9 @@ def get_data(avg=True):
         query = "SELECT * from actStream"
         cur.execute(query)
         rows = cur.fetchall()
-        actStream = []
-        for row in rows:
-            actStream.append({"timeStamp": row["timeStamp"].strftime("%B %d, %I:%M %p"),
-                              "status": row["status"],
-                              "MO": row["MO"]})
+        actStream = [{"timeStamp": row["timeStamp"].strftime("%B %d, %I:%M %p"),
+                      "status": row["status"],
+                      "MO": row["MO"]} for row in rows]
     return {"results": results, "actStream": actStream}
 
 def get_modbus_data():
@@ -124,10 +122,10 @@ def index():
     data = get_data()
     mode = int(data["results"]["mode"])
     print mode
-    if mode == 0:
+    if mode in (0, 2):
         modbus_data = get_modbus_data()
         redir = render_template("winter.html", data=data, modbus_data=modbus_data)
-    elif mode == 1:
+    elif mode in (1, 3):
         redir = render_template("summer.html", data=data)
     return redir
 
