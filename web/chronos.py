@@ -5,7 +5,8 @@ from config_parser import cfg
 from pymodbus.exceptions import ModbusException
 from pymodbus.client.sync import ModbusSerialClient
 from db_conn import conn
-from flask import Flask, render_template, Response, jsonify, request, make_response
+from flask import Flask, render_template, Response, jsonify, request, \
+     make_response, flash, abort
 app = Flask(__name__)
 
 def get_data(avg=True):
@@ -102,7 +103,7 @@ def update_settings():
         with conn:
             cur = conn.cursor()
             cur.execute(query2)
-    return make_response()
+    return jsonify(data=request.form)
 
 @app.route("/switch_mode")
 def switch_mode():
@@ -121,7 +122,6 @@ def switch_mode():
 def index():
     data = get_data()
     mode = int(data["results"]["mode"])
-    print mode
     if mode in (0, 2):
         modbus_data = get_modbus_data()
         redir = render_template("winter.html", data=data, modbus_data=modbus_data)
@@ -129,16 +129,28 @@ def index():
         redir = render_template("summer.html", data=data)
     return redir
 
-@app.route("/update_state")
+@app.route("/update_state", methods=["POST"])
 def update_state():
-    tid = request.args["tid"]
-    status = request.args["status"]
-    query = "UPDATE actStream SET MO={} WHERE TID={}".format(status, tid)
-    with conn:
-        cur = conn.cursor()
-        cur.execute(query)
-    return make_response()
-
+    tid = request.form["tid"]
+    status = request.form["status"]
+    command = {"2": "off", "1": "on"}
+    try:
+        if status == "0":
+            pass
+        else:
+            with serial.Serial(cfg.serial.portname,
+                               cfg.serial.baudr,
+                               timeout=1) as ser_port:
+                ser_port.write("relay {} {}\n\r".format(command[status], tid))
+    except (serial.SerialException, OSError) as e:
+        resp = jsonify(error=True)
+    else:
+        query = "UPDATE actStream SET MO={} WHERE TID={}".format(status, tid)
+        with conn:
+            cur = conn.cursor()
+            cur.execute(query)
+        resp = make_response()
+    return resp
 
 @app.route("/winter")
 def winter():

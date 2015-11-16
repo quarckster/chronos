@@ -16,7 +16,6 @@
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
         <!-- Optional theme -->
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css" integrity="sha384-aUGj/X2zp5rLCbBxumKTCw2Z50WgIr1vs/PFN4praOTvYXWlVyh2UtNUU0KAUhAX" crossorigin="anonymous">
-        {# <link href="static/css/bootstrap-switch.min.css" rel="stylesheet"> #}
         <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
         <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
         <!--[if lt IE 9]>
@@ -161,6 +160,9 @@
                         </div>
                     </div>
                     <div class="row">
+                        <div id="relay-alert" class="col-md-5"></div>
+                    </div>
+                    <div class="row">
                         {% for i in range(1,6) %}
                             <div class="col-md-2">
                                 <div class="radio">
@@ -223,21 +225,33 @@
         <script>
             $(document).ready(function() {
                 $("input:radio[name$=ManualOverride]").change(function() {
-                    $.get("update_state", {tid: $(this)[0].id.split(/device(On|Off|Auto)/)[2],
-                                           status: $(this)[0].value});
+                    $.post("update_state", {tid: $(this)[0].id.split(/device(On|Off|Auto)/)[2],
+                                            status: $(this)[0].value})
+                          .done(function(data) {
+                                if (data["error"] == true) {
+                                    $("#relay-alert").html("<div class=\"alert alert-danger\"> <a href=\"#\" class=\"close\" data-dismiss=\"alert\" aria-label=\"close\">&times;</a><strong>Error!</strong> Relay switching has been failed.</div>");
+                                }
+                          });
                 });
                 $("#settings").ajaxForm({clearForm: true,
                                          beforeSubmit: function(formData, jqForm, options) {
-                                            var empty = false;
-                                            for (var i=0; i < formData.length; i++) { 
-                                                if (formData[i].value) { 
-                                                    empty = true;
-                                                }
-                                            } 
-                                            if (!empty) {
-                                                alert("At least a one field should be filled.");
-                                            }
-                                            return empty;
+                                             var empty = false;
+                                             for (var i=0; i < formData.length; i++) { 
+                                                 if (formData[i].value) { 
+                                                     empty = true;
+                                                 }
+                                             } 
+                                             if (!empty) {
+                                                 alert("At least a one field should be filled.");
+                                             }
+                                             return empty;
+                                         },
+                                         success: function(responseText, statusText, xhr, $form) {
+                                             for (var property in responseText.data) {
+                                                 if (responseText.data[property]) {
+                                                     $("#"+property).text(parseFloat(responseText.data[property]).toFixed(1));
+                                                 }
+                                             } 
                                          }
                                      });
                 setInterval(function() {

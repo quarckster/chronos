@@ -4,15 +4,15 @@
     <h4 class="text-center">Modbus</h4>
     <dl class="dl-horizontal dl-horizontal-text-left">
         <dt>System Supply Temp</dt>
-        <dd><span>11</span></dd>
+        <dd><span class="systemSupplyTemp"></span></dd>
         <dt>Outlet Temp</dt>
-        <dd><span>11</span></dd>
+        <dd><span class="outletTemp"></span></dd>
         <dt>Inlet Temp</dt>
-        <dd><span>11</span></dd>
+        <dd><span></span></dd>
         <dt>Cascade Power</dt>
-        <dd><span>11</span></dd>
+        <dd><span class="cascadeCurrentPower"></span></dd>
         <dt>Lead Firing Rate</dt>
-        <dd><span>11</span></dd>
+        <dd><span class="leadFiringRate"></span></dd>
     </dl>
 {% endblock %}
 {% block system_map %}
@@ -28,9 +28,9 @@
             <div class="boiler-caption">
                 <br/>
                 <p class="text-center"><strong>Cascade Fire</strong></p>
-                <p class="text-center"><span>11</span></p>
+                <p class="text-center"><span class="cascadeCurrentPower">11</span></p>
                 <p class="text-center"><strong>Lead Fire</strong></p>
-                <p class="text-center"><span>11</span></p>
+                <p class="text-center"><span class="leadFiringRate">11</span></p>
             </div>
         </div>
         <div class="col-md-8">
@@ -94,12 +94,10 @@
     </div>
 {% endblock %}
 {% block js %}
-// $(".system_supply_temp").text(data.system_supply_temp);
-// $(".outlet_temp").text(data.outlet_temp);
-// $(".inlet_temp").text(data.inlet_temp);
-// $(".flue_temp").text(data.flue_temp);
-// $(".cascade_current_power").text(data.cascade_current_power);
-// $(".lead_firing_rate").text(data.lead_firing_rate);
-// $("#parameterX").text(data.parameterX);
-// $("#t1").text(data.t1);
+    $(".systemSupplyTemp").text(data.system_supply_temp);
+    $(".outletTemp").text(data.outlet_temp);
+    $(".inletTemp").text(data.inlet_temp);
+    $(".flueTemp").text(data.flue_temp);
+    $(".cascadeCurrentPower").text(data.cascade_current_power);
+    $(".leadFiringRate").text(data.lead_firing_rate);
 {% endblock %}
