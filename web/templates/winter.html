@@ -4,15 +4,15 @@
     <h4 class="text-center">Modbus</h4>
     <dl class="dl-horizontal dl-horizontal-text-left">
         <dt>System Supply Temp</dt>
-        <dd><span class="systemSupplyTemp"></span></dd>
+        <dd><span class="systemSupplyTemp">{{ modbus["system_supply_temp"] }}</span> &deg;F</dd>
         <dt>Outlet Temp</dt>
-        <dd><span class="outletTemp"></span></dd>
+        <dd><span class="outletTemp">{{ modbus["outlet_temp"] }}</span> &deg;F</dd>
         <dt>Inlet Temp</dt>
-        <dd><span></span></dd>
+        <dd><span class="inletTemp">{{ modbus["inlet_temp"] }}</span> &deg;F</dd>
         <dt>Cascade Power</dt>
-        <dd><span class="cascadeCurrentPower"></span></dd>
+        <dd><span class="cascadeCurrentPower">{{ modbus["cascade_current_power"] }}</span> %</dd>
         <dt>Lead Firing Rate</dt>
-        <dd><span class="leadFiringRate"></span></dd>
+        <dd><span class="leadFiringRate">{{ modbus["lead_firing_rate"] }}</span> %</dd>
     </dl>
 {% endblock %}
 {% block system_map %}
@@ -28,18 +28,18 @@
             <div class="boiler-caption">
                 <br/>
                 <p class="text-center"><strong>Cascade Fire</strong></p>
-                <p class="text-center"><span class="cascadeCurrentPower">11</span></p>
+                <p class="text-center"><span class="cascadeCurrentPower">{{ modbus["cascade_current_power"] }}</span> %</p>
                 <p class="text-center"><strong>Lead Fire</strong></p>
-                <p class="text-center"><span class="leadFiringRate">11</span></p>
+                <p class="text-center"><span class="leadFiringRate">{{ modbus["lead_firing_rate"] }}</span> %</p>
             </div>
         </div>
         <div class="col-md-8">
             <div class="row">
-                <div class="col-md-2 col-md-offset-1">
-                    <span>10</span>
+                <div class="col-md-3 col-md-offset-1">
+                    <span class="outletTemp">{{ modbus["outlet_temp"] }}</span> &deg;F
                 </div>
-                <div class="col-md-3 col-md-offset-2">
-                    <span>10</span>
+                <div class="col-md-3 col-md-offset-1">
+                    <span class="systemSupplyTemp">{{ modbus["system_supply_temp"] }}</span> &deg;F
                 </div>
             </div>
             <div class="row">
@@ -48,16 +48,13 @@
                 </div>
             </div>
             <div class="row row-margin">
-                <div class="col-md-2 col-md-offset-3">
-                    <span>11</span>
+                <div class="col-md-3 col-md-offset-3">
+                    <span class="waterOutTemp">{{ data["results"]["waterOutTemp"] }}</span> &deg;F
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-2 col-md-offset-1">
-                    <span>10</span>
-                </div>
-                <div class="col-md-3 col-md-offset-2">
-                    <span>10</span>
+                <div class="col-md-3 col-md-offset-1">
+                    <span class="inletTemp">{{ modbus["inlet_temp"] }}</span> &deg;F
                 </div>
             </div>
             <div class="row">
@@ -66,38 +63,18 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-2 col-md-offset-3">
-                    <span>11</span>
+                <div class="col-md-3 col-md-offset-3">
+                    <span class="returnTemp">{{ data["results"]["returnTemp"] }}</span> &deg;F
                 </div>
             </div>
         </div>
     </div>
 {% endblock %}
-{% block form %}
-    <div class="form-group no-gutter form-group-no-gutter">
-        <label for="setPointOffset" class="col-sm-6 control-label">Setpoint Offset</label>
-        <div class="col-sm-3">
-            <p class="form-control-static"><span id="parameterX">{{ data["results"]["parameterX"] }}</span> &deg;F</p>
-        </div>
-        <div class="col-sm-3">
-            <input type="text" class="form-control input-sm" name="setPointOffset">
-        </div>
-    </div>
-    <div class="form-group no-gutter form-group-no-gutter">
-        <label for="tolerance" class="col-sm-6 control-label">Tolerance</label>
-        <div class="col-sm-3">
-            <p class="form-control-static"><span id="t1">{{ data["results"]["t1"] }}</span> &deg;F</p>
-        </div>
-        <div class="col-sm-3">
-            <input type="text" class="form-control input-sm" name="tolerance">
-        </div>
-    </div>
-{% endblock %}
 {% block js %}
-    $(".systemSupplyTemp").text(data.system_supply_temp);
-    $(".outletTemp").text(data.outlet_temp);
-    $(".inletTemp").text(data.inlet_temp);
-    $(".flueTemp").text(data.flue_temp);
-    $(".cascadeCurrentPower").text(data.cascade_current_power);
-    $(".leadFiringRate").text(data.lead_firing_rate);
+    modbus = data.modbus;
+    $(".systemSupplyTemp").text(modbus.system_supply_temp.toFixed(1));
+    $(".outletTemp").text(modbus.outlet_temp.toFixed(1));
+    $(".inletTemp").text(modbus.inlet_temp.toFixed(1));
+    $(".cascadeCurrentPower").text(modbus.cascade_current_power.toFixed(1));
+    $(".leadFiringRate").text(modbus.lead_firing_rate.toFixed(1));
 {% endblock %}

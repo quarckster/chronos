@@ -143,7 +143,7 @@
                                 <input type="text" class="form-control input-sm" name="tolerance">
                             </div>
                         </div>
-                    {% block form %}{% endblock %}
+                        {% block form %}{% endblock %}
                         <div class="form-group form-group-no-gutter">
                             <div class="col-md-4 col-md-offset-8">
                                 <button type="submit" class="btn btn-default">Update</button>
@@ -255,39 +255,40 @@
                                          }
                                      });
                 setInterval(function() {
-                    $.get("fetch_data", function(data) {
-                        data = data.data
-                        if (data.results.mode == 0 || data.results.mode == 2) {
+                    $.get("fetch_data", {{ "{modbus: true}," if data["results"]["mode"] == 0 }} function(data) {
+                        results = data.data.results;
+                        actStream = data.data.actStream;
+                        if (results.mode == 0 || results.mode == 2) {
                             $("#winterStatus").attr("src", "static/images/Icons/WinterSummer/WOn.png");
                             $("#summerStatus").attr("src", "static/images/Icons/WinterSummer/SOff.png");
-                        } else if (data.results.mode == 1 || data.results.mode == 3) {
+                        } else if (results.mode == 1 || results.mode == 3) {
                             $("#winterStatus").attr("src", "static/images/Icons/WinterSummer/WOff.png");
                             $("#summerStatus").attr("src", "static/images/Icons/WinterSummer/SOn.png");
-                        $("#outsideTemp").text(data.results.outsideTemp.toFixed(1));
-                        $("#baselineSetPoint").text(data.results.baselineSetPoint.toFixed(1));
-                        $("#setPoint2").text(data.results.setPoint2.toFixed(1));
-                        $("#effectiveSetPoint").text(data.results.sp.toFixed(1));
-                        $("#setPointOffset").text(data.results.parameterX.toFixed(1));
-                        $("#tolerance").text(data.results.t1.toFixed(1));
-                        $(".returnTemp").text(data.results.returnTemp.toFixed(1));
-                        $(".waterOutTemp").text(data.results.waterOutTemp.toFixed(1));
+                        }
+                        $("#outsideTemp").text(results.outsideTemp.toFixed(1));
+                        $("#baselineSetPoint").text(results.baselineSetPoint.toFixed(1));
+                        $("#setPoint2").text(results.setPoint2.toFixed(1));
+                        $("#effectiveSetPoint").text(results.sp.toFixed(1));
+                        $("#setPointOffset").text(results.parameterX.toFixed(1));
+                        $("#tolerance").text(results.t1.toFixed(1));
+                        $(".returnTemp").text(results.returnTemp.toFixed(1));
+                        $(".waterOutTemp").text(results.waterOutTemp.toFixed(1));
                         $("[id^=deviceAuto]").each(function(i) {
-                            if (data.actStream[i].MO == 0) {
+                            if (actStream[i].MO == 0) {
                                 $(this).prop("checked", true);
                             }
                         });
                         $("[id^=deviceOn]").each(function(i) {
-                            if (data.actStream[i].MO == 1) {
+                            if (actStream[i].MO == 1) {
                                 $(this).prop("checked", true);
                             }
                         });
                         $("[id^=deviceOff]").each(function(i) {
-                            if (data.actStream[i].MO == 2) {
+                            if (actStream[i].MO == 2) {
                                 $(this).prop("checked", true);
                             }
                         });
                         {% block js %}{% endblock %}
-                        }
                     }, "json");
                 }, 10000);
             });

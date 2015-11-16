@@ -55,16 +55,16 @@
     </div>
 {% endblock %}
 {% block js %}
-    $("#cascadeTime").text(data.results.CCT.toFixed(1));
-    $("#minSetPoint").text(data.results.spMin.toFixed(1));
-    $("#maxSetPoint").text(data.results.spMax.toFixed(1));
+    $("#cascadeTime").text(results.CCT.toFixed(1));
+    $("#minSetPoint").text(results.spMin.toFixed(1));
+    $("#maxSetPoint").text(results.spMax.toFixed(1));
     $("[id^=chillerOnTime]").each(function(i) {
-        $(this).text(data.actStream[i + 1].timeStamp);
+        $(this).text(actStream[i + 1].timeStamp);
     });
     $("[id^=chillerStatus]").each(function(i) {
-        if (data.actStream[i + 1].status == 0) {
+        if (actStream[i + 1].status == 0) {
             $(this).attr("src", "static/images/Icons/Boiler/Chiller-OFF.png");;
-        } else if (data.actStream[i + 1].status == 1) {
+        } else if (actStream[i + 1].status == 1) {
             $(this).attr("src", "static/images/Icons/Boiler/Chiller-ON.png");;
         }
     });

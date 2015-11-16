@@ -65,16 +65,21 @@ def get_modbus_data():
         else:
             break
     modbus_client.close()
-    return boiler_stats
+    return {"system_supply_temp": boiler_stats[0],
+            "outlet_temp": boiler_stats[1],
+            "inlet_temp": boiler_stats[2],
+            "flue_temp": boiler_stats[3],
+            "cascade_current_power": boiler_stats[4],
+            "lead_firing_rate": boiler_stats[5]}
 
 @app.route("/fetch_data")
 def fetch_data():
-    # if request.args["modbus"] == "true":
-    #     modbus_data = get_modbus_data()
-    #     response = jsonify(data=get_data(avg=False), modbus_data=modbus_data)
-    # else:
-    #     response = jsonify(data=get_data(avg=False))
-    # return response
+    if "modbus" in request.args:
+        modbus_data = get_modbus_data()
+        response = jsonify(data=get_data(avg=False), modbus=modbus_data)
+    else:
+        response = jsonify(data=get_data(avg=False))
+    return response
     return jsonify(data=get_data(avg=False))
 
 @app.route("/update_settings", methods=["POST"])
@@ -124,7 +129,7 @@ def index():
     mode = int(data["results"]["mode"])
     if mode in (0, 2):
         modbus_data = get_modbus_data()
-        redir = render_template("winter.html", data=data, modbus_data=modbus_data)
+        redir = render_template("winter.html", data=data, modbus=modbus_data)
     elif mode in (1, 3):
         redir = render_template("summer.html", data=data)
     return redir
@@ -156,7 +161,7 @@ def update_state():
 def winter():
     data = get_data()
     modbus_data = get_modbus_data()
-    return render_template("winter.html", data=data, modbus_data=modbus_data)
+    return render_template("winter.html", data=data, modbus=modbus_data)
 
 @app.route("/summer")
 def summer():
