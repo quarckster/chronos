@@ -4,34 +4,32 @@ import time
 from config_parser import cfg
 from pymodbus.exceptions import ModbusException
 from pymodbus.client.sync import ModbusSerialClient
-from db_conn import conn
+from db_conn import db
 from flask import Flask, render_template, Response, jsonify, request, \
      make_response, flash, abort
 app = Flask(__name__)
 
 def get_data(avg=True):
-    with conn:
-        cur = conn.cursor()
-        queries = ["SELECT * from mainTable order by LID desc limit 1",
-                   """SELECT spl.setPoint AS baselineSetPoint
-                      FROM SetpointLookup AS spl
-                      INNER JOIN (SELECT outsideTemp FROM mainTable ORDER BY LID DESC LIMIT 1) AS mt
-                      ON spl.windChill = ROUND(mt.outsideTemp, 0)""",
-                   "SELECT * FROM setpoints"]
-        if avg:
-            queries.append("""SELECT ROUND(AVG(outsideTemp), 1) AS avgOutsideTemp
-                              FROM mainTable WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR)
-                              ORDER BY LID DESC LIMIT 5760""")
-        results = {}
-        for query in queries:
-            cur.execute(query)
+    queries = ["SELECT * from mainTable order by LID desc limit 1",
+               """SELECT spl.setPoint AS baselineSetPoint
+                  FROM SetpointLookup AS spl
+                  INNER JOIN (SELECT outsideTemp FROM mainTable ORDER BY LID DESC LIMIT 1) AS mt
+                  ON spl.windChill = ROUND(mt.outsideTemp, 0)""",
+               "SELECT * FROM setpoints"]
+    if avg:
+        queries.append("""SELECT ROUND(AVG(outsideTemp), 1) AS avgOutsideTemp
+                          FROM mainTable WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR)
+                          ORDER BY LID DESC LIMIT 5760""")
+    results = {}
+    for query in queries:
+            cur = db.query(query)
             results.update(cur.fetchone())
-        query = "SELECT * from actStream"
-        cur.execute(query)
-        rows = cur.fetchall()
-        actStream = [{"timeStamp": row["timeStamp"].strftime("%B %d, %I:%M %p"),
-                      "status": row["status"],
-                      "MO": row["MO"]} for row in rows]
+    query = "SELECT * from actStream"
+    cur = db.query(query)
+    rows = cur.fetchall()
+    actStream = [{"timeStamp": row["timeStamp"].strftime("%B %d, %I:%M %p"),
+                  "status": row["status"],
+                  "MO": row["MO"]} for row in rows]
     return {"results": results, "actStream": actStream}
 
 def get_modbus_data():
@@ -60,7 +58,7 @@ def get_modbus_data():
                             c_to_f(iregs.getRegister(7) / 10.0),
                             float(iregs.getRegister(3)),
                             float(iregs.getRegister(8))]
-        except (OSError, serial.SerialException, ModbusException, AttributeError, IndexError) as e:
+        except (OSError, serial.SerialException, ModbusException, AttributeError, IndexError):
             time.sleep(0.7)
         else:
             break
@@ -92,9 +90,7 @@ def update_settings():
     query1 = ", ".join(query1)
     if query1:
         query1 = "UPDATE setpoints SET {}".format(query1)
-        with conn:
-            cur = conn.cursor()
-            cur.execute(query1)
+        db.query(query1)
     query2 = []
     if request.form["cascadeTime"]:
         query2.append("CCT='{}'".format(request.form["cascadeTime"]))
@@ -105,18 +101,14 @@ def update_settings():
     query2 = ", ".join(query2)
     if query2:
         query2 = "UPDATE mainTable SET {} ORDER BY LID DESC LIMIT 1".format(query2)
-        with conn:
-            cur = conn.cursor()
-            cur.execute(query2)
+        db.query(query2)
     return jsonify(data=request.form)
 
 @app.route("/switch_mode")
 def switch_mode():
     mode = request.args["mode"]
     query = "UPDATE mainTable SET mode={} ORDER BY LID DESC LIMIT 1".format(int(mode))
-    with conn:
-        cur = conn.cursor()
-        cur.execute(query)
+    db.query(query)
     if mode in ("2", "3"):
         resp = render_template("switch_mode.html", mode=mode)
     elif mode in ("0", "1"):
@@ -151,9 +143,7 @@ def update_state():
         resp = jsonify(error=True)
     else:
         query = "UPDATE actStream SET MO={} WHERE TID={}".format(status, tid)
-        with conn:
-            cur = conn.cursor()
-            cur.execute(query)
+        db.query(query)
         resp = make_response()
     return resp
 
@@ -171,10 +161,8 @@ def summer():
 @app.route("/chart_data")
 def chart_data():
     query = "SELECT returnTemp, logdatetime, waterOutTemp from mainTable order by LID desc limit 40";
-    with conn:
-        cur = conn.cursor()
-        cur.execute(query)
-        rows = cur.fetchall()
+    cur = db.query(query)
+    rows = cur.fetchall()
     data = [{"column-1": row["waterOutTemp"],
              "column-2": row["returnTemp"],
              "date": row["logdatetime"].strftime("%Y-%m-%d %H:%M")} for row in reversed(rows)]
