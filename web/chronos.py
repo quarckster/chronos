@@ -24,9 +24,11 @@ def get_data(avg=True):
     for query in queries:
             cur = db.query(query)
             results.update(cur.fetchone())
+            cur.close()
     query = "SELECT * from actStream"
     cur = db.query(query)
     rows = cur.fetchall()
+    cur.close()
     actStream = [{"timeStamp": row["timeStamp"].strftime("%B %d, %I:%M %p"),
                   "status": row["status"],
                   "MO": row["MO"]} for row in rows]
@@ -82,33 +84,41 @@ def fetch_data():
 
 @app.route("/update_settings", methods=["POST"])
 def update_settings():
-    query1 = []
-    if request.form["maxSetPoint"]:
-        query1.append("spMax='{}'".format(request.form["maxSetPoint"]))
-    if request.form["minSetPoint"]:
-        query1.append("spMin='{}'".format(request.form["minSetPoint"]))
-    query1 = ", ".join(query1)
-    if query1:
-        query1 = "UPDATE setpoints SET {}".format(query1)
-        db.query(query1)
+    try:
+        query1 = []
+        if request.form["maxSetPoint"]:
+            query1.append("spMax='{}'".format(request.form["maxSetPoint"]))
+        if request.form["minSetPoint"]:
+            query1.append("spMin='{}'".format(request.form["minSetPoint"]))
+    except KeyError:
+        pass
+    else:
+        query1 = ", ".join(query1)
+        if query1:
+            query1 = "UPDATE setpoints SET {}".format(query1)
+            db.query(query1).close()
     query2 = []
-    if request.form["cascadeTime"]:
-        query2.append("CCT='{}'".format(request.form["cascadeTime"]))
-    if request.form["tolerance"]:
-        query2.append("t1='{}'".format(request.form["tolerance"]))
-    if request.form["setPointOffset"]:
-        query2.append("parameterX='{}'".format(request.form["setPointOffset"]))
-    query2 = ", ".join(query2)
-    if query2:
-        query2 = "UPDATE mainTable SET {} ORDER BY LID DESC LIMIT 1".format(query2)
-        db.query(query2)
+    try:
+        if request.form["cascadeTime"]:
+            query2.append("CCT='{}'".format(request.form["cascadeTime"]))
+    except KeyError:
+        pass
+    else:
+        if request.form["tolerance"]:
+            query2.append("t1='{}'".format(request.form["tolerance"]))
+        if request.form["setPointOffset"]:
+            query2.append("parameterX='{}'".format(request.form["setPointOffset"]))
+        query2 = ", ".join(query2)
+        if query2:
+            query2 = "UPDATE mainTable SET {} ORDER BY LID DESC LIMIT 1".format(query2)
+            db.query(query2).close()
     return jsonify(data=request.form)
 
 @app.route("/switch_mode")
 def switch_mode():
     mode = request.args["mode"]
     query = "UPDATE mainTable SET mode={} ORDER BY LID DESC LIMIT 1".format(int(mode))
-    db.query(query)
+    db.query(query).close()
     if mode in ("2", "3"):
         resp = render_template("switch_mode.html", mode=mode)
     elif mode in ("0", "1"):
@@ -143,7 +153,7 @@ def update_state():
         resp = jsonify(error=True)
     else:
         query = "UPDATE actStream SET MO={} WHERE TID={}".format(status, tid)
-        db.query(query)
+        db.query(query).close()
         resp = make_response()
     return resp
 
@@ -163,6 +173,7 @@ def chart_data():
     query = "SELECT returnTemp, logdatetime, waterOutTemp from mainTable order by LID desc limit 40";
     cur = db.query(query)
     rows = cur.fetchall()
+    cur.close()
     data = [{"column-1": row["waterOutTemp"],
              "column-2": row["returnTemp"],
              "date": row["logdatetime"].strftime("%Y-%m-%d %H:%M")} for row in reversed(rows)]

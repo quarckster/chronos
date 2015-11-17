@@ -19,8 +19,9 @@ class DB:
                 cursor.execute(sql)
         except (AttributeError, MySQLdb.OperationalError):
             self.connect()
-            cursor = self.conn.cursor()
-            cursor.execute(sql)
+            with self.conn:
+                cursor = self.conn.cursor()
+                cursor.execute(sql)
         return cursor
 
 db = DB()
