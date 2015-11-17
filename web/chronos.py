@@ -2,15 +2,17 @@ import json
 import serial
 import time
 import os
+import MySQLdb.cursors
 from config_parser import cfg
 from pymodbus.exceptions import ModbusException
 from pymodbus.client.sync import ModbusSerialClient
-from db_conn import db
+from db_conn import DB
 from flask import Flask, render_template, Response, jsonify, request, \
-     make_response, flash, abort
+     make_response
 app = Flask(__name__)
 
 def get_data(avg=True):
+    db = DB()
     queries = ["SELECT * from mainTable order by LID desc limit 1",
                """SELECT spl.setPoint AS baselineSetPoint
                   FROM SetpointLookup AS spl
@@ -86,6 +88,36 @@ def get_modbus_data():
             "cascade_current_power": boiler_stats[4],
             "lead_firing_rate": boiler_stats[5]}
 
+@app.route("/download_log")
+def dump_log():
+    def generate():
+        limit = 256
+        offset = 0
+        conn = DB()
+        headers = ["LID", "logdatetime", "outsideTemp", "waterOutTemp",
+                  "returnTemp", "boilerStatus", "chiller1Status",
+                  "chiller2Status", "chiller3Status", "chiller4Status",
+                  "setPoint2", "parameterX", "t1", "MO_B", "MO_C1", "MO_C2",
+                  "MO_C3", "MO_C4", "mode", "powerMode", "CCT", "windSpeed", "avgOutsideTemp"]
+        yield ";".join(headers) + "\n"
+        while True:
+            query = "SELECT * FROM mainTable ORDER BY LID DESC"
+            limit_phrase = " LIMIT {} OFFSET {}".format(limit, offset)
+            query += limit_phrase
+            offset += limit
+            cur = conn.query(query, cursorclass=MySQLdb.cursors.Cursor)
+            rows = cur.fetchall()
+            cur.close()
+            if not rows:
+                break
+            for row in rows:
+                row = list(row)
+                row[1] = row[1].strftime("%d %b %I:%M %p")
+                yield ";".join([str(val) for val in row]) + "\n"
+    resp = Response(generate(), mimetype="text/csv")
+    resp.headers["Content-Disposition"] = "attachment; filename=exported-data.csv"
+    return resp
+
 @app.route("/fetch_data")
 def fetch_data():
     data = get_data(avg=False)
@@ -95,6 +127,7 @@ def fetch_data():
 
 @app.route("/update_settings", methods=["POST"])
 def update_settings():
+    db = DB()
     try:
         query1 = []
         if request.form["maxSetPoint"]:
@@ -129,6 +162,7 @@ def update_settings():
 def switch_mode():
     mode = request.args["mode"]
     query = "UPDATE mainTable SET mode={} ORDER BY LID DESC LIMIT 1".format(int(mode))
+    db = DB()
     db.query(query).close()
     if mode in ("2", "3"):
         resp = render_template("switch_mode.html", mode=mode)
@@ -146,7 +180,7 @@ def index():
     elif mode in (1, 3):
         resp = render_template("summer.html", data=data)
     return resp
-    
+
 @app.route("/update_state", methods=["POST"])
 def update_state():
     tid = request.form["tid"]
@@ -164,6 +198,7 @@ def update_state():
         resp = jsonify(error=True)
     else:
         query = "UPDATE actStream SET MO={} WHERE TID={}".format(status, tid)
+        db = DB()
         db.query(query).close()
         resp = make_response()
     return resp
@@ -182,6 +217,7 @@ def summer():
 @app.route("/chart_data")
 def chart_data():
     query = "SELECT returnTemp, logdatetime, waterOutTemp from mainTable order by LID desc limit 40";
+    db = DB()
     cur = db.query(query)
     rows = cur.fetchall()
     cur.close()

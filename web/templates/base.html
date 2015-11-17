@@ -101,7 +101,7 @@
                         <dt>Avg Wind Chill (96 hrs)</dt>
                         <dd>{{ data["results"]["avgOutsideTemp"] }} &deg;F</dd>
                     </dl>
-                    <p class="text-center"><a href="http://wx.thomaslivestock.com/"><small>wx.thomaslivestock.com</small></a></p>
+                    <p class="text-center"><a href="http://wx.thomaslivestock.com/" target="_blank"><small>wx.thomaslivestock.com</small></a></p>
                     <h4 class="text-center">Sensors</h4>
                     <dl class="dl-horizontal dl-horizontal-text-left">
                         <dt>Inlet</dt>
@@ -216,6 +216,13 @@
             <div class="row">
                 <h4 class="text-center">Inlet/Outlet Temperature History</h4>
                 <div id="chartdiv" class="col-md-12" style="height: 450px;"></div>
+            </div>
+            <div class="row row-margin">
+                <div class="col-md-2 col-md-offset-10">
+                    <div class="pull-right">
+                        <a role="button" class="btn btn-default" href="/download_log">Download log</a>
+                    </div>
+                </div>
             </div>
         </div>
         <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
