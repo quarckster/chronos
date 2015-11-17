@@ -4,15 +4,15 @@
     <h4 class="text-center">Modbus</h4>
     <dl class="dl-horizontal dl-horizontal-text-left">
         <dt>System Supply Temp</dt>
-        <dd><span class="systemSupplyTemp">{{ modbus["system_supply_temp"] }}</span> &deg;F</dd>
+        <dd><span class="systemSupplyTemp">{{ data["modbus"]["system_supply_temp"] }}</span> &deg;F</dd>
         <dt>Outlet Temp</dt>
-        <dd><span class="outletTemp">{{ modbus["outlet_temp"] }}</span> &deg;F</dd>
+        <dd><span class="outletTemp">{{ data["modbus"]["outlet_temp"] }}</span> &deg;F</dd>
         <dt>Inlet Temp</dt>
-        <dd><span class="inletTemp">{{ modbus["inlet_temp"] }}</span> &deg;F</dd>
+        <dd><span class="inletTemp">{{ data["modbus"]["inlet_temp"] }}</span> &deg;F</dd>
         <dt>Cascade Power</dt>
-        <dd><span class="cascadeCurrentPower">{{ modbus["cascade_current_power"] }}</span> %</dd>
+        <dd><span class="cascadeCurrentPower">{{ data["modbus"]["cascade_current_power"] }}</span> %</dd>
         <dt>Lead Firing Rate</dt>
-        <dd><span class="leadFiringRate">{{ modbus["lead_firing_rate"] }}</span> %</dd>
+        <dd><span class="leadFiringRate">{{ data["modbus"]["lead_firing_rate"] }}</span> %</dd>
     </dl>
 {% endblock %}
 {% block system_map %}
@@ -28,18 +28,18 @@
             <div class="boiler-caption">
                 <br/>
                 <p class="text-center"><strong>Cascade Fire</strong></p>
-                <p class="text-center"><span class="cascadeCurrentPower">{{ modbus["cascade_current_power"] }}</span> %</p>
+                <p class="text-center"><span class="cascadeCurrentPower">{{ data["modbus"]["cascade_current_power"] }}</span> %</p>
                 <p class="text-center"><strong>Lead Fire</strong></p>
-                <p class="text-center"><span class="leadFiringRate">{{ modbus["lead_firing_rate"] }}</span> %</p>
+                <p class="text-center"><span class="leadFiringRate">{{ data["modbus"]["lead_firing_rate"] }}</span> %</p>
             </div>
         </div>
         <div class="col-md-8">
             <div class="row">
                 <div class="col-md-3 col-md-offset-1">
-                    <span class="outletTemp">{{ modbus["outlet_temp"] }}</span> &deg;F
+                    <span class="outletTemp">{{ data["modbus"]["outlet_temp"] }}</span> &deg;F
                 </div>
                 <div class="col-md-3 col-md-offset-1">
-                    <span class="systemSupplyTemp">{{ modbus["system_supply_temp"] }}</span> &deg;F
+                    <span class="systemSupplyTemp">{{ data["modbus"]["system_supply_temp"] }}</span> &deg;F
                 </div>
             </div>
             <div class="row">
@@ -54,7 +54,7 @@
             </div>
             <div class="row">
                 <div class="col-md-3 col-md-offset-1">
-                    <span class="inletTemp">{{ modbus["inlet_temp"] }}</span> &deg;F
+                    <span class="inletTemp">{{ data["modbus"]["inlet_temp"] }}</span> &deg;F
                 </div>
             </div>
             <div class="row">
@@ -71,7 +71,7 @@
     </div>
 {% endblock %}
 {% block js %}
-    modbus = data.modbus;
+    modbus = data.data.modbus;
     $(".systemSupplyTemp").text(modbus.system_supply_temp.toFixed(1));
     $(".outletTemp").text(modbus.outlet_temp.toFixed(1));
     $(".inletTemp").text(modbus.inlet_temp.toFixed(1));

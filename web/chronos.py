@@ -1,6 +1,7 @@
 import json
 import serial
 import time
+import os
 from config_parser import cfg
 from pymodbus.exceptions import ModbusException
 from pymodbus.client.sync import ModbusSerialClient
@@ -32,7 +33,20 @@ def get_data(avg=True):
     actStream = [{"timeStamp": row["timeStamp"].strftime("%B %d, %I:%M %p"),
                   "status": row["status"],
                   "MO": row["MO"]} for row in rows]
-    return {"results": results, "actStream": actStream}
+    return {"results": results,
+            "actStream": actStream,
+            "chronos_status": get_chronos_status()}
+
+def get_chronos_status():
+    chronos_status = True
+    try:
+        with open("/var/run/chronos.pid") as pid_file:
+            pid = int(pid_file.readline())
+    except IOError:
+        chronos_status = False
+    else:
+        chronos_status = os.path.exists("/proc/{}".format(pid))
+    return chronos_status
 
 def get_modbus_data():
     boiler_stats = [0, 0, 0, 0, 0, 0]
@@ -74,13 +88,10 @@ def get_modbus_data():
 
 @app.route("/fetch_data")
 def fetch_data():
+    data = get_data(avg=False)
     if "modbus" in request.args:
-        modbus_data = get_modbus_data()
-        response = jsonify(data=get_data(avg=False), modbus=modbus_data)
-    else:
-        response = jsonify(data=get_data(avg=False))
-    return response
-    return jsonify(data=get_data(avg=False))
+        data["modbus"] = get_modbus_data()
+    return jsonify(data=data)
 
 @app.route("/update_settings", methods=["POST"])
 def update_settings():
@@ -130,12 +141,12 @@ def index():
     data = get_data()
     mode = int(data["results"]["mode"])
     if mode in (0, 2):
-        modbus_data = get_modbus_data()
-        redir = render_template("winter.html", data=data, modbus=modbus_data)
+        data["modbus"] = get_modbus_data()
+        resp = render_template("winter.html", data=data)
     elif mode in (1, 3):
-        redir = render_template("summer.html", data=data)
-    return redir
-
+        resp = render_template("summer.html", data=data)
+    return resp
+    
 @app.route("/update_state", methods=["POST"])
 def update_state():
     tid = request.form["tid"]
@@ -160,8 +171,8 @@ def update_state():
 @app.route("/winter")
 def winter():
     data = get_data()
-    modbus_data = get_modbus_data()
-    return render_template("winter.html", data=data, modbus=modbus_data)
+    data["modbus"] = get_modbus_data()
+    return render_template("winter.html", data=data)
 
 @app.route("/summer")
 def summer():

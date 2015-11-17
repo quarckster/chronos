@@ -59,7 +59,7 @@
             <div class="row">
                 <div class="col-md-3">
                     <h3><b>CHRONOS</b></h3>
-                    <h4>SYSTEM - OFFLINE</h4>
+                    <h4>SYSTEM - <span id="chronosStatus">{{ "ONLINE" if data["chronos_status"] else "OFFLINE" }}</span></h4>
                 </div>
                 <div class="col-md-3 col-md-offset-6 block-margin-top">
                     <div class="pull-left">
@@ -258,6 +258,11 @@
                     $.get("fetch_data", {{ "{modbus: true}," if data["results"]["mode"] == 0 }} function(data) {
                         results = data.data.results;
                         actStream = data.data.actStream;
+                        if (data.data.chronos_status) {
+                            $("#chronosStatus").text("ONLINE");
+                        } else {
+                            $("#chronosStatus").text("OFFLINE");
+                        }
                         if (results.mode == 0 || results.mode == 2) {
                             $("#winterStatus").attr("src", "static/images/Icons/WinterSummer/WOn.png");
                             $("#summerStatus").attr("src", "static/images/Icons/WinterSummer/SOff.png");
