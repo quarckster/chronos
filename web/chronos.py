@@ -3,12 +3,14 @@ import serial
 import time
 import os
 import MySQLdb.cursors
-from config_parser import cfg
+import sys
 from pymodbus.exceptions import ModbusException
 from pymodbus.client.sync import ModbusSerialClient
 from db_conn import DB
 from flask import Flask, render_template, Response, jsonify, request, \
      make_response
+sys.path.insert(1, os.path.join(sys.path[0], "../backend"))
+from config_parser import cfg
 app = Flask(__name__)
 
 def get_data(avg=True):
@@ -59,7 +61,7 @@ def get_modbus_data():
                                            port=cfg.modbus.portname,
                                            timeout=cfg.modbus.timeout)
         modbus_client.connect()
-    except (ModbusException, OSError) as e:
+    except (ModbusException, OSError):
         pass
     c_to_f = lambda t: round(((9.0 / 5.0) * t + 32.0), 1)
     for i in range(3):
@@ -98,7 +100,8 @@ def dump_log():
                   "returnTemp", "boilerStatus", "chiller1Status",
                   "chiller2Status", "chiller3Status", "chiller4Status",
                   "setPoint2", "parameterX", "t1", "MO_B", "MO_C1", "MO_C2",
-                  "MO_C3", "MO_C4", "mode", "powerMode", "CCT", "windSpeed", "avgOutsideTemp"]
+                  "MO_C3", "MO_C4", "mode", "powerMode", "CCT", "windSpeed",
+                  "avgOutsideTemp"]
         yield ";".join(headers) + "\n"
         while True:
             query = "SELECT * FROM mainTable ORDER BY LID DESC"
@@ -147,15 +150,14 @@ def update_settings():
             query2.append("CCT='{}'".format(request.form["cascadeTime"]))
     except KeyError:
         pass
-    else:
-        if request.form["tolerance"]:
-            query2.append("t1='{}'".format(request.form["tolerance"]))
-        if request.form["setPointOffset"]:
-            query2.append("parameterX='{}'".format(request.form["setPointOffset"]))
-        query2 = ", ".join(query2)
-        if query2:
-            query2 = "UPDATE mainTable SET {} ORDER BY LID DESC LIMIT 1".format(query2)
-            db.query(query2).close()
+    if request.form["tolerance"]:
+        query2.append("t1='{}'".format(request.form["tolerance"]))
+    if request.form["setPointOffset"]:
+        query2.append("parameterX='{}'".format(request.form["setPointOffset"]))
+    query2 = ", ".join(query2)
+    if query2:
+        query2 = "UPDATE mainTable SET {} ORDER BY LID DESC LIMIT 1".format(query2)
+        db.query(query2).close()
     return jsonify(data=request.form)
 
 @app.route("/switch_mode")
@@ -183,7 +185,13 @@ def index():
 
 @app.route("/update_state", methods=["POST"])
 def update_state():
+    devices = {"1": "boiler",
+               "2": "chiller1",
+               "3": "chiller2",
+               "4": "chiller3",
+               "5": "chiller4"}
     tid = request.form["tid"]
+    real_device_id = getattr(cfg.relay, devices[tid])
     status = request.form["status"]
     command = {"2": "off", "1": "on"}
     try:
@@ -193,8 +201,9 @@ def update_state():
             with serial.Serial(cfg.serial.portname,
                                cfg.serial.baudr,
                                timeout=1) as ser_port:
-                ser_port.write("relay {} {}\n\r".format(command[status], tid))
-    except (serial.SerialException, OSError) as e:
+                ser_port.write("relay {} {}\n\r".format(command[status],
+                                                        real_device_id))
+    except (serial.SerialException, OSError):
         resp = jsonify(error=True)
     else:
         query = "UPDATE actStream SET MO={} WHERE TID={}".format(status, tid)
