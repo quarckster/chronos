@@ -10,7 +10,7 @@ import serial
 from lxml import etree
 from root_logger import root_logger
 from config_parser import cfg
-from modbus_client import modbus_client
+from modbus_client import modbus_client, ModbusException
 from db_conn import conn, MySQLdb_error
 
 # Constants
@@ -235,7 +235,7 @@ def get_data_from_web(mode):
     error_Web = 0
     try:
         content = urllib2.urlopen('http://wx.thomaslivestock.com')
-    except IOError, urllib2.HTTPError:
+    except (IOError, urllib2.HTTPError, urllib2.URLError):
         root_logger.exception("""Unable to get data from website.
                               Reading previous value from DB.""")
         error_Web = 1
@@ -458,6 +458,20 @@ def switch_valve(mode, valveStatus):
     return valveStatus
 
 
+def change_sp(setpoint):
+    setpoint = int(-101.4856 + 1.7363171*int(setpoint))
+    for i in range(3):
+        try:
+            assert(setpoint > 0 and setpoint < 100)
+            modbus_client.write_register(0, 4, unit=cfg.modbus.unit)
+            modbus_client.write_register(2, setpoint, unit=cfg.modbus.unit)
+        except (AssertionError, ModbusException, serial.SerialException) as e:
+            root_logger.exception(e)
+            time.sleep(0.5)
+        else:
+            break
+
+
 def update_db(MO, outside_temp, water_out_temp, return_temp, boiler_status,
               chiller_status, setpoint2, wind_speed, avgOutsideTemp):
     try:
@@ -524,53 +538,6 @@ def update_actStream_table(status, chiller_id, boiler=False, MO=False):
     except MySQLdb_error as e:
         root_logger.exception("Error updating actStream table: %s" % e)
 
-def get_boiler_stats():
-    c_to_f = lambda t: round(((9.0/5.0)*t + 32.0), 1)
-    while True:
-        try:
-            # Read one register from 40006 address to get System Supply Temperature
-            # Memory map for the boiler is here on page 8:
-            # http://www.lochinvar.com/_linefiles/SYNC-MODB%20REV%20H.pdf
-            hregs = modbus_client.read_holding_registers(6, count=1, unit=cfg.modbus.unit)
-            # Read 9 registers from 30003 address
-            iregs = modbus_client.read_input_registers(3, count=9, unit=cfg.modbus.unit)
-            boiler_stats = {"system_supply_temp": c_to_f(hregs.getRegister(0)/10.0),
-                            "outlet_temp": c_to_f(iregs.getRegister(5)/10.0),
-                            "inlet_temp": c_to_f(iregs.getRegister(6)/10.0),
-                            "flue_temp": c_to_f(iregs.getRegister(7)/10.0),
-                            "cascade_current_power": float(iregs.getRegister(3)),
-                            "lead_firing_rate": float(iregs.getRegister(8))}
-        except (AttributeError, IndexError):
-            root_logger.exception("Modbus answer is empty, retrying.")
-            time.sleep(1)
-        except (serial.SerialException, OSError) as e:
-            root_logger.exception("Modbus error: %s" % e)
-            boiler_stats = False
-            break
-        else:
-            break
-    return boiler_stats
-
-def update_boilerStats_table(system_supply_temp, outlet_temp, inlet_temp,
-                             flue_temp, cascade_current_power, lead_firing_rate):
-    try:
-        with conn:
-            cur = conn.cursor()
-            sql = ("""UPDATE boilerStats
-                      SET system_supply_temp=%s,
-                          outlet_temp=%s,
-                          inlet_temp=%s,
-                          flue_temp=%s,
-                          cascade_current_power=%s,
-                          lead_firing_rate=%s""" % (system_supply_temp,
-                                                    outlet_temp,
-                                                    inlet_temp,
-                                                    flue_temp,
-                                                    cascade_current_power,
-                                                    lead_firing_rate))
-            cur.execute(sql)
-    except MySQLdb_error as e:
-        root_logger.exception("Error updating boilerStats table: %s" % e)     
 
 def update_sysStatus(error_sensor, error_DB, error_Web):
     errData = [error_sensor[0], error_sensor[1], error_DB, error_Web]
@@ -652,6 +619,7 @@ if __name__ == "__main__":
                                           db_data["setpoint2"],
                                           db_data["parameterX"],
                                           db_data["mode"])
+            change_sp(setpoint["effective_setpoint"])
             boiler_status = boiler_switcher(db_data["MO_B"],
                                             db_data["mode"],
                                             sensors_data["return_temp"],
@@ -666,7 +634,6 @@ if __name__ == "__main__":
                                                        db_data["MO_C"],
                                                        db_data["CCT"],
                                                        db_data["mode"])
-            boiler_stats = get_boiler_stats()
             valveStatus = switch_valve(db_data["mode"], valveStatus)
             # Update db every minute
             if time.time() - timer >= 60:
@@ -683,13 +650,6 @@ if __name__ == "__main__":
                           web_data["windSpeed"],
                           setpoint["wind_chill_avg"])
                 timer = time.time()
-                if boiler_stats:
-                    update_boilerStats_table(boiler_stats["system_supply_temp"],
-                                             boiler_stats["outlet_temp"],
-                                             boiler_stats["inlet_temp"],
-                                             boiler_stats["flue_temp"],
-                                             boiler_stats["cascade_current_power"],
-                                             boiler_stats["lead_firing_rate"])
             update_sysStatus(sensors_data["errors"],
                              error_DB,
                              web_data["error_Web"])
