@@ -469,23 +469,63 @@ def change_sp(setpoint):
             root_logger.exception(e)
             time.sleep(0.5)
         else:
+            root_logger.info("Setpoint %s is sent to boiler" % setpoint)
             break
 
 
-def update_db(MO, outside_temp, water_out_temp, return_temp, boiler_status,
+def get_boiler_stats():
+    c_to_f = lambda t: round(((9.0/5.0)*t + 32.0), 1)
+    boiler_stats = {"system_supply_temp": 0,
+                    "outlet_temp": 0,
+                    "inlet_temp": 0,
+                    "flue_temp": 0,
+                    "cascade_current_power": 0,
+                    "lead_firing_rate": 0}
+    for i in range(3):
+        try:
+            # Read one register from 40006 address to get System Supply Temperature
+            # Memory map for the boiler is here on page 8:
+            # http://www.lochinvar.com/_linefiles/SYNC-MODB%20REV%20H.pdf
+            hregs = modbus_client.read_holding_registers(6, count=1, unit=cfg.modbus.unit)
+            # Read 9 registers from 30003 address
+            iregs = modbus_client.read_input_registers(3, count=9, unit=cfg.modbus.unit)
+            boiler_stats = {"system_supply_temp": c_to_f(hregs.getRegister(0)/10.0),
+                            "outlet_temp": c_to_f(iregs.getRegister(5)/10.0),
+                            "inlet_temp": c_to_f(iregs.getRegister(6)/10.0),
+                            "flue_temp": c_to_f(iregs.getRegister(7)/10.0),
+                            "cascade_current_power": float(iregs.getRegister(3)),
+                            "lead_firing_rate": float(iregs.getRegister(8))}
+        except (AttributeError, IndexError):
+            root_logger.exception("Modbus answer is empty, retrying.")
+            time.sleep(1)
+        except (serial.SerialException, OSError) as e:
+            root_logger.exception("Modbus error: %s" % e)
+            break
+        else:
+            break
+    return boiler_stats
+
+
+def update_db(MO, outside_temp, effective_setpoint, cascade_fire_rate, 
+              lead_fire_rate, water_out_temp, return_temp, boiler_status,
               chiller_status, setpoint2, wind_speed, avgOutsideTemp):
     try:
         with conn:
             cur = conn.cursor()
-            args = [outside_temp, water_out_temp, return_temp, boiler_status, chiller_status[0],
-                    chiller_status[1], chiller_status[2], chiller_status[3], setpoint2]
+            args = [outside_temp, effective_setpoint, water_out_temp,
+                    return_temp, boiler_status, cascade_fire_rate, 
+                    lead_fire_rate, chiller_status[0], chiller_status[1],
+                    chiller_status[2], chiller_status[3], setpoint2]
             string1 = ",".join(["\"%s\"" % i for i in args])
             string2 = ",".join(["\"%s\"" % i for i in MO])
             sql2 = ("""INSERT INTO mainTable (logdatetime,
                                               outsideTemp,
+                                              effectiveSetpoint,
                                               waterOutTemp,
                                               returnTemp,
                                               boilerStatus,
+                                              cascadeFireRate,
+                                              leadFireRate,
                                               chiller1Status,
                                               chiller2Status,
                                               chiller3Status,
@@ -540,12 +580,6 @@ def update_actStream_table(status, chiller_id, boiler=False, MO=False):
 
 def update_sysStatus(error_sensor, error_DB, error_Web):
     errData = [error_sensor[0], error_sensor[1], error_DB, error_Web]
-    try:
-        with open("/var/www/sysStatus.txt", "w") as dataFile:
-            for item in errData:
-                dataFile.write("%s\n" % str(item))
-    except IOError as e:
-        root_logger.exception("Error opening file to write: %s" % e)
     try:
         with conn:
             cur = conn.cursor()
@@ -639,8 +673,12 @@ if __name__ == "__main__":
                 MO = []
                 MO.append(db_data["MO_B"])
                 MO.extend(db_data["MO_C"])
+                boiler_stats = get_boiler_stats()
                 update_db(MO,
                           web_data["outside_temp"],
+                          setpoint["effective_setpoint"],
+                          boiler_stats["cascade_fire_rate"],
+                          boiler_stats["lead_fire_rate"],
                           sensors_data["water_out_temp"],
                           sensors_data["return_temp"],
                           boiler_status,
