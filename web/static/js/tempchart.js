@@ -20,13 +20,13 @@ AmCharts.makeChart("chartdiv",
                 {
                     "bullet": "round",
                     "id": "AmGraph-1",
-                    "title": "Water Inlet",
+                    "title": "Water Outlet",
                     "valueField": "column-1"
                 },
                 {
                     "bullet": "square",
                     "id": "AmGraph-2",
-                    "title": "Water Outlet",
+                    "title": "Water Inlet",
                     "valueField": "column-2"
                 }
             ],
