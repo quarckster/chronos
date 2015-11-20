@@ -3,7 +3,6 @@
 import time
 import os
 import urllib2
-import subprocess
 import signal
 import sys
 import serial
@@ -11,12 +10,10 @@ from lxml import etree
 from root_logger import root_logger
 from config_parser import cfg
 from modbus_client import modbus_client, ModbusException
-from db_conn import conn, MySQLdb_error
+from db_conn import conn, MySQLdb.Error
 
 # Constants
 DEVICE_DIR = cfg.files.sys_devices_dir
-SYSTEMUP = cfg.files.systemup_path
-FIRMWARE_UPGRADE = cfg.files.firmware_upgrade
 # Set relay numbers
 boiler_pin = cfg.relay.boiler
 chiller_pin = [0]*4
@@ -33,13 +30,6 @@ led_blue = cfg.relay.led_blue
 sensor_out_id = cfg.sensors.out_id 
 sensor_in_id = cfg.sensors.in_id
 
-def update_systemUp():
-    try:
-        with open(SYSTEMUP, "w") as dataFile:
-            dataFile.write("ONLINE\n")
-    except IOError as e:
-        root_logger.exception("Can't write to systemUp.txt: %s" % e)
-
 
 def switch_relay(number, command):
     if command in [1, True]:
@@ -55,21 +45,6 @@ def switch_relay(number, command):
     except serial.SerialException as e:
         root_logger.exception("Serial port error: %s" % e)
         sys.exit(1)
-
-
-def manage_system(power_mode):
-    "Check for shutdown, restart, etc."
-    if power_mode == 10:
-        subprocess.call(["reboot"])
-    elif power_mode == 20:
-        subprocess.call(["shutdown", "now"])
-    elif power_mode == 2:
-        subprocess.call(["python", FIRMWARE_UPGRADE])
-        time.sleep(10)
-    elif power_mode == 7:
-        subprocess.call(["python",
-                         "/home/pi/Desktop/Chronos/Chronos_starter.py"])
-        time.sleep(10)
 
 
 def check_mysql():
@@ -142,7 +117,7 @@ def read_temperature_sensors():
                         cur.execute(sql)
                         results = cur.fetchone()
                     return_temp = results[0]
-                except MySQLdb_error:
+                except MySQLdb.Error:
                     return_temp = 00.00
             if device_id == sensor_out_id:
                 water_out_temp = read_temp(device_file)
@@ -199,7 +174,7 @@ def read_values_from_db():
             MO_C = [result2[1][1], result2[2][1], result2[3][1], result2[4][1]]
             time_stamps = [result2[1][2], result2[2][2], result2[3][2], result2[4][2]]
             # power_mode = result[19]
-    except MySQLdb_error as e:
+    except MySQLdb.Error as e:
         # ON = 1, OFF = 0
         boiler_status = 0
         chiller_status = [0]*4
@@ -250,9 +225,9 @@ def get_data_from_web(mode):
                 results = cur.fetchone()
                 outside_temp = results[0]
                 wind_speed = results[1]
-        except MySQLdb_error:
+        except MySQLdb.Error:
             root_logger.exception("""Unable to get value from DB.
-                                 Reverting to default value of 65 deg F""")
+                                  Reverting to default value of 65 deg F""")
             outside_temp = 65.00
             wind_speed = 0.00
     else:
@@ -298,7 +273,7 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
                 wind_chill_avg = int(round(result[0]))
             else:
                 wind_chill_avg = wind_chill
-    except MySQLdb_error as e:
+    except MySQLdb.Error as e:
         wind_chill_avg = 0
         root_logger.exception("Unable to get value from DB: %s" % e)
     if wind_chill < 11:
@@ -313,7 +288,7 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
                 cur.execute(sql)
                 results = cur.fetchone()
                 baseline_setpoint = results[0]
-        except MySQLdb_error as e:
+        except MySQLdb.Error as e:
             root_logger.exception("Setpoint error: %s" % e)
     if wind_chill_avg < 71:
         temperature_history_adjsutment = 0
@@ -327,7 +302,7 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
                 cur.execute(sql)
                 results = cur.fetchone()
                 temperature_history_adjsutment = results[0]
-        except MySQLdb_error as e:
+        except MySQLdb.Error as e:
             temperature_history_adjsutment = 0
             root_logger.exception("Setpoint error: %s" % e)
     tha_setpoint = baseline_setpoint - temperature_history_adjsutment
@@ -340,7 +315,7 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
             cur.execute(sql)
             results = cur.fetchone()
             sp_min =  results[0]
-    except MySQLdb_error as e:
+    except MySQLdb.Error as e:
         sp_min = 40.00
         root_logger.exception("Unable to read spMin: %s" % e)
     try:
@@ -350,7 +325,7 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
             cur.execute(sql)
             results = cur.fetchone()
             sp_max =  results[0]
-    except MySQLdb_error as e:
+    except MySQLdb.Error as e:
         sp_max = 100.00
         root_logger.exception("Unable to read spMax: %s" % e)
     if effective_setpoint > sp_max:
@@ -362,7 +337,7 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
             cur = conn.cursor()
             sql = "UPDATE setpoints SET sp=%s" % effective_setpoint
             cur.execute(sql)
-    except MySQLdb_error as e:
+    except MySQLdb.Error as e:
         root_logger.exception("Unable to update sp: %s" % e)
     return {"effective_setpoint": effective_setpoint,
             "tha_setpoint": tha_setpoint,
@@ -498,7 +473,7 @@ def get_boiler_stats():
         except (AttributeError, IndexError):
             root_logger.exception("Modbus answer is empty, retrying.")
             time.sleep(1)
-        except (serial.SerialException, OSError) as e:
+        except (ModbusException, serial.SerialException, OSError) as e:
             root_logger.exception("Modbus error: %s" % e)
             break
         else:
@@ -551,7 +526,7 @@ def update_db(MO, outside_temp, effective_setpoint, cascade_fire_rate,
                                      wind_speed,
                                      avgOutsideTemp))
             cur.execute(sql2)
-    except MySQLdb_error as e:
+    except MySQLdb.Error as e:
         root_logger.exception("Error updating table: %s" % e)
 
 
@@ -575,7 +550,7 @@ def update_actStream_table(status, chiller_id, boiler=False, MO=False):
                               status=%s
                           WHERE TID=%s""" % (status, tid))
             cur.execute(sql)
-    except MySQLdb_error as e:
+    except MySQLdb.Error as e:
         root_logger.exception("Error updating actStream table: %s" % e)
 
 def update_sysStatus(error_sensor, error_DB, error_Web):
@@ -590,7 +565,7 @@ def update_sysStatus(error_sensor, error_DB, error_Web):
                                            error_sensor[1],
                                            error_Web))
             cur.execute(sql)
-    except MySQLdb_error as e:
+    except MySQLdb.Error as e:
         root_logger.exception("Error updating actStream table: %s" % e)            
 
 
@@ -638,7 +613,6 @@ if __name__ == "__main__":
     breather_count = 0
     valveStatus = 0
     timer = 0 
-    update_systemUp()
     initialize_chronos_state()
     try:
         while True:
@@ -690,7 +664,6 @@ if __name__ == "__main__":
             update_sysStatus(sensors_data["errors"],
                              error_DB,
                              web_data["error_Web"])
-            # manage_system(db_data["power_mode"])
     except KeyboardInterrupt:
         destructor()
     except Exception as e:

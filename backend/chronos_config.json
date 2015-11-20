@@ -18,8 +18,7 @@
         "files": {
                 "sys_devices_dir": "/sys/bus/w1/devices",
                 "log_path": "/tmp/chronos.log",
-                "firmware_upgrade": "/home/pi/Desktop/Chronos/firmwareUpgrade.py",
-                "systemup_path": "/tmp/systemUp.txt"
+                "firmware_upgrade": "/home/pi/Desktop/Chronos/firmwareUpgrade.py"
         },
         "relay": {
                 "boiler": 0,
