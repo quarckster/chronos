@@ -54,6 +54,7 @@ def get_chronos_status():
 
 def get_modbus_data():
     boiler_stats = [0, 0, 0, 0, 0, 0]
+    error = True
     try:
         modbus_client = ModbusSerialClient(method=cfg.modbus.method,
                                            baudrate=cfg.modbus.baudr,
@@ -81,6 +82,7 @@ def get_modbus_data():
         except (OSError, serial.SerialException, ModbusException, AttributeError, IndexError):
             time.sleep(0.7)
         else:
+            error = False
             break
     modbus_client.close()
     return {"system_supply_temp": boiler_stats[0],
@@ -88,7 +90,8 @@ def get_modbus_data():
             "inlet_temp": boiler_stats[2],
             "flue_temp": boiler_stats[3],
             "cascade_current_power": boiler_stats[4],
-            "lead_firing_rate": boiler_stats[5]}
+            "lead_firing_rate": boiler_stats[5],
+            "error": error}
 
 @app.route("/download_log")
 def dump_log():

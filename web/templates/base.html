@@ -263,8 +263,8 @@
                                      });
                 setInterval(function() {
                     $.get("fetch_data", {{ "{modbus: true}," if data["results"]["mode"] == 0 }} function(data) {
-                        results = data.data.results;
-                        actStream = data.data.actStream;
+                        var results = data.data.results;
+                        var actStream = data.data.actStream;
                         if (data.data.chronos_status) {
                             $("#chronosStatus").text("ONLINE");
                         } else {
