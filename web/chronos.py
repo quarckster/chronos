@@ -1,12 +1,12 @@
+import os
+import sys
+import time
 import json
 import serial
-import time
-import os
 import MySQLdb.cursors
-import sys
+from db_conn import DB
 from pymodbus.exceptions import ModbusException
 from pymodbus.client.sync import ModbusSerialClient
-from db_conn import DB
 from flask import Flask, render_template, Response, jsonify, request, \
      make_response
 sys.path.insert(1, os.path.join(sys.path[0], "../backend"))
@@ -64,27 +64,28 @@ def get_modbus_data():
         modbus_client.connect()
     except (ModbusException, OSError):
         pass
-    c_to_f = lambda t: round(((9.0 / 5.0) * t + 32.0), 1)
-    for i in range(3):
-        try:
-            # Read one register from 40006 address to get System Supply Temperature
-            # Memory map for the boiler is here on page 8:
-            # http://www.lochinvar.com/_linefiles/SYNC-MODB%20REV%20H.pdf
-            hregs = modbus_client.read_holding_registers(6, count=1, unit=1)
-            # Read 9 registers from 30003 address
-            iregs = modbus_client.read_input_registers(3, count=9, unit=1)
-            boiler_stats = [c_to_f(hregs.getRegister(0) / 10.0),
-                            c_to_f(iregs.getRegister(5) / 10.0),
-                            c_to_f(iregs.getRegister(6) / 10.0),
-                            c_to_f(iregs.getRegister(7) / 10.0),
-                            float(iregs.getRegister(3)),
-                            float(iregs.getRegister(8))]
-        except (OSError, serial.SerialException, ModbusException, AttributeError, IndexError):
-            time.sleep(0.7)
-        else:
-            error = False
-            break
-    modbus_client.close()
+    else:
+        c_to_f = lambda t: round(((9.0 / 5.0) * t + 32.0), 1)
+        for i in range(3):
+            try:
+                # Read one register from 40006 address to get System Supply Temperature
+                # Memory map for the boiler is here on page 8:
+                # http://www.lochinvar.com/_linefiles/SYNC-MODB%20REV%20H.pdf
+                hregs = modbus_client.read_holding_registers(6, count=1, unit=1)
+                # Read 9 registers from 30003 address
+                iregs = modbus_client.read_input_registers(3, count=9, unit=1)
+                boiler_stats = [c_to_f(hregs.getRegister(0) / 10.0),
+                                c_to_f(iregs.getRegister(5) / 10.0),
+                                c_to_f(iregs.getRegister(6) / 10.0),
+                                c_to_f(iregs.getRegister(7) / 10.0),
+                                float(iregs.getRegister(3)),
+                                float(iregs.getRegister(8))]
+            except (OSError, serial.SerialException, ModbusException, AttributeError, IndexError):
+                time.sleep(0.7)
+            else:
+                error = False
+                break
+        modbus_client.close()
     return {"system_supply_temp": boiler_stats[0],
             "outlet_temp": boiler_stats[1],
             "inlet_temp": boiler_stats[2],
@@ -105,7 +106,7 @@ def dump_log():
                   "setPoint2", "parameterX", "t1", "MO_B", "MO_C1", "MO_C2",
                   "MO_C3", "MO_C4", "mode", "powerMode", "CCT", "windSpeed",
                   "avgOutsideTemp"]
-        yield ";".join(headers) + "\n"
+        yield ",".join(headers) + "\n"
         while True:
             query = "SELECT * FROM mainTable ORDER BY LID DESC"
             limit_phrase = " LIMIT {} OFFSET {}".format(limit, offset)
@@ -119,7 +120,7 @@ def dump_log():
             for row in rows:
                 row = list(row)
                 row[1] = row[1].strftime("%d %b %I:%M %p")
-                yield ";".join([str(val) for val in row]) + "\n"
+                yield ",".join([str(val) for val in row]) + "\n"
     resp = Response(generate(), mimetype="text/csv")
     resp.headers["Content-Disposition"] = "attachment; filename=exported-data.csv"
     return resp
