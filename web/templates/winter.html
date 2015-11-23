@@ -71,10 +71,12 @@
     </div>
 {% endblock %}
 {% block js %}
-    modbus = data.data.modbus;
-    $(".systemSupplyTemp").text(modbus.system_supply_temp.toFixed(1));
-    $(".outletTemp").text(modbus.outlet_temp.toFixed(1));
-    $(".inletTemp").text(modbus.inlet_temp.toFixed(1));
-    $(".cascadeCurrentPower").text(modbus.cascade_current_power.toFixed(1));
-    $(".leadFiringRate").text(modbus.lead_firing_rate.toFixed(1));
+    var modbus = data.data.modbus;
+    if (!modbus.error) {
+        $(".systemSupplyTemp").text(modbus.system_supply_temp.toFixed(1));
+        $(".outletTemp").text(modbus.outlet_temp.toFixed(1));
+        $(".inletTemp").text(modbus.inlet_temp.toFixed(1));
+        $(".cascadeCurrentPower").text(modbus.cascade_current_power.toFixed(1));
+        $(".leadFiringRate").text(modbus.lead_firing_rate.toFixed(1));
+    }
 {% endblock %}

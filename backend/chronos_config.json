@@ -1,43 +1,41 @@
 {
     "serial": {
-            "baudr": 19200,
-            "portname": "/dev/ttyACM0"
+        "baudr": 19200,
+        "portname": "/dev/ttyACM0"
     },
     "modbus": {
-            "baudr": 9600,
-            "portname": "/dev/ttyUSB0",
-            "parity": "E",
-            "timeout": 1,
-            "method": "rtu",
-            "unit": 1
+        "baudr": 9600,
+        "portname": "/dev/ttyUSB0",
+        "parity": "E",
+        "timeout": 1,
+        "method": "rtu",
+        "unit": 1
     },
     "sensors": {
-            "in_id": "28-00000677d509",
-            "out_id": "28-0000067841b0"
+        "in_id": "28-00000677d509",
+        "out_id": "28-0000067841b0"
     },
     "files": {
-            "sys_devices_dir": "/sys/bus/w1/devices",
-            "log_path": "/tmp/chronos.log",
-            "firmware_upgrade": "/home/pi/Desktop/Chronos/firmwareUpgrade.py",
-            "systemup_path": "/tmp/systemUp.txt"
+        "sys_devices_dir": "/sys/bus/w1/devices",
+        "log_path": "/tmp/chronos.log"
     },
     "relay": {
-            "boiler": 0,
-            "chiller1": 2,
-            "chiller2": 1,
-            "chiller3": 4,
-            "chiller4": 3,
-            "valve1": 5,
-            "valve2": 6,
-            "led_breather": 7,
-            "led_red": 8,
-            "led_green": 9,
-            "led_blue": 10
+        "boiler": 0,
+        "chiller1": 2,
+        "chiller2": 1,
+        "chiller3": 4,
+        "chiller4": 3,
+        "valve1": 5,
+        "valve2": 6,
+        "led_breather": 7,
+        "led_red": 8,
+        "led_green": 9,
+        "led_blue": 10
     },
     "db": {
-            "host": "localhost",
-            "user": "root",
-            "password": "estrrado",
-            "name": "Chronos"
+        "host": "localhost",
+        "user": "root",
+        "password": "estrrado",
+        "name": "Chronos"
     }
 }

@@ -6,7 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
         <title>Chronos: Home Page</title>
-        <link rel="icon" type="image/png" href="images/Icons/Logo.png">
+        <link rel="icon" type="image/png" href="static/images/Icons/Logo.png">
         <script src="static/js/amcharts/amcharts.js" type="text/javascript"></script>
         <script src="static/js/amcharts/serial.js" type="text/javascript"></script>
         <script src="static/js/amcharts/plugins/dataloader/dataloader.min.js" type="text/javascript"></script>
@@ -263,8 +263,8 @@
                                      });
                 setInterval(function() {
                     $.get("fetch_data", {{ "{modbus: true}," if data["results"]["mode"] == 0 }} function(data) {
-                        results = data.data.results;
-                        actStream = data.data.actStream;
+                        var results = data.data.results;
+                        var actStream = data.data.actStream;
                         if (data.data.chronos_status) {
                             $("#chronosStatus").text("ONLINE");
                         } else {
@@ -302,7 +302,7 @@
                         });
                         {% block js %}{% endblock %}
                     }, "json");
-                }, 10000);
+                }, 8000);
             });
         </script>
     </body>
