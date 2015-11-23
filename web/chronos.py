@@ -100,12 +100,13 @@ def dump_log():
         limit = 256
         offset = 0
         conn = DB()
-        headers = ["LID", "logdatetime", "outsideTemp", "waterOutTemp",
-                  "returnTemp", "boilerStatus", "chiller1Status",
-                  "chiller2Status", "chiller3Status", "chiller4Status",
-                  "setPoint2", "parameterX", "t1", "MO_B", "MO_C1", "MO_C2",
-                  "MO_C3", "MO_C4", "mode", "powerMode", "CCT", "windSpeed",
-                  "avgOutsideTemp"]
+        headers = ["LID", "logdatetime", "outsideTemp", "effective_setpoint",
+                   "waterOutTemp", "returnTemp", "boilerStatus", 
+                   "cascadeFireRate", "leadFireRate", "chiller1Status",
+                   "chiller2Status", "chiller3Status", "chiller4Status",
+                   "setPoint2", "parameterX", "t1", "MO_B", "MO_C1", "MO_C2",
+                   "MO_C3", "MO_C4", "mode", "powerMode", "CCT", "windSpeed",
+                   "avgOutsideTemp"]
         yield ",".join(headers) + "\n"
         while True:
             query = "SELECT * FROM mainTable ORDER BY LID DESC"

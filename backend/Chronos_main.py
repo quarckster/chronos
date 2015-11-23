@@ -7,10 +7,10 @@ import signal
 import sys
 import serial
 from lxml import etree
-from root_logger import root_logger
+from db_conn import conn, MySQLdb
 from config_parser import cfg
+from root_logger import root_logger
 from modbus_client import modbus_client, ModbusException
-from db_conn import conn, MySQLdb.Error
 
 # Constants
 DEVICE_DIR = cfg.files.sys_devices_dir
@@ -578,9 +578,6 @@ def destructor(signum=None, frame=None):
     # turn off all relays
     for i in vars(cfg.relay).values():
         switch_relay(i, "off")
-    with open(SYSTEMUP, "w") as dataFile:
-        dataFile.write("OFFLINE\n")
-        root_logger.info("Chronos_main shutted down")
     sys.exit(0)
 
 signal.signal(signal.SIGTERM, destructor)
@@ -651,8 +648,8 @@ if __name__ == "__main__":
                 update_db(MO,
                           web_data["outside_temp"],
                           setpoint["effective_setpoint"],
-                          boiler_stats["cascade_fire_rate"],
-                          boiler_stats["lead_fire_rate"],
+                          boiler_stats["cascade_current_power"],
+                          boiler_stats["lead_firing_rate"],
                           sensors_data["water_out_temp"],
                           sensors_data["return_temp"],
                           boiler_status,
