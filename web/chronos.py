@@ -99,6 +99,8 @@ def dump_log():
     def generate():
         limit = 256
         offset = 0
+        stop = False
+        log_limit = datetime.datetime.now() - datetime.timedelta(days=1)
         conn = DB()
         headers = ["LID", "logdatetime", "outsideTemp", "effective_setpoint",
                    "waterOutTemp", "returnTemp", "boilerStatus", 
@@ -108,7 +110,7 @@ def dump_log():
                    "MO_C3", "MO_C4", "mode", "powerMode", "CCT", "windSpeed",
                    "avgOutsideTemp"]
         yield ",".join(headers) + "\n"
-        while True:
+        while not stop:
             query = "SELECT * FROM mainTable ORDER BY LID DESC"
             limit_phrase = " LIMIT {} OFFSET {}".format(limit, offset)
             query += limit_phrase
@@ -116,12 +118,14 @@ def dump_log():
             cur = conn.query(query, cursorclass=MySQLdb.cursors.Cursor)
             rows = cur.fetchall()
             cur.close()
-            if not rows:
-                break
             for row in rows:
-                row = list(row)
-                row[1] = row[1].strftime("%d %b %I:%M %p")
-                yield ",".join([str(val) for val in row]) + "\n"
+                if row[1] > log_limit:
+                    row = list(row)
+                    row[1] = row[1].strftime("%d %b %I:%M %p")
+                    yield ",".join([str(val) for val in row]) + "\n"
+                else:
+                    stop = True
+                    break
     resp = Response(generate(), mimetype="text/csv")
     resp.headers["Content-Disposition"] = "attachment; filename=exported-data.csv"
     return resp
