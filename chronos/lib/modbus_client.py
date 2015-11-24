@@ -1,7 +1,7 @@
 import time
 import serial
-from root_logger import root_logger
-from config_parser import cfg
+from chronos.lib.config_parser import cfg
+from chronos.lib.root_logger import root_logger
 from pymodbus.exceptions import ModbusException
 from pymodbus.client.sync import ModbusSerialClient
 

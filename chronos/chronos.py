@@ -4,12 +4,11 @@ import time
 import json
 import serial
 import MySQLdb.cursors
-from db_conn import DB
+from .lib.db_conn_web import DB
+from .lib.config_parser import cfg
+from .lib.modbus_client import get_boiler_stats
 from flask import Flask, render_template, Response, jsonify, request, \
      make_response
-sys.path.insert(1, os.path.join(sys.path[0], "../backend"))
-from config_parser import cfg
-from modbus_client import get_boiler_stats
 app = Flask(__name__)
 
 def get_data(avg=True):
