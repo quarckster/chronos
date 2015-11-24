@@ -5,12 +5,11 @@ import json
 import serial
 import MySQLdb.cursors
 from db_conn import DB
-from pymodbus.exceptions import ModbusException
-from pymodbus.client.sync import ModbusSerialClient
 from flask import Flask, render_template, Response, jsonify, request, \
      make_response
 sys.path.insert(1, os.path.join(sys.path[0], "../backend"))
 from config_parser import cfg
+from modbus_client import get_boiler_stats
 app = Flask(__name__)
 
 def get_data(avg=True):
@@ -52,48 +51,6 @@ def get_chronos_status():
         chronos_status = os.path.exists("/proc/{}".format(pid))
     return chronos_status
 
-def get_modbus_data():
-    boiler_stats = [0, 0, 0, 0, 0, 0]
-    error = True
-    try:
-        modbus_client = ModbusSerialClient(method=cfg.modbus.method,
-                                           baudrate=cfg.modbus.baudr,
-                                           parity=cfg.modbus.parity,
-                                           port=cfg.modbus.portname,
-                                           timeout=cfg.modbus.timeout)
-        modbus_client.connect()
-    except (ModbusException, OSError):
-        pass
-    else:
-        c_to_f = lambda t: round(((9.0 / 5.0) * t + 32.0), 1)
-        for i in range(3):
-            try:
-                # Read one register from 40006 address to get System Supply Temperature
-                # Memory map for the boiler is here on page 8:
-                # http://www.lochinvar.com/_linefiles/SYNC-MODB%20REV%20H.pdf
-                hregs = modbus_client.read_holding_registers(6, count=1, unit=1)
-                # Read 9 registers from 30003 address
-                iregs = modbus_client.read_input_registers(3, count=9, unit=1)
-                boiler_stats = [c_to_f(hregs.getRegister(0) / 10.0),
-                                c_to_f(iregs.getRegister(5) / 10.0),
-                                c_to_f(iregs.getRegister(6) / 10.0),
-                                c_to_f(iregs.getRegister(7) / 10.0),
-                                float(iregs.getRegister(3)),
-                                float(iregs.getRegister(8))]
-            except (OSError, serial.SerialException, ModbusException, AttributeError, IndexError):
-                time.sleep(0.7)
-            else:
-                error = False
-                break
-        modbus_client.close()
-    return {"system_supply_temp": boiler_stats[0],
-            "outlet_temp": boiler_stats[1],
-            "inlet_temp": boiler_stats[2],
-            "flue_temp": boiler_stats[3],
-            "cascade_current_power": boiler_stats[4],
-            "lead_firing_rate": boiler_stats[5],
-            "error": error}
-
 @app.route("/download_log")
 def dump_log():
     def generate():
@@ -134,7 +91,7 @@ def dump_log():
 def fetch_data():
     data = get_data(avg=False)
     if "modbus" in request.args:
-        data["modbus"] = get_modbus_data()
+        data["modbus"] = get_boiler_stats()
     return jsonify(data=data)
 
 @app.route("/update_settings", methods=["POST"])
@@ -186,7 +143,7 @@ def index():
     data = get_data()
     mode = int(data["results"]["mode"])
     if mode in (0, 2):
-        data["modbus"] = get_modbus_data()
+        data["modbus"] = get_boiler_stats()
         resp = render_template("winter.html", data=data)
     elif mode in (1, 3):
         resp = render_template("summer.html", data=data)
@@ -224,7 +181,7 @@ def update_state():
 @app.route("/winter")
 def winter():
     data = get_data()
-    data["modbus"] = get_modbus_data()
+    data["modbus"] = get_boiler_stats()
     return render_template("winter.html", data=data)
 
 @app.route("/summer")
