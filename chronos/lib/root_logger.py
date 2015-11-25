@@ -1,7 +1,7 @@
 import logging
 import sys
 from logging.handlers import TimedRotatingFileHandler
-from config_parser import cfg
+from chronos.lib.config_parser import cfg
 
 log_formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s",
                                   "%Y-%m-%d %H:%M:%S")

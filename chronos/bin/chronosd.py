@@ -7,10 +7,10 @@ import signal
 import sys
 import serial
 from lxml import etree
-from db_conn import conn, MySQLdb
-from config_parser import cfg
-from root_logger import root_logger
-from modbus_client import change_sp, get_boiler_stats
+from chronos.lib.config_parser import cfg
+from chronos.lib.db_conn import conn, MySQLdb
+from chronos.lib.root_logger import root_logger
+from chronos.lib.modbus_client import change_sp, get_boiler_stats
 # Constants
 DEVICE_DIR = cfg.files.sys_devices_dir
 # Set relay numbers
@@ -554,7 +554,7 @@ def initialize_chronos_state():
         elif relay_mo_status == 0:
             switch_relay(relay, relay_status)
 
-if __name__ == "__main__":
+def main():
     root_logger.info("Starting script")
     breather_count = 0
     valveStatus = 0
@@ -614,3 +614,6 @@ if __name__ == "__main__":
         destructor()
     except Exception as e:
         root_logger.exception(e)
+
+if __name__ == "__main__":
+    main()
