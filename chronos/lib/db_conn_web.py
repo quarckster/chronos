@@ -1,9 +1,8 @@
+import os
+import sys
 import MySQLdb
 import MySQLdb.cursors
-import sys
-import os
-sys.path.insert(1, os.path.join(sys.path[0], "../backend"))
-from config_parser import cfg
+from chronos.lib.config_parser import cfg
 
 class DB:
     conn = None

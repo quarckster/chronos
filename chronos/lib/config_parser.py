@@ -13,8 +13,7 @@ class Struct(object):
         else:
             return Struct(value) if isinstance(value, dict) else value
 
-config_dir = os.path.abspath(os.path.dirname(__file__))
-config_path = os.path.join(config_dir, "chronos_config.json")
+config_path = os.path.join(os.path.expanduser("~pi"), "chronos_config.json")
 
 with open(config_path) as config:
     cfg = json.load(config, object_hook=Struct)

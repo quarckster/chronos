@@ -7,11 +7,10 @@ import signal
 import sys
 import serial
 from lxml import etree
-from db_conn import conn, MySQLdb
-from config_parser import cfg
-from root_logger import root_logger
-from modbus_client import modbus_client, ModbusException
-
+from chronos.lib.config_parser import cfg
+from chronos.lib.db_conn import conn, MySQLdb
+from chronos.lib.root_logger import root_logger
+from chronos.lib.modbus_client import change_sp, get_boiler_stats
 # Constants
 DEVICE_DIR = cfg.files.sys_devices_dir
 # Set relay numbers
@@ -433,54 +432,6 @@ def switch_valve(mode, valveStatus):
     return valveStatus
 
 
-def change_sp(setpoint):
-    setpoint = int(-101.4856 + 1.7363171*int(setpoint))
-    for i in range(3):
-        try:
-            assert(setpoint > 0 and setpoint < 100)
-            modbus_client.write_register(0, 4, unit=cfg.modbus.unit)
-            modbus_client.write_register(2, setpoint, unit=cfg.modbus.unit)
-        except (AssertionError, ModbusException, serial.SerialException) as e:
-            root_logger.exception(e)
-            time.sleep(0.5)
-        else:
-            root_logger.info("Setpoint %s is sent to boiler" % setpoint)
-            break
-
-
-def get_boiler_stats():
-    c_to_f = lambda t: round(((9.0/5.0)*t + 32.0), 1)
-    boiler_stats = {"system_supply_temp": 0,
-                    "outlet_temp": 0,
-                    "inlet_temp": 0,
-                    "flue_temp": 0,
-                    "cascade_current_power": 0,
-                    "lead_firing_rate": 0}
-    for i in range(3):
-        try:
-            # Read one register from 40006 address to get System Supply Temperature
-            # Memory map for the boiler is here on page 8:
-            # http://www.lochinvar.com/_linefiles/SYNC-MODB%20REV%20H.pdf
-            hregs = modbus_client.read_holding_registers(6, count=1, unit=cfg.modbus.unit)
-            # Read 9 registers from 30003 address
-            iregs = modbus_client.read_input_registers(3, count=9, unit=cfg.modbus.unit)
-            boiler_stats = {"system_supply_temp": c_to_f(hregs.getRegister(0)/10.0),
-                            "outlet_temp": c_to_f(iregs.getRegister(5)/10.0),
-                            "inlet_temp": c_to_f(iregs.getRegister(6)/10.0),
-                            "flue_temp": c_to_f(iregs.getRegister(7)/10.0),
-                            "cascade_current_power": float(iregs.getRegister(3)),
-                            "lead_firing_rate": float(iregs.getRegister(8))}
-        except (AttributeError, IndexError):
-            root_logger.exception("Modbus answer is empty, retrying.")
-            time.sleep(1)
-        except (ModbusException, serial.SerialException, OSError) as e:
-            root_logger.exception("Modbus error: %s" % e)
-            break
-        else:
-            break
-    return boiler_stats
-
-
 def update_db(MO, outside_temp, effective_setpoint, cascade_fire_rate, 
               lead_fire_rate, water_out_temp, return_temp, boiler_status,
               chiller_status, setpoint2, wind_speed, avgOutsideTemp):
@@ -574,8 +525,6 @@ def destructor(signum=None, frame=None):
     # close db connection
     if conn:
         conn.rollback()
-    # close modbus connection
-    modbus_client.close()
     # turn off all relays
     for i in vars(cfg.relay).values():
         switch_relay(i, "off")
@@ -606,7 +555,7 @@ def initialize_chronos_state():
         elif relay_mo_status == 0:
             switch_relay(relay, relay_status)
 
-if __name__ == "__main__":
+def main():
     root_logger.info("Starting script")
     breather_count = 0
     valveStatus = 0
@@ -666,3 +615,6 @@ if __name__ == "__main__":
         destructor()
     except Exception as e:
         root_logger.exception(e)
+
+if __name__ == "__main__":
+    main()
