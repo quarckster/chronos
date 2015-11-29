@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
-import time
 import os
-import urllib2
-import signal
 import sys
+import zmq
+import time
 import serial
+import signal
+import cPickle
+import urllib2
 from lxml import etree
 from chronos.lib.config_parser import cfg
 from chronos.lib.db_conn import conn, MySQLdb
@@ -432,6 +434,15 @@ def switch_valve(mode, valveStatus):
     return valveStatus
 
 
+def publish_boiler_stats(boiler_stats):
+    context = zmq.Context()
+    sock = context.socket(zmq.PUB)
+    sock.bind("ipc:///tmp/chronos.pipe")
+    time.sleep(0.5)
+    serialized_data = cPickle.dumps(boiler_stats)
+    sock.send(serialized_data)
+
+
 def update_db(MO, outside_temp, effective_setpoint, cascade_fire_rate, 
               lead_fire_rate, water_out_temp, return_temp, boiler_status,
               chiller_status, setpoint2, wind_speed, avgOutsideTemp):
@@ -563,6 +574,8 @@ def main():
     try:
         while True:
             error_DB = check_mysql()
+            boiler_stats = get_boiler_stats()
+            publish_boiler_stats(boiler_stats)
             sensors_data = read_temperature_sensors()
             # breather_count = blink_leds(sensors_data["water_out_temp"],
                                         # breather_count)
@@ -593,7 +606,6 @@ def main():
                 MO = []
                 MO.append(db_data["MO_B"])
                 MO.extend(db_data["MO_C"])
-                boiler_stats = get_boiler_stats()
                 update_db(MO,
                           web_data["outside_temp"],
                           setpoint["effective_setpoint"],

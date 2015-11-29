@@ -1,14 +1,17 @@
 import os
 import sys
+import zmq
 import time
 import json
 import serial
+import cPickle
+import datetime
 import MySQLdb.cursors
 from .lib.db_conn_web import DB
 from .lib.config_parser import cfg
-from .lib.modbus_client import get_boiler_stats
 from flask import Flask, render_template, Response, jsonify, request, \
      make_response
+
 app = Flask(__name__)
 
 def get_data(avg=True):
@@ -49,6 +52,13 @@ def get_chronos_status():
     else:
         chronos_status = os.path.exists("/proc/{}".format(pid))
     return chronos_status
+
+def get_boiler_stats():
+    context = zmq.Context()
+    sock = context.socket(zmq.SUB)
+    sock.setsockopt(zmq.SUBSCRIBE, "")
+    sock.connect("ipc:///tmp/chronos.pipe")
+    return cPickle.loads(sock.recv())
 
 @app.route("/download_log")
 def dump_log():
