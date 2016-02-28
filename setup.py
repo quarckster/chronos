@@ -6,6 +6,7 @@ from setuptools.command.install import install as _install
 
 pi_home = os.path.expanduser("~pi")
 
+
 def post_install():
     os.chmod("/etc/init.d/chronos", 0755)
     user = pwd.getpwnam("pi").pw_uid
@@ -21,7 +22,7 @@ class install(_install):
 
 setup(
     name="chronos",
-    version="0.1",
+    version="0.2",
     description="Boiling/cooling water system.",
     url="https://bitbucket.org/quarck/chronos/",
     author="Dmitry Misharov",
@@ -35,7 +36,8 @@ setup(
         "pyserial==2.7",
         "lxml==2.3.2",
         "mysqlclient==1.3.7",
-        "pymodbus==1.2.0"],
+        "pymodbus==1.2.0",
+        "pyzmq==15.2.0"],
     include_package_data=True,
     entry_points={
         "console_scripts": [

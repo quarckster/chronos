@@ -57,7 +57,7 @@ def get_boiler_stats():
     context = zmq.Context()
     sock = context.socket(zmq.SUB)
     sock.setsockopt(zmq.SUBSCRIBE, "")
-    sock.connect("ipc:///tmp/chronos.pipe")
+    sock.connect("tcp://127.0.0.1:5680")
     return cPickle.loads(sock.recv())
 
 @app.route("/download_log")

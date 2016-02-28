@@ -28,7 +28,7 @@ led_red = cfg.relay.led_red
 led_green = cfg.relay.led_green
 led_blue = cfg.relay.led_blue
 # Temp sensors
-sensor_out_id = cfg.sensors.out_id 
+sensor_out_id = cfg.sensors.out_id
 sensor_in_id = cfg.sensors.in_id
 
 
@@ -278,7 +278,7 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
         wind_chill_avg = 0
         root_logger.exception("Unable to get value from DB: %s" % e)
     if wind_chill < 11:
-         baseline_setpoint = 100
+        baseline_setpoint = 100
     else:
         try:
             with conn:
@@ -315,7 +315,7 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
             sql = "SELECT spMin FROM setpoints"
             cur.execute(sql)
             results = cur.fetchone()
-            sp_min =  results[0]
+            sp_min = results[0]
     except MySQLdb.Error as e:
         sp_min = 40.00
         root_logger.exception("Unable to read spMin: %s" % e)
@@ -325,7 +325,7 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
             sql = "SELECT spMax FROM setpoints"
             cur.execute(sql)
             results = cur.fetchone()
-            sp_max =  results[0]
+            sp_max = results[0]
     except MySQLdb.Error as e:
         sp_max = 100.00
         root_logger.exception("Unable to read spMax: %s" % e)
@@ -437,13 +437,13 @@ def switch_valve(mode, valveStatus):
 def publish_boiler_stats(boiler_stats):
     context = zmq.Context()
     sock = context.socket(zmq.PUB)
-    sock.bind("ipc:///tmp/chronos.pipe")
+    sock.bind("tcp://127.0.0.1:5680")
     time.sleep(0.5)
     serialized_data = cPickle.dumps(boiler_stats)
     sock.send(serialized_data)
 
 
-def update_db(MO, outside_temp, effective_setpoint, cascade_fire_rate, 
+def update_db(MO, outside_temp, effective_setpoint, cascade_fire_rate,
               lead_fire_rate, water_out_temp, return_temp, boiler_status,
               chiller_status, setpoint2, wind_speed, avgOutsideTemp):
     try:
@@ -505,7 +505,7 @@ def update_actStream_table(status, chiller_id, boiler=False, MO=False):
                           SET timeStamp=NOW(),
                               status=%s,
                               MO=%s
-                          WHERE TID=%s""" % (status, tid, MO))
+                          WHERE TID=%s""" % (status, MO, tid))
             else:
                 sql = ("""UPDATE actStream
                           SET timeStamp=NOW(),
@@ -514,6 +514,7 @@ def update_actStream_table(status, chiller_id, boiler=False, MO=False):
             cur.execute(sql)
     except MySQLdb.Error as e:
         root_logger.exception("Error updating actStream table: %s" % e)
+
 
 def update_sysStatus(error_sensor, error_DB, error_Web):
     errData = [error_sensor[0], error_sensor[1], error_DB, error_Web]
@@ -528,7 +529,7 @@ def update_sysStatus(error_sensor, error_DB, error_Web):
                                            error_Web))
             cur.execute(sql)
     except MySQLdb.Error as e:
-        root_logger.exception("Error updating actStream table: %s" % e)            
+        root_logger.exception("Error updating actStream table: %s" % e)
 
 
 def destructor(signum=None, frame=None):
