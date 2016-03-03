@@ -411,27 +411,18 @@ def chillers_cascade_switcher(effective_setpoint, time_stamps, chiller_status,
         switch_relay(chiller_pin[turn_off_index], "off")
         update_actStream_table(0, turn_off_index)
     # Turn off chillers when winter or valve is switching
-    elif mode in (2, 3) and turn_off_index is not None:
-        new_chiller_status[turn_off_index] = 0
-        switch_relay(chiller_pin[turn_off_index], "off")
-        # when the user switches between summer/winter modes,
-        # all five devices are switched to the manual "off" state
-        # and stay off until the user turns them back to "on" or "auto".
-        update_actStream_table(0, turn_off_index, MO=2)
+    elif mode in (2, 3):
+        for i, (c_status, MO_C_item) in enumerate(zip(chiller_status, MO_C)):
+            if c_status != 0 or MO_C_item != 2:
+                new_chiller_status[i] = 0
+                switch_relay(chiller_pin[i], "off")
+                # when the user switches between summer/winter modes,
+                # all five devices are switched to the manual "off" state
+                # and stay off until the user turns them back to "on" or "auto".
+                update_actStream_table(0, i, MO=2)
     string = ", ".join([str(i) for i in new_chiller_status])
     root_logger.debug("Chillers: %s; time gap: %d; mode: %s" % (string, time_gap, mode))
     return new_chiller_status
-
-
-def switch_valve(mode, valveStatus):
-    if mode == 0 and valveStatus != mode:
-        switch_relay(valve1_pin, "on")
-        switch_relay(valve2_pin, "off")
-    elif mode == 1 and valveStatus != mode:
-        switch_relay(valve1_pin, "off")
-        switch_relay(valve2_pin, "on")
-    valveStatus = mode
-    return valveStatus
 
 
 def publish_boiler_stats(boiler_stats):
@@ -568,8 +559,6 @@ def initialize_chronos_state():
 
 def main():
     root_logger.info("Starting script")
-    breather_count = 0
-    valveStatus = 0
     timer = 0 
     initialize_chronos_state()
     try:
@@ -578,8 +567,6 @@ def main():
             boiler_stats = get_boiler_stats()
             publish_boiler_stats(boiler_stats)
             sensors_data = read_temperature_sensors()
-            # breather_count = blink_leds(sensors_data["water_out_temp"],
-                                        # breather_count)
             db_data = read_values_from_db()
             web_data = get_data_from_web(db_data["mode"])
             setpoint = calculate_setpoint(web_data["outside_temp"],
@@ -601,7 +588,6 @@ def main():
                                                        db_data["MO_C"],
                                                        db_data["CCT"],
                                                        db_data["mode"])
-            valveStatus = switch_valve(db_data["mode"], valveStatus)
             # Update db every minute
             if time.time() - timer >= 60:
                 MO = []

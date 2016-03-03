@@ -1,7 +1,5 @@
 import os
-import sys
 import zmq
-import time
 import json
 import serial
 import cPickle
@@ -9,10 +7,11 @@ import datetime
 import MySQLdb.cursors
 from .lib.db_conn_web import DB
 from .lib.config_parser import cfg
-from flask import Flask, render_template, Response, jsonify, request, \
-     make_response
+from flask import (Flask, render_template, Response, jsonify, request,
+                   make_response)
 
 app = Flask(__name__)
+
 
 def get_data(avg=True):
     db = DB()
@@ -42,6 +41,7 @@ def get_data(avg=True):
             "actStream": actStream,
             "chronos_status": get_chronos_status()}
 
+
 def get_chronos_status():
     chronos_status = True
     try:
@@ -53,12 +53,14 @@ def get_chronos_status():
         chronos_status = os.path.exists("/proc/{}".format(pid))
     return chronos_status
 
+
 def get_boiler_stats():
     context = zmq.Context()
     sock = context.socket(zmq.SUB)
     sock.setsockopt(zmq.SUBSCRIBE, "")
     sock.connect("tcp://127.0.0.1:5680")
     return cPickle.loads(sock.recv())
+
 
 @app.route("/download_log")
 def dump_log():
@@ -69,7 +71,7 @@ def dump_log():
         log_limit = datetime.datetime.now() - datetime.timedelta(days=1)
         conn = DB()
         headers = ["LID", "logdatetime", "outsideTemp", "effective_setpoint",
-                   "waterOutTemp", "returnTemp", "boilerStatus", 
+                   "waterOutTemp", "returnTemp", "boilerStatus",
                    "cascadeFireRate", "leadFireRate", "chiller1Status",
                    "chiller2Status", "chiller3Status", "chiller4Status",
                    "setPoint2", "parameterX", "t1", "MO_B", "MO_C1", "MO_C2",
@@ -96,12 +98,14 @@ def dump_log():
     resp.headers["Content-Disposition"] = "attachment; filename=exported-data.csv"
     return resp
 
+
 @app.route("/fetch_data")
 def fetch_data():
     data = get_data(avg=False)
     if "modbus" in request.args:
         data["modbus"] = get_boiler_stats()
     return jsonify(data=data)
+
 
 @app.route("/update_settings", methods=["POST"])
 def update_settings():
@@ -135,17 +139,39 @@ def update_settings():
         db.query(query2).close()
     return jsonify(data=request.form)
 
+
 @app.route("/switch_mode")
 def switch_mode():
     mode = request.args["mode"]
     query = "UPDATE mainTable SET mode={} ORDER BY LID DESC LIMIT 1".format(int(mode))
     db = DB()
     db.query(query).close()
-    if mode in ("2", "3"):
-        resp = render_template("switch_mode.html", mode=mode)
+    if mode == "2":
+        try:
+            with serial.Serial(cfg.serial.portname,
+                               cfg.serial.baudr,
+                               timeout=1) as ser_port:
+                ser_port.write("relay on {}\n\r".format(cfg.relay.valve1))
+                ser_port.write("relay off {}\n\r".format(cfg.relay.valve2))
+        except (serial.SerialException, OSError):
+            resp = jsonify(error=True)
+        else:
+            resp = render_template("switch_mode.html", mode=mode)
+    elif mode == "3":
+        try:
+            with serial.Serial(cfg.serial.portname,
+                               cfg.serial.baudr,
+                               timeout=1) as ser_port:
+                ser_port.write("relay off {}\n\r".format(cfg.relay.valve1))
+                ser_port.write("relay on {}\n\r".format(cfg.relay.valve2))
+        except (serial.SerialException, OSError):
+            resp = jsonify(error=True)
+        else:
+            resp = render_template("switch_mode.html", mode=mode)
     elif mode in ("0", "1"):
         resp = make_response()
     return resp
+
 
 @app.route("/")
 def index():
@@ -157,6 +183,7 @@ def index():
     elif mode in (1, 3):
         resp = render_template("summer.html", data=data)
     return resp
+
 
 @app.route("/update_state", methods=["POST"])
 def update_state():
@@ -181,11 +208,17 @@ def update_state():
     except (serial.SerialException, OSError):
         resp = jsonify(error=True)
     else:
-        query = "UPDATE actStream SET MO={} WHERE TID={}".format(status, tid)
+        if status == "0":
+            query = "UPDATE actStream SET MO={} WHERE TID={}".format(status, tid)
+        elif status == "1":
+            query = "UPDATE actStream SET status=1, MO={} WHERE TID={}".format(status, tid)
+        elif status == "2":
+            query = "UPDATE actStream SET status=0, MO={} WHERE TID={}".format(status, tid)
         db = DB()
         db.query(query).close()
         resp = make_response()
     return resp
+
 
 @app.route("/winter")
 def winter():
@@ -193,14 +226,16 @@ def winter():
     data["modbus"] = get_boiler_stats()
     return render_template("winter.html", data=data)
 
+
 @app.route("/summer")
 def summer():
     data = get_data()
     return render_template("summer.html", data=data)
 
+
 @app.route("/chart_data")
 def chart_data():
-    query = "SELECT returnTemp, logdatetime, waterOutTemp from mainTable order by LID desc limit 40";
+    query = "SELECT returnTemp, logdatetime, waterOutTemp from mainTable order by LID desc limit 40"
     db = DB()
     cur = db.query(query)
     rows = cur.fetchall()
