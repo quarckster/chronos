@@ -9,10 +9,10 @@ Chronos is a boiling/cooling water system working on Raspberry Pi. Chronos has a
 ### Summary of set up ###
 #### Installation ####
 To install the latest version Chronos from Bitbucket repo enter the following command:
-`sudo pip install git+https://bitbucket.org/quarck/chronos.git`
+`# pip install git+https://bitbucket.org/quarck/chronos.git`
 
-To install certain version from tag, commit or branch enter this:
-`sudo pip install git+https://bitbucket.org/quarck/chronos.git@commit|tag|branch`
+To install a certain version from a tag, commit or branch enter this:
+`# pip install git+https://bitbucket.org/quarck/chronos.git@commit|tag|branch`
 #### Configuration ####
 
 The config file is a json file which is stored in /home/pi/chronos_config.json
@@ -20,7 +20,6 @@ The config file is a json file which is stored in /home/pi/chronos_config.json
 
 * Flask
 * pyserial
-* lxml
 * mysqlclient
 * pymodbus
 * zmq
@@ -31,6 +30,10 @@ TODO
 
 Ensure modbus is working otherwise the web interface doesn't load in winter mode.
 
+www-data user have to be added in dialout group for managing serial port via web interface.
+
+`# usermod -a -G dialout www-data`
+
 Chronos has a daemon which controlled by the following command:
 
-`sudo service chronos start|stop|restart`
+`# service chronos start|stop|restart`

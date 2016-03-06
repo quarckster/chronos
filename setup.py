@@ -34,7 +34,6 @@ setup(
     install_requires=[
         "Flask==0.10.1",
         "pyserial==2.7",
-        "lxml==2.3.2",
         "mysqlclient==1.3.7",
         "pymodbus==1.2.0",
         "pyzmq==15.2.0"],

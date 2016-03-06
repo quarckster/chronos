@@ -8,7 +8,6 @@ import serial
 import signal
 import cPickle
 import urllib2
-from lxml import etree
 from chronos.lib.config_parser import cfg
 from chronos.lib.db_conn import conn, MySQLdb
 from chronos.lib.root_logger import root_logger
@@ -210,7 +209,7 @@ def get_data_from_web(mode):
     "Parsing windChill and windSpeed from wx.thomaslivestock.com."
     error_Web = 0
     try:
-        content = urllib2.urlopen('http://wx.thomaslivestock.com')
+        content = urllib2.urlopen('http://wx.thomaslivestock.com/downld02.txt')
     except (IOError, urllib2.HTTPError, urllib2.URLError):
         root_logger.exception("""Unable to get data from website.
                               Reading previous value from DB.""")
@@ -232,22 +231,14 @@ def get_data_from_web(mode):
             outside_temp = 65.00
             wind_speed = 0.00
     else:
-        html = content.read()
-        tree = etree.HTML(html)
+        last_line = content.readlines()[-1].split()
+        wind_speed = float(last_line[7])
         # Wind chill
         if mode in (0, 2):
-            node = tree.xpath(
-                "/html/body/table/tr[10]/td[2]/font/strong/font/small/text()")
+            outside_temp = float(last_line[12])
         # Temperature
         elif mode in (1, 3):
-            node = tree.xpath(
-                "/html/body/table/tr[3]/td[2]/font/strong/small/font/text()")
-        outTemp = node[0].split(u"\xb0F")[0]
-        outside_temp = float(outTemp)
-        # Wind speed
-        node = tree.xpath(
-            "/html/body/table/tr[6]/td[2]/font/strong/font/small/text()")
-        wind_speed = float(node[0].split()[2])
+            outside_temp = float(last_line[2])
     return {"outside_temp": outside_temp,
             "windSpeed": wind_speed,
             "error_Web": error_Web}
