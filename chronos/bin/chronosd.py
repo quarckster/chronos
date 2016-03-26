@@ -173,6 +173,12 @@ def read_values_from_db():
             MO_B = result2[0][1]
             MO_C = [result2[1][1], result2[2][1], result2[3][1], result2[4][1]]
             time_stamps = [result2[1][2], result2[2][2], result2[3][2], result2[4][2]]
+            sql3 = "SELECT returnTemp, waterOutTemp, delta FROM temperature"
+            cur.execute(sql3)
+            result3 = cur.fetchone()
+            return_temp = result3[0]
+            water_out_temp = result3[1]
+            delta = result3[2]
             # power_mode = result[19]
     except MySQLdb.Error as e:
         # ON = 1, OFF = 0
@@ -202,7 +208,9 @@ def read_values_from_db():
             "MO_C": MO_C,
             "mode": mode,
             # "power_mode": power_mode,
-            "CCT": CCT*60}
+            "CCT": CCT*60,
+            "previous_return_temp": return_temp,
+            "delta": delta}
 
 
 def get_data_from_web(mode):
@@ -369,6 +377,7 @@ def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_stat
     root_logger.debug("Boiler: %s; mode: %s" % (new_boiler_status, mode))
     return new_boiler_status
 
+
 def find_chiller_index_to_switch(time_stamps, MO_C, chiller_status, status):
     min_date = time.time()
     switch_index = None
@@ -379,12 +388,31 @@ def find_chiller_index_to_switch(time_stamps, MO_C, chiller_status, status):
             switch_index = i
     return switch_index
 
-def chillers_cascade_switcher(effective_setpoint, time_stamps, chiller_status,
-                              return_temp, t1, MO_C, CCT, mode):
+
+def calc_water_out_temp_delta(previous_return_temp, return_temp):
+    current_delta = return_temp - previous_return_temp
+    if current_delta > 0:
+        current_delta = 1
+    elif current_delta < 0:
+        current_delta = -1
+    else:
+        current_delta = 0
+    with conn:
+        cur = conn.cursor()
+        sql = ("UPDATE temperature SET returnTemp={}, delta={}".format(return_temp, current_delta))
+        cur.execute(sql)
+    return current_delta
+
+
+def chillers_cascade_switcher(effective_setpoint, time_stamps,
+                              chiller_status, return_temp, t1, MO_C, CCT, mode,
+                              prev_delta, current_delta):
     time_gap = time.time() - time.mktime(max(time_stamps).timetuple())
     new_chiller_status = chiller_status[:]
     turn_off_index = find_chiller_index_to_switch(time_stamps, MO_C, chiller_status, 1)
     turn_on_index = find_chiller_index_to_switch(time_stamps, MO_C, chiller_status, 0)
+    if current_delta not in (prev_delta, 0):
+        CCT = 0
     # Turn on chillers
     if (return_temp >= (effective_setpoint + t1)
             and time_gap >= CCT
@@ -560,42 +588,56 @@ def main():
             sensors_data = read_temperature_sensors()
             db_data = read_values_from_db()
             web_data = get_data_from_web(db_data["mode"])
-            setpoint = calculate_setpoint(web_data["outside_temp"],
-                                          db_data["setpoint2"],
-                                          db_data["parameterX"],
-                                          db_data["mode"])
+            setpoint = calculate_setpoint(
+                web_data["outside_temp"],
+                db_data["setpoint2"],
+                db_data["parameterX"],
+                db_data["mode"]
+            )
             change_sp(setpoint["effective_setpoint"])
-            boiler_status = boiler_switcher(db_data["MO_B"],
-                                            db_data["mode"],
-                                            sensors_data["return_temp"],
-                                            setpoint["effective_setpoint"],
-                                            db_data["t1"],
-                                            db_data["boiler_status"])
-            chiller_status = chillers_cascade_switcher(setpoint["effective_setpoint"],
-                                                       db_data["time_stamps"],
-                                                       db_data["chiller_status"],
-                                                       sensors_data["return_temp"],
-                                                       db_data["t1"],
-                                                       db_data["MO_C"],
-                                                       db_data["CCT"],
-                                                       db_data["mode"])
+            boiler_status = boiler_switcher(
+                db_data["MO_B"],
+                db_data["mode"],
+                sensors_data["return_temp"],
+                setpoint["effective_setpoint"],
+                db_data["t1"],
+                db_data["boiler_status"]
+            )
+            current_delta = calc_water_out_temp_delta(
+                db_data["previous_return_temp"],
+                sensors_data["return_temp"]
+            )
+            chiller_status = chillers_cascade_switcher(
+                setpoint["effective_setpoint"],
+                db_data["time_stamps"],
+                db_data["chiller_status"],
+                sensors_data["return_temp"],
+                db_data["t1"],
+                db_data["MO_C"],
+                db_data["CCT"],
+                db_data["mode"],
+                db_data["delta"],
+                current_delta
+            )
             # Update db every minute
             if time.time() - timer >= 60:
                 MO = []
                 MO.append(db_data["MO_B"])
                 MO.extend(db_data["MO_C"])
-                update_db(MO,
-                          web_data["outside_temp"],
-                          setpoint["effective_setpoint"],
-                          boiler_stats["cascade_current_power"],
-                          boiler_stats["lead_firing_rate"],
-                          sensors_data["water_out_temp"],
-                          sensors_data["return_temp"],
-                          boiler_status,
-                          chiller_status,
-                          setpoint["tha_setpoint"],
-                          web_data["windSpeed"],
-                          setpoint["wind_chill_avg"])
+                update_db(
+                    MO,
+                    web_data["outside_temp"],
+                    setpoint["effective_setpoint"],
+                    boiler_stats["cascade_current_power"],
+                    boiler_stats["lead_firing_rate"],
+                    sensors_data["water_out_temp"],
+                    sensors_data["return_temp"],
+                    boiler_status,
+                    chiller_status,
+                    setpoint["tha_setpoint"],
+                    web_data["windSpeed"],
+                    setpoint["wind_chill_avg"]
+                )
                 timer = time.time()
             update_sysStatus(sensors_data["errors"],
                              error_DB,
