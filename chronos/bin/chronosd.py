@@ -411,10 +411,11 @@ def chillers_cascade_switcher(effective_setpoint, time_stamps,
     new_chiller_status = chiller_status[:]
     turn_off_index = find_chiller_index_to_switch(time_stamps, MO_C, chiller_status, 1)
     turn_on_index = find_chiller_index_to_switch(time_stamps, MO_C, chiller_status, 0)
-    if current_delta not in (prev_delta, 0):
-        CCT = 0
+#    if current_delta not in (prev_delta, 0):
+#        CCT = 0
     # Turn on chillers
     if (return_temp >= (effective_setpoint + t1)
+            and current_delta in (1, 0)
             and time_gap >= CCT
             and mode == 1
             and turn_on_index is not None):
@@ -423,6 +424,7 @@ def chillers_cascade_switcher(effective_setpoint, time_stamps,
         update_actStream_table(1, turn_on_index)
     # Turn off chillers
     elif (return_temp < (effective_setpoint - t1)
+            and current_delta in (-1, 0)    
             and time_gap >= CCT
             and mode == 1
             and turn_off_index is not None):
