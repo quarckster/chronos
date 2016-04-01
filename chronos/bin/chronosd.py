@@ -173,12 +173,10 @@ def read_values_from_db():
             MO_B = result2[0][1]
             MO_C = [result2[1][1], result2[2][1], result2[3][1], result2[4][1]]
             time_stamps = [result2[1][2], result2[2][2], result2[3][2], result2[4][2]]
-            sql3 = "SELECT returnTemp, waterOutTemp, delta FROM temperature"
+            sql3 = "SELECT returnTemp FROM temperature"
             cur.execute(sql3)
             result3 = cur.fetchone()
             return_temp = result3[0]
-            water_out_temp = result3[1]
-            delta = result3[2]
             # power_mode = result[19]
     except MySQLdb.Error as e:
         # ON = 1, OFF = 0
@@ -209,8 +207,7 @@ def read_values_from_db():
             "mode": mode,
             # "power_mode": power_mode,
             "CCT": CCT*60,
-            "previous_return_temp": return_temp,
-            "delta": delta}
+            "previous_return_temp": return_temp}
 
 
 def get_data_from_web(mode):
@@ -406,15 +403,14 @@ def calc_water_out_temp_delta(previous_return_temp, return_temp):
 
 def chillers_cascade_switcher(effective_setpoint, time_stamps,
                               chiller_status, return_temp, t1, MO_C, CCT, mode,
-                              prev_delta, current_delta):
+                              current_delta):
     time_gap = time.time() - time.mktime(max(time_stamps).timetuple())
     new_chiller_status = chiller_status[:]
     turn_off_index = find_chiller_index_to_switch(time_stamps, MO_C, chiller_status, 1)
     turn_on_index = find_chiller_index_to_switch(time_stamps, MO_C, chiller_status, 0)
-    if current_delta not in (prev_delta, 0):
-        CCT = 0
     # Turn on chillers
     if (return_temp >= (effective_setpoint + t1)
+            and current_delta in (1, 0)
             and time_gap >= CCT
             and mode == 1
             and turn_on_index is not None):
@@ -423,6 +419,7 @@ def chillers_cascade_switcher(effective_setpoint, time_stamps,
         update_actStream_table(1, turn_on_index)
     # Turn off chillers
     elif (return_temp < (effective_setpoint - t1)
+            and current_delta in (-1, 0)    
             and time_gap >= CCT
             and mode == 1
             and turn_off_index is not None):
@@ -615,8 +612,7 @@ def main():
                 db_data["t1"],
                 db_data["MO_C"],
                 db_data["CCT"],
-                db_data["mode"],
-                db_data["delta"],
+                db_data["mode"]
                 current_delta
             )
             # Update db every minute
