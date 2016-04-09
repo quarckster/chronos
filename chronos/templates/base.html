@@ -283,17 +283,13 @@
                     $.get("fetch_data", {{ "{modbus: true}," if data["results"]["mode"] == 0 }} function(data) {
                         var results = data.data.results;
                         var actStream = data.data.actStream;
+                        if (results.mode_changed == 1 && data.data.chronos_status) {
+                            location.reload(true);
+                        }
                         if (data.data.chronos_status) {
                             $("#chronosStatus").text("ONLINE");
                         } else {
                             $("#chronosStatus").text("OFFLINE");
-                        }
-                        if (results.mode == 0 || results.mode == 2) {
-                            $("#winterStatus").attr("src", "static/images/Icons/WinterSummer/WOn.png");
-                            $("#summerStatus").attr("src", "static/images/Icons/WinterSummer/SOff.png");
-                        } else if (results.mode == 1 || results.mode == 3) {
-                            $("#winterStatus").attr("src", "static/images/Icons/WinterSummer/WOff.png");
-                            $("#summerStatus").attr("src", "static/images/Icons/WinterSummer/SOn.png");
                         }
                         $("#outsideTemp").text(results.outsideTemp.toFixed(1));
                         $("#baselineSetPoint").text(results.baselineSetPoint.toFixed(1));

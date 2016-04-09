@@ -20,7 +20,10 @@ def get_data(avg=True):
                   FROM SetpointLookup AS spl
                   INNER JOIN (SELECT outsideTemp FROM mainTable ORDER BY LID DESC LIMIT 1) AS mt
                   ON spl.windChill = ROUND(mt.outsideTemp, 0)""",
-               "SELECT * FROM setpoints"]
+               "SELECT * FROM setpoints",
+               """SELECT MAX( t1.mode ) != MIN( t1.mode ) AS mode_changed
+                  FROM (SELECT MODE FROM mainTable
+                        ORDER BY LID DESC LIMIT 2) AS t1"""]
     if avg:
         queries.append("""SELECT ROUND(AVG(outsideTemp), 1) AS avgOutsideTemp
                           FROM mainTable WHERE logdatetime > DATE_SUB(CURDATE(), INTERVAL 96 HOUR)

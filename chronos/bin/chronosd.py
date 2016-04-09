@@ -341,16 +341,105 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
             "wind_chill_avg": wind_chill_avg}
 
 
+def season_switcher(mode, effective_setpoint, change_dt, return_temp,
+                    switch_timestamp, ):
+    new_mode = False
+    restore = False
+    save = False
+    timegap = time.time() - switch_timestamp
+    if mode == 0 and return_temp > (effective_setpoint + change_dt):
+        switch_relay(cfg.relay.valve1, 1)
+        switch_relay(cfg.relay.valve2, 0)
+        new_mode = 3
+        switch_timestamp = time.time()
+        save = True
+    if mode == 1 and return_temp < (effective_setpoint - change_dt):
+        switch_relay(cfg.relay.valve1, 0)
+        switch_relay(cfg.relay.valve2, 1)
+        new_mode = 2
+        switch_timestamp = time.time()
+        save = True
+    if mode == 2 and timegap >= 120:
+        new_mode = 0
+        restore = True
+    if mode == 3 and timegap >= 120:
+        new_mode = 1
+        restore = True
+    if new_mode:
+        if save:
+            save_devices_states()
+            turn_off_devices()
+        with conn:
+            cur = conn.cursor()
+            query = "UPDATE mainTable SET mode={} ORDER BY LID DESC LIMIT 1".format(new_mode)
+            cur.execute(query)
+        if restore:
+            restore_devices_states()
+    return switch_timestamp
+
+
+def turn_off_devices():
+    switch_relay(boiler_pin, "off")
+    for pin in chiller_pin:
+        switch_relay(pin, "off")
+    with conn:
+        cur = conn.cursor()
+        query1 = """UPDATE actStream 
+                    SET status = 0,
+                    MO = 2 WHERE TID > 0"""
+        query2 = """UPDATE mainTable
+                    SET boilerStatus = 0,
+                        chiller1Status = 0,
+                        chiller2Status = 0,
+                        chiller3Status = 0,
+                        chiller4Status = 0,
+                        MO_B = 2,
+                        MO_C1 = 2,
+                        MO_C2 = 2,
+                        MO_C3 = 2,
+                        MO_C4 = 2
+                    ORDER BY LID DESC LIMIT 1"""
+        cur.execute(query1)
+        cur.execute(query2)
+
+
+def save_devices_states():
+    with conn:
+        cur = conn.cursor()
+        save_query = """UPDATE actStreamSave
+                        INNER JOIN actStream USING (TID)
+                        SET actStreamSave.status = actStream.status,
+                            actStreamSave.MO = actStream.MO"""
+        cur.execute(save_query)
+
+
+def restore_devices_states():
+    with conn:
+        cur = conn.cursor()
+        restore_actStream = """UPDATE actStream
+                               INNER JOIN actStreamSave USING (TID)
+                               SET actStream.status = actStreamSave.status,
+                                   actStream.MO = actStreamSave.MO"""
+        restore_mainTable = """UPDATE mainTable
+                               SET boilerStatus = (SELECT status FROM actStreamSave WHERE TID = 1),
+                               chiller1Status = (SELECT status FROM actStreamSave WHERE TID = 2),
+                               chiller2Status = (SELECT status FROM actStreamSave WHERE TID = 3),
+                               chiller3Status = (SELECT status FROM actStreamSave WHERE TID = 4),
+                               chiller4Status = (SELECT status FROM actStreamSave WHERE TID = 5),
+                               MO_B = (SELECT MO FROM actStreamSave WHERE TID = 1),
+                               MO_C1 = (SELECT MO FROM actStreamSave WHERE TID = 2),
+                               MO_C2 = (SELECT MO FROM actStreamSave WHERE TID = 3),
+                               MO_C3 = (SELECT MO FROM actStreamSave WHERE TID = 4),
+                               MO_C4 = (SELECT MO FROM actStreamSave WHERE TID = 5)
+                               ORDER BY LID DESC LIMIT 1"""
+        cur.execute(restore_actStream)
+        cur.execute(restore_mainTable)
+    initialize_chronos_state()
+
+
 def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_status):
     new_boiler_status = boiler_status
-    if mode in (2, 3):
-        new_boiler_status = 0
-        switch_relay(boiler_pin, "off")
-        # when the user switches between summer/winter modes,
-        # all five devices are switched to the manual "off" state
-        # and stay off until the user turns them back to "on" or "auto".
-        update_actStream_table(new_boiler_status, None, True, MO=2)
-    elif MO_B == 0:
+    if MO_B == 0:
         if (new_boiler_status == 0
                 and mode == 0
                 and return_temp <= (effective_setpoint - t1)):
@@ -363,11 +452,11 @@ def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_stat
             new_boiler_status = 0
             switch_relay(boiler_pin, "off")
             update_actStream_table(new_boiler_status, None, True)
-    elif MO_B == 1 and new_boiler_status == 0:
+    elif MO_B == 1 and new_boiler_status == 0 and mode not in (2, 3):
         new_boiler_status = 1
         switch_relay(boiler_pin, "on")
         update_actStream_table(new_boiler_status, None, True)
-    elif MO_B == 2 and new_boiler_status == 1:
+    elif MO_B == 2 and new_boiler_status == 1 and mode not in (2, 3):
         new_boiler_status = 0
         switch_relay(boiler_pin, "off")
         update_actStream_table(new_boiler_status, None, True)
@@ -419,23 +508,13 @@ def chillers_cascade_switcher(effective_setpoint, time_stamps,
         update_actStream_table(1, turn_on_index)
     # Turn off chillers
     elif (return_temp < (effective_setpoint - t1)
-            and current_delta in (-1, 0)    
+            and current_delta in (-1, 0)
             and time_gap >= CCT
             and mode == 1
             and turn_off_index is not None):
         new_chiller_status[turn_off_index] = 0
         switch_relay(chiller_pin[turn_off_index], "off")
         update_actStream_table(0, turn_off_index)
-    # Turn off chillers when winter or valve is switching
-    elif mode in (2, 3):
-        for i, (c_status, MO_C_item) in enumerate(zip(chiller_status, MO_C)):
-            if c_status != 0 or MO_C_item != 2:
-                new_chiller_status[i] = 0
-                switch_relay(chiller_pin[i], "off")
-                # when the user switches between summer/winter modes,
-                # all five devices are switched to the manual "off" state
-                # and stay off until the user turns them back to "on" or "auto".
-                update_actStream_table(0, i, MO=2)
     string = ", ".join([str(i) for i in new_chiller_status])
     root_logger.debug("Chillers: %s; time gap: %d; mode: %s" % (string, time_gap, mode))
     return new_chiller_status
@@ -550,6 +629,7 @@ def destructor(signum=None, frame=None):
 
 signal.signal(signal.SIGTERM, destructor)
 
+
 def initialize_chronos_state():
     relays = [cfg.relay.boiler,
               cfg.relay.chiller1,
@@ -573,9 +653,11 @@ def initialize_chronos_state():
         elif relay_mo_status == 0:
             switch_relay(relay, relay_status)
 
+
 def main():
     root_logger.info("Starting script")
-    timer = 0 
+    timer = 0
+    switch_timestamp = time.time()
     initialize_chronos_state()
     try:
         while True:
@@ -612,8 +694,15 @@ def main():
                 db_data["t1"],
                 db_data["MO_C"],
                 db_data["CCT"],
-                db_data["mode"]
+                db_data["mode"],
                 current_delta
+            )
+            switch_timestamp = season_switcher(
+                db_data["mode"],
+                setpoint["effective_setpoint"],
+                setpoint["change_dt"],
+                sensors_data["return_temp"],
+                switch_timestamp
             )
             # Update db every minute
             if time.time() - timer >= 60:
