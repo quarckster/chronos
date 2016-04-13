@@ -70,7 +70,19 @@
         </div>
     </div>
 {% endblock %}
+{% block form %}
+    <div class="form-group no-gutter form-group-no-gutter">
+        <label for="setPointOffsetWinter" class="col-md-6 control-label">Setpoint Offset</label>
+        <div class="col-md-3">
+            <p class="form-control-static"><span id="setPointOffsetWinter">{{ data["results"]["parameterX_winter"] }}</span> &deg;F</p>
+        </div>
+        <div class="col-md-3">
+            <input type="text" class="form-control input-sm" name="setPointOffsetWinter">
+        </div>
+    </div>
+{% endblock %}
 {% block js %}
+    $("#setPointOffsetWinter").text(results.parameterX_winter.toFixed(1));
     var modbus = data.data.modbus;
     if (!modbus.error) {
         $(".systemSupplyTemp").text(modbus.system_supply_temp.toFixed(1));

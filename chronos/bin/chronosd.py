@@ -156,15 +156,17 @@ def read_values_from_db():
     try:
         with conn:
             cur = conn.cursor()
-            sql1 = """SELECT setPoint2, parameterX, t1, mode, CCT
+            sql1 = """SELECT setPoint2, parameterX_winter,
+                      parameterX_summer, t1, mode, CCT
                       FROM mainTable ORDER BY LID DESC LIMIT 1"""
             cur.execute(sql1)
             result1 = cur.fetchone()
             setpoint2 = result1[0]
-            parameterX = result1[1]
-            t1 = result1[2]
-            mode = result1[3]
-            CCT = result1[4]
+            parameterX_winter = result1[1]
+            parameterX_summer = result1[2]
+            t1 = result1[3]
+            mode = result1[4]
+            CCT = result1[5]
             sql2 = "SELECT status, MO, timeStamp FROM actStream"
             cur.execute(sql2)
             result2 = cur.fetchall()
@@ -200,7 +202,8 @@ def read_values_from_db():
             "chiller_status": chiller_status,
             "time_stamps": time_stamps,
             "setpoint2": setpoint2,
-            "parameterX": parameterX,
+            "parameterX_winter": parameterX_winter,
+            "parameterX_summer": parameterX_summer,
             "t1": t1,
             "MO_B": MO_B,
             "MO_C": MO_C,
@@ -249,7 +252,8 @@ def get_data_from_web(mode):
             "error_Web": error_Web}
 
 
-def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
+def calculate_setpoint(outside_temp, setpoint2, parameterX_winter,
+                       parameterX_summer, mode):
     "Calculate setpoint from windChill."
     wind_chill = int(round(outside_temp))
     try:
@@ -303,7 +307,10 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX, mode):
             temperature_history_adjsutment = 0
             root_logger.exception("Setpoint error: %s" % e)
     tha_setpoint = baseline_setpoint - temperature_history_adjsutment
-    effective_setpoint = tha_setpoint + parameterX
+    if mode == 0:
+        effective_setpoint = tha_setpoint + parameterX_winter
+    elif mode == 1:
+        effective_setpoint = tha_setpoint + parameterX_summer
     # constrain effective setpoint
     try:
         with conn:
@@ -670,7 +677,8 @@ def main():
             setpoint = calculate_setpoint(
                 web_data["outside_temp"],
                 db_data["setpoint2"],
-                db_data["parameterX"],
+                db_data["parameterX_winter"],
+                db_data["parameterX_summer"],
                 db_data["mode"]
             )
             change_sp(setpoint["effective_setpoint"])

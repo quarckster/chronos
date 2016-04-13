@@ -27,6 +27,15 @@
 {% endblock %}
 {% block form %}
     <div class="form-group no-gutter form-group-no-gutter">
+        <label for="setPointOffsetSummer" class="col-md-6 control-label">Setpoint Offset</label>
+        <div class="col-md-3">
+            <p class="form-control-static"><span id="setPointOffsetSummer">{{ data["results"]["parameterX_summer"] }}</span> &deg;F</p>
+        </div>
+        <div class="col-md-3">
+            <input type="text" class="form-control input-sm" name="setPointOffsetSummer">
+        </div>
+    </div>
+    <div class="form-group no-gutter form-group-no-gutter">
         <label for="cascadeTime" class="col-md-6 control-label">Cascade Time</label>
         <div class="col-md-3">
             <p class="form-control-static"><span id="cascadeTime">{{ data["results"]["CCT"] }}</span> min.</p>
@@ -37,6 +46,7 @@
     </div>
 {% endblock %}
 {% block js %}
+    $("#setPointOffsetSummer").text(results.parameterX_summer.toFixed(1));
     $("#cascadeTime").text(results.CCT.toFixed(1));
     $("[id^=chillerOnTime]").each(function(i) {
         $(this).text(actStream[i + 1].timeStamp);

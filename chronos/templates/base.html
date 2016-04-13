@@ -126,15 +126,6 @@
                     </dl>
                     <form id="settings" class="form-horizontal form-horizontal-text-left" action="update_settings" method="post">
                         <div class="form-group no-gutter form-group-no-gutter">
-                            <label for="setPointOffset" class="col-md-6 control-label">Setpoint Offset</label>
-                            <div class="col-md-3">
-                                <p class="form-control-static"><span id="setPointOffset">{{ data["results"]["parameterX"] }}</span> &deg;F</p>
-                            </div>
-                            <div class="col-md-3">
-                                <input type="text" class="form-control input-sm" name="setPointOffset">
-                            </div>
-                        </div>
-                        <div class="form-group no-gutter form-group-no-gutter">
                             <label for="tolerance" class="col-md-6 control-label">Tolerance</label>
                             <div class="col-md-3">
                                 <p class="form-control-static"><span id="tolerance">{{ data["results"]["t1"] }}</span> &deg;F</p>
@@ -295,7 +286,6 @@
                         $("#baselineSetPoint").text(results.baselineSetPoint.toFixed(1));
                         $("#setPoint2").text(results.setPoint2.toFixed(1));
                         $("#effectiveSetPoint").text(results.sp.toFixed(1));
-                        $("#setPointOffset").text(results.parameterX.toFixed(1));
                         $("#tolerance").text(results.t1.toFixed(1));
                         $("#minSetPoint").text(results.spMin.toFixed(1));
                         $("#maxSetPoint").text(results.spMax.toFixed(1));

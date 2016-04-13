@@ -77,7 +77,8 @@ def dump_log():
                    "waterOutTemp", "returnTemp", "boilerStatus",
                    "cascadeFireRate", "leadFireRate", "chiller1Status",
                    "chiller2Status", "chiller3Status", "chiller4Status",
-                   "setPoint2", "parameterX", "t1", "MO_B", "MO_C1", "MO_C2",
+                   "setPoint2", "parameterX_winter", "parameterX_summer",
+                   "t1", "MO_B", "MO_C1", "MO_C2",
                    "MO_C3", "MO_C4", "mode", "powerMode", "CCT", "windSpeed",
                    "avgOutsideTemp"]
         yield ",".join(headers) + "\n"
@@ -132,10 +133,18 @@ def update_settings():
             query2.append("CCT='{}'".format(request.form["cascadeTime"]))
     except KeyError:
         pass
+    try:
+        if request.form["setPointOffsetWinter"]:
+            query2.append("parameterX_winter='{}'".format(request.form["setPointOffsetWinter"]))
+    except KeyError:
+        pass
+    try:
+        if request.form["setPointOffsetSummer"]:
+            query2.append("parameterX_summer='{}'".format(request.form["setPointOffsetSummer"]))
+    except KeyError:
+        pass
     if request.form["tolerance"]:
         query2.append("t1='{}'".format(request.form["tolerance"]))
-    if request.form["setPointOffset"]:
-        query2.append("parameterX='{}'".format(request.form["setPointOffset"]))
     query2 = ", ".join(query2)
     if query2:
         query2 = "UPDATE mainTable SET {} ORDER BY LID DESC LIMIT 1".format(query2)
