@@ -669,8 +669,6 @@ def main():
     try:
         while True:
             error_DB = check_mysql()
-            boiler_stats = get_boiler_stats()
-            publish_boiler_stats(boiler_stats)
             sensors_data = read_temperature_sensors()
             db_data = read_values_from_db()
             web_data = get_data_from_web(db_data["mode"])
@@ -681,7 +679,10 @@ def main():
                 db_data["parameterX_summer"],
                 db_data["mode"]
             )
-            change_sp(setpoint["effective_setpoint"])
+            boiler_stats = get_boiler_stats(db_data["MO_B"])
+            publish_boiler_stats(boiler_stats)
+            if db_data["MO_B"] != 2:
+                change_sp(setpoint["effective_setpoint"])
             boiler_status = boiler_switcher(
                 db_data["MO_B"],
                 db_data["mode"],
