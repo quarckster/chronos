@@ -484,7 +484,7 @@ def find_chiller_index_to_switch(time_stamps, MO_C, chiller_status, status):
 
 def calc_water_out_temp_delta(previous_return_temp, return_temp):
     current_delta = return_temp - previous_return_temp
-    if current_delta > 0:
+    if current_delta > 0.2:
         current_delta = 1
     elif current_delta < 0:
         current_delta = -1
@@ -506,7 +506,7 @@ def chillers_cascade_switcher(effective_setpoint, time_stamps,
     turn_on_index = find_chiller_index_to_switch(time_stamps, MO_C, chiller_status, 0)
     # Turn on chillers
     if (return_temp >= (effective_setpoint + t1)
-            and current_delta in (1, 0)
+            and current_delta == 1
             and time_gap >= CCT
             and mode == 1
             and turn_on_index is not None):
