@@ -374,14 +374,15 @@ def season_switcher(mode, effective_setpoint, change_dt, return_temp,
         restore = True
     if new_mode:
         if save:
-            save_devices_states()
+            save_devices_states(new_mode)
             turn_off_devices()
         with conn:
             cur = conn.cursor()
             query = "UPDATE mainTable SET mode={} ORDER BY LID DESC LIMIT 1".format(new_mode)
             cur.execute(query)
         if restore:
-            restore_devices_states()
+            restore_devices_states(new_mode)
+            initialize_chronos_state()
     return switch_timestamp
 
 
@@ -410,38 +411,56 @@ def turn_off_devices():
         cur.execute(query2)
 
 
-def save_devices_states():
+def save_devices_states(mode):
     with conn:
         cur = conn.cursor()
-        save_query = """UPDATE actStreamSave
-                        INNER JOIN actStream USING (TID)
-                        SET actStreamSave.status = actStream.status,
-                            actStreamSave.MO = actStream.MO"""
+        if mode == 3:
+            save_query = """UPDATE actStreamSave
+                            INNER JOIN actStream USING (TID)
+                            SET actStreamSave.status = actStream.status,
+                            actStreamSave.MO = actStream.MO
+                            WHERE TID = 1"""
+        if mode == 2:
+            save_query = """UPDATE actStreamSave
+                            INNER JOIN actStream USING (TID)
+                            SET actStreamSave.status = actStream.status,
+                            actStreamSave.MO = actStream.MO
+                            WHERE TID > 1"""
         cur.execute(save_query)
 
 
-def restore_devices_states():
+def restore_devices_states(mode):
     with conn:
         cur = conn.cursor()
-        restore_actStream = """UPDATE actStream
-                               INNER JOIN actStreamSave USING (TID)
-                               SET actStream.status = actStreamSave.status,
-                                   actStream.MO = actStreamSave.MO"""
-        restore_mainTable = """UPDATE mainTable
-                               SET boilerStatus = (SELECT status FROM actStreamSave WHERE TID = 1),
-                               chiller1Status = (SELECT status FROM actStreamSave WHERE TID = 2),
-                               chiller2Status = (SELECT status FROM actStreamSave WHERE TID = 3),
-                               chiller3Status = (SELECT status FROM actStreamSave WHERE TID = 4),
-                               chiller4Status = (SELECT status FROM actStreamSave WHERE TID = 5),
-                               MO_B = (SELECT MO FROM actStreamSave WHERE TID = 1),
-                               MO_C1 = (SELECT MO FROM actStreamSave WHERE TID = 2),
-                               MO_C2 = (SELECT MO FROM actStreamSave WHERE TID = 3),
-                               MO_C3 = (SELECT MO FROM actStreamSave WHERE TID = 4),
-                               MO_C4 = (SELECT MO FROM actStreamSave WHERE TID = 5)
-                               ORDER BY LID DESC LIMIT 1"""
+        if mode == 0:
+            restore_actStream = """UPDATE actStream
+                                   INNER JOIN actStreamSave USING (TID)
+                                   SET actStream.status = actStreamSave.status,
+                                   actStream.MO = actStreamSave.MO
+                                   WHERE TID = 1"""
+            restore_mainTable = """UPDATE mainTable
+                                   SET boilerStatus = (SELECT status FROM actStreamSave WHERE TID = 1),
+                                   MO_B = (SELECT MO FROM actStreamSave WHERE TID = 1)
+                                   ORDER BY LID DESC LIMIT 1"""
+        elif mode == 1:
+            restore_actStream = """UPDATE actStream
+                                   INNER JOIN actStreamSave USING (TID)
+                                   SET actStream.status = actStreamSave.status,
+                                   actStream.MO = actStreamSave.MO
+                                   WHERE TID > 1"""
+            restore_mainTable = """UPDATE mainTable
+                                   SET
+                                   chiller1Status = (SELECT status FROM actStreamSave WHERE TID = 2),
+                                   chiller2Status = (SELECT status FROM actStreamSave WHERE TID = 3),
+                                   chiller3Status = (SELECT status FROM actStreamSave WHERE TID = 4),
+                                   chiller4Status = (SELECT status FROM actStreamSave WHERE TID = 5),
+                                   MO_C1 = (SELECT MO FROM actStreamSave WHERE TID = 2),
+                                   MO_C2 = (SELECT MO FROM actStreamSave WHERE TID = 3),
+                                   MO_C3 = (SELECT MO FROM actStreamSave WHERE TID = 4),
+                                   MO_C4 = (SELECT MO FROM actStreamSave WHERE TID = 5)
+                                   ORDER BY LID DESC LIMIT 1"""
         cur.execute(restore_actStream)
         cur.execute(restore_mainTable)
-    initialize_chronos_state()
 
 
 def boiler_switcher(MO_B, mode, return_temp, effective_setpoint, t1, boiler_status):
@@ -561,7 +580,8 @@ def update_db(MO, outside_temp, effective_setpoint, cascade_fire_rate,
                                               chiller3Status,
                                               chiller4Status,
                                               setPoint2,
-                                              parameterX,
+                                              parameterX_winter,
+                                              parameterX_summer,
                                               t1,
                                               MO_B,
                                               MO_C1,
@@ -573,7 +593,7 @@ def update_db(MO, outside_temp, effective_setpoint, cascade_fire_rate,
                                               CCT,
                                               windSpeed,
                                               avgOutsideTemp)
-                       SELECT NOW(),%s,parameterX,t1,%s,mode,powerMode,CCT,\"%s\",\"%s\"
+                       SELECT NOW(),%s,parameterX_winter,parameterX_summe,rt1,%s,mode,powerMode,CCT,\"%s\",\"%s\"
                        FROM mainTable
                        ORDER BY LID DESC
                        LIMIT 1""" % (string1,
