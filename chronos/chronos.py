@@ -120,6 +120,8 @@ def update_settings():
             query1.append("spMax='{}'".format(request.form["maxSetPoint"]))
         if request.form["minSetPoint"]:
             query1.append("spMin='{}'".format(request.form["minSetPoint"]))
+        if request.form["ModeChangeDeltaTemp"]:
+            query1.append("ModeChangeDeltaTemp='{}'".format(request.form["ModeChangeDeltaTemp"]))
     except KeyError:
         pass
     else:

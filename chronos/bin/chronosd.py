@@ -325,13 +325,19 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX_winter,
     try:
         with conn:
             cur = conn.cursor()
-            sql = "SELECT spMax FROM setpoints"
+            sql = "SELECT * FROM setpoints"
             cur.execute(sql)
-            results = cur.fetchone()
-            sp_max = results[0]
+            sp_min, sp_max, sp, change_dt = cur.fetchone()
     except MySQLdb.Error as e:
+        sp_min = 40.00
         sp_max = 100.00
-        root_logger.exception("Unable to read spMax: %s" % e)
+        change_dt = 0.0
+        root_logger.exception("Unable to read data: %s" % e)
+    if effective_setpoint > sp_max:
+        effective_setpoint = sp_max
+    elif effective_setpoint < sp_min:
+        effective_setpoint = sp_min
+
     if effective_setpoint > sp_max:
         effective_setpoint = sp_max
     elif effective_setpoint < sp_min:
@@ -345,7 +351,8 @@ def calculate_setpoint(outside_temp, setpoint2, parameterX_winter,
         root_logger.exception("Unable to update sp: %s" % e)
     return {"effective_setpoint": effective_setpoint,
             "tha_setpoint": tha_setpoint,
-            "wind_chill_avg": wind_chill_avg}
+            "wind_chill_avg": wind_chill_avg,
+            "change_dt": change_dt}
 
 
 def season_switcher(mode, effective_setpoint, change_dt, return_temp,
