@@ -1,0 +1,17 @@
+{% extends "summer.html" %}
+{% block switches %}
+    <div class="pull-left">
+        <img id="winterStatus" class="center-block" src="/static/images/Icons/WinterSummer/WOff.png" alt=""/>
+        <span class="switch-mode">Winter</span>
+    </div>
+    <div class="pull-right">
+        <img id="summerStatus" class="center-block" src="/static/images/Icons/WinterSummer/SOff.png" alt=""/>
+        <span class="switch-mode">Summer</span>
+    </div>
+{% endblock %}
+{% block mode %}
+    <span id="mode-header">Switching to winter mode in </span>
+    <span id="timer"></span>
+{% endblock %}
+{% block property_boiler %}disabled{% endblock %}
+{% block property_chiller %}disabled{% endblock %}

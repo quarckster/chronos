@@ -1,0 +1,32 @@
+<div id="form">
+{% if data["results"]["mode"] == 0 %}
+    <div class="form-group no-gutter form-group-no-gutter">
+        <label for="setpoint_offset_winter" class="col-md-6 control-label">Setpoint Offset</label>
+        <div class="col-md-3">
+            <p class="form-control-static"><span id="setpoint_offset_winter">{{ data["results"]["setpoint_offset_winter"] }}</span> &deg;F</p>
+        </div>
+        <div class="col-md-3">
+            <input type="text" class="form-control input-sm" name="setpoint_offset_winter">
+        </div>
+    </div>
+{% elif data["results"]["mode"] == 1 %}
+	<div class="form-group no-gutter form-group-no-gutter">
+	    <label for="setpoint_offset_summer" class="col-md-6 control-label">Setpoint Offset</label>
+	    <div class="col-md-3">
+	        <p class="form-control-static"><span id="setpoint_offset_summer">{{ data["results"]["setpoint_offset_summer"] }}</span> &deg;F</p>
+	    </div>
+	    <div class="col-md-3">
+	        <input type="text" class="form-control input-sm" name="setpoint_offset_summer">
+	    </div>
+	</div>
+	<div class="form-group no-gutter form-group-no-gutter">
+	    <label for="cascade_time" class="col-md-6 control-label">Cascade Time</label>
+	    <div class="col-md-3">
+	        <p class="form-control-static"><span id="cascade_time">{{ data["results"]["cascade_time"] }}</span> min.</p>
+	    </div>
+	    <div class="col-md-3">
+	        <input type="text" class="form-control input-sm" name="cascade_time">
+	    </div>
+	</div>
+{% endif %}
+</div>

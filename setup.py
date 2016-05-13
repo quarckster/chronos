@@ -22,7 +22,7 @@ class install(_install):
 
 setup(
     name="chronos",
-    version="0.2.8.1",
+    version="0.3",
     description="Boiling/cooling water system.",
     url="https://bitbucket.org/quarck/chronos/",
     author="Dmitry Misharov",
@@ -32,11 +32,16 @@ setup(
         "chronos.lib",
         "chronos.bin"],
     install_requires=[
+        "apscheduler==3.1.0"
+        "sqlalchemy==1.0.13",
         "Flask==0.10.1",
         "pyserial==2.7",
-        "mysqlclient==1.3.7",
         "pymodbus==1.2.0",
-        "pyzmq==15.2.0"],
+        "websocket-client==0.37.0",
+        "SimpleWebSocketServer"],
+    dependency_links=[
+        "git+https://github.com/dpallot/simple-websocket-server.git#egg=SimpleWebSocketServer"
+    ],
     include_package_data=True,
     entry_points={
         "console_scripts": [

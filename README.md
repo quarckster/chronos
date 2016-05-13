@@ -20,9 +20,11 @@ The config file is a json file which is stored in /home/pi/chronos_config.json
 
 * Flask
 * pyserial
-* mysqlclient
+* apscheduler
 * pymodbus
-* zmq
+* sqlalchemy
+* websocket-client
+* SimpleWebSocketServer
 #### Database configuration ####
 
 TODO

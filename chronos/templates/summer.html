@@ -1,10 +1,25 @@
 {% extends "base.html" %}
-{% block mode %}Summer Mode{% endblock %}
+{% block switches %}
+    <div class="pull-left">
+        <img id="winterStatus" class="center-block" src="/static/images/Icons/WinterSummer/WOff.png" alt=""/>
+        <a class="switch-mode" data-mode="2" href="#">Winter</a>
+    </div>
+    <div class="pull-right">
+        <img id="summerStatus" class="center-block" src="/static/images/Icons/WinterSummer/SOn.png" alt=""/>
+        <span class="switch-mode">Summer</span>
+    </div>
+{% endblock %}
+{% block mode %}
+    <span id="mode-header">Summer Mode</span>
+    <span id="timer"></span>
+{% endblock %}
 {% block chillers_on_time %}
-    <h4 class="text-center">On Time</h4>
-    {% for i in range(1,5) %}
-        <p><strong>Chiller {{i}}:</strong> <span id="chillerOnTime{{ i }}">{{ data["actStream"][i]["timeStamp"] }}</span></p>
-    {% endfor %}
+    <div id="chillers-on-time">
+        <h4 class="text-center">On Time</h4>
+        {% for i in range(1, 5) %}
+            <p><strong>Chiller {{i}}:</strong> <span id="chillerOnTime{{ i }}">{{ data["actStream"][i]["timeStamp"] }}</span></p>
+        {% endfor %}
+    </div>
 {% endblock %}
 {% block system_map %}
     <img src="static/images/Icons/Boiler/arrow1.png" alt=""/>
@@ -18,44 +33,31 @@
     <img src="static/images/Icons/Boiler/arrow2.png" alt=""/>
     <div class="row">
         <div class="col-md-2">
-            <span class="returnTemp">{{ data["results"]["returnTemp"] }}</span> &deg;F
+            <span class="return_temp">{{ data["results"]["return_temp"] }}</span> &deg;F
         </div>
         <div class="col-md-2 col-md-offset-8">
-            <span class="waterOutTemp">{{ data["results"]["waterOutTemp"] }}</span> &deg;F
+            <span class="water_out_temp">{{ data["results"]["water_out_temp"] }}</span> &deg;F
         </div>
     </div>
 {% endblock %}
 {% block form %}
     <div class="form-group no-gutter form-group-no-gutter">
-        <label for="setPointOffsetSummer" class="col-md-6 control-label">Setpoint Offset</label>
+        <label for="setpoint_offset_summer" class="col-md-6 control-label">Setpoint Offset</label>
         <div class="col-md-3">
-            <p class="form-control-static"><span id="setPointOffsetSummer">{{ data["results"]["parameterX_summer"] }}</span> &deg;F</p>
+            <p class="form-control-static"><span id="setpoint_offset_summer">{{ data["results"]["setpoint_offset_summer"] }}</span> &deg;F</p>
         </div>
         <div class="col-md-3">
-            <input type="text" class="form-control input-sm" name="setPointOffsetSummer">
+            <input type="text" class="form-control input-sm" name="setpoint_offset_summer">
         </div>
     </div>
     <div class="form-group no-gutter form-group-no-gutter">
-        <label for="cascadeTime" class="col-md-6 control-label">Cascade Time</label>
+        <label for="cascade_time" class="col-md-6 control-label">Cascade Time</label>
         <div class="col-md-3">
-            <p class="form-control-static"><span id="cascadeTime">{{ data["results"]["CCT"] }}</span> min.</p>
+            <p class="form-control-static"><span id="cascade_time">{{ data["results"]["cascade_time"] }}</span> min.</p>
         </div>
         <div class="col-md-3">
-            <input type="text" class="form-control input-sm" name="cascadeTime">
+            <input type="text" class="form-control input-sm" name="cascade_time">
         </div>
     </div>
 {% endblock %}
-{% block js %}
-    $("#setPointOffsetSummer").text(results.parameterX_summer.toFixed(1));
-    $("#cascadeTime").text(results.CCT.toFixed(1));
-    $("[id^=chillerOnTime]").each(function(i) {
-        $(this).text(actStream[i + 1].timeStamp);
-    });
-    $("[id^=chillerStatus]").each(function(i) {
-        if (actStream[i + 1].status == 0) {
-            $(this).attr("src", "static/images/Icons/Boiler/Chiller-OFF.png");;
-        } else if (actStream[i + 1].status == 1) {
-            $(this).attr("src", "static/images/Icons/Boiler/Chiller-ON.png");;
-        }
-    });
-{% endblock %}
+{% block property_boiler %}disabled{% endblock %}

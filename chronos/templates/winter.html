@@ -1,45 +1,60 @@
 {% extends "base.html" %}
-{% block mode %}Winter Mode{% endblock %}
+{% block switches %}
+    <div class="pull-left">
+        <img id="winterStatus" class="center-block" src="/static/images/Icons/WinterSummer/WOn.png" alt=""/>
+        <span>Winter</span>
+    </div>
+    <div class="pull-right">
+        <img id="summerStatus" class="center-block" src="/static/images/Icons/WinterSummer/SOff.png" alt=""/>
+        <a class="switch-mode" data-mode="3" href="#">Summer</a>
+    </div>
+{% endblock %}
+{% block mode %}
+    <span id="mode-header">Winter Mode</span>
+    <span id="timer"></span>
+{% endblock %}
 {% block modbus %}
-    <h4 class="text-center">Modbus</h4>
-    <dl class="dl-horizontal dl-horizontal-text-left">
-        <dt>System Supply Temp</dt>
-        <dd><span class="systemSupplyTemp">{{ data["modbus"]["system_supply_temp"] }}</span> &deg;F</dd>
-        <dt>Outlet Temp</dt>
-        <dd><span class="outletTemp">{{ data["modbus"]["outlet_temp"] }}</span> &deg;F</dd>
-        <dt>Inlet Temp</dt>
-        <dd><span class="inletTemp">{{ data["modbus"]["inlet_temp"] }}</span> &deg;F</dd>
-        <dt>Cascade Power</dt>
-        <dd><span class="cascadeCurrentPower">{{ data["modbus"]["cascade_current_power"] }}</span> %</dd>
-        <dt>Lead Firing Rate</dt>
-        <dd><span class="leadFiringRate">{{ data["modbus"]["lead_firing_rate"] }}</span> %</dd>
-    </dl>
+    <div id="modbus">
+        <h4 class="text-center">Modbus</h4>
+        <dl class="dl-horizontal dl-horizontal-text-left">
+            <dt>System Supply Temp</dt>
+            <dd><span class="system_supply_temp">0</span> &deg;F</dd>
+            <dt>Outlet Temp</dt>
+            <dd><span class="outlet_temp">0</span> &deg;F</dd>
+            <dt>Inlet Temp</dt>
+            <dd><span class="inlet_temp">0</span> &deg;F</dd>
+            <dt>Cascade Power</dt>
+            <dd><span class="cascade_current_power">0</span> %</dd>
+            <dt>Lead Firing Rate</dt>
+            <dd><span class="lead_firing_rate">0</span> %</dd>
+        </dl>
+    </div>
 {% endblock %}
 {% block system_map %}
     <div class="row no-gutter">
         <div class="col-md-4">
             <div class="pull-right thumbnail boiler-thumbnail">    
                 {% if data["actStream"][0]["status"] == 0 %}
-                    <img src="static/images/Icons/Boiler/Boiler-OFF.png" alt="">
+                    <img id="boilerStatus" src="static/images/Icons/Boiler/Boiler-OFF.png" alt="">
                 {% elif data["actStream"][0]["status"] == 1 %}
-                    <img src="static/images/Icons/Boiler/Boiler-ON.png" alt="">
+                    <img id="boilerStatus" src="static/images/Icons/Boiler/Boiler-ON.png" alt="">
                 {% endif%}
             </div>
             <div class="boiler-caption">
                 <br/>
                 <p class="text-center"><strong>Cascade Fire</strong></p>
-                <p class="text-center"><span class="cascadeCurrentPower">{{ data["modbus"]["cascade_current_power"] }}</span> %</p>
+                <p class="text-center"><span class="cascade_current_power">0</span> %</p>
                 <p class="text-center"><strong>Lead Fire</strong></p>
-                <p class="text-center"><span class="leadFiringRate">{{ data["modbus"]["lead_firing_rate"] }}</span> %</p>
+                <p class="text-center"><span class="lead_firing_rate">0</span> %</p>
             </div>
         </div>
         <div class="col-md-8">
             <div class="row">
                 <div class="col-md-3 col-md-offset-1">
-                    <span class="outletTemp">{{ data["modbus"]["outlet_temp"] }}</span> &deg;F
+                    <span class="outlet_temp">0</span> &deg;F
                 </div>
                 <div class="col-md-3 col-md-offset-1">
-                    <span class="systemSupplyTemp">{{ data["modbus"]["system_supply_temp"] }}</span> &deg;F
+                    <span class="system_supply_temp">0</span> &deg;F
                 </div>
             </div>
             <div class="row">
@@ -49,12 +64,12 @@
             </div>
             <div class="row row-margin">
                 <div class="col-md-3 col-md-offset-3">
-                    <span class="waterOutTemp">{{ data["results"]["waterOutTemp"] }}</span> &deg;F
+                    <span class="water_out_temp">{{ data["results"]["water_out_temp"] }}</span> &deg;F
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-3 col-md-offset-1">
-                    <span class="inletTemp">{{ data["modbus"]["inlet_temp"] }}</span> &deg;F
+                    <span class="inlet_temp">0</span> &deg;F
                 </div>
             </div>
             <div class="row">
@@ -64,7 +79,7 @@
             </div>
             <div class="row">
                 <div class="col-md-3 col-md-offset-3">
-                    <span class="returnTemp">{{ data["results"]["returnTemp"] }}</span> &deg;F
+                    <span class="return_temp">{{ data["results"]["return_temp"] }}</span> &deg;F
                 </div>
             </div>
         </div>
@@ -72,23 +87,13 @@
 {% endblock %}
 {% block form %}
     <div class="form-group no-gutter form-group-no-gutter">
-        <label for="setPointOffsetWinter" class="col-md-6 control-label">Setpoint Offset</label>
+        <label for="setpoint_offset_winter" class="col-md-6 control-label">Setpoint Offset</label>
         <div class="col-md-3">
-            <p class="form-control-static"><span id="setPointOffsetWinter">{{ data["results"]["parameterX_winter"] }}</span> &deg;F</p>
+            <p class="form-control-static"><span id="setpoint_offset_winter">{{ data["results"]["setpoint_offset_winter"] }}</span> &deg;F</p>
         </div>
         <div class="col-md-3">
-            <input type="text" class="form-control input-sm" name="setPointOffsetWinter">
+            <input type="text" class="form-control input-sm" name="setpoint_offset_winter">
         </div>
     </div>
 {% endblock %}
-{% block js %}
-    $("#setPointOffsetWinter").text(results.parameterX_winter.toFixed(1));
-    var modbus = data.data.modbus;
-    if (!modbus.error) {
-        $(".systemSupplyTemp").text(modbus.system_supply_temp.toFixed(1));
-        $(".outletTemp").text(modbus.outlet_temp.toFixed(1));
-        $(".inletTemp").text(modbus.inlet_temp.toFixed(1));
-        $(".cascadeCurrentPower").text(modbus.cascade_current_power.toFixed(1));
-        $(".leadFiringRate").text(modbus.lead_firing_rate.toFixed(1));
-    }
-{% endblock %}
+{% block property_chiller %}disabled{% endblock %}

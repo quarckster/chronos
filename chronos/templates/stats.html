@@ -1,0 +1,24 @@
+{% if data["results"]["mode"] == 0 %}
+    <div id="modbus">
+        <h4 class="text-center">Modbus</h4>
+        <dl class="dl-horizontal dl-horizontal-text-left">
+            <dt>System Supply Temp</dt>
+            <dd><span class="systemSupplyTemp">0</span> &deg;F</dd>
+            <dt>Outlet Temp</dt>
+            <dd><span class="outletTemp">0</span> &deg;F</dd>
+            <dt>Inlet Temp</dt>
+            <dd><span class="inletTemp">0</span> &deg;F</dd>
+            <dt>Cascade Power</dt>
+            <dd><span class="cascadeCurrentPower">0</span> %</dd>
+            <dt>Lead Firing Rate</dt>
+            <dd><span class="leadFiringRate">0</span> %</dd>
+        </dl>
+    </div>
+{% elif data["results"]["mode"] == 1 %}
+    <div id="chillers-on-time">
+        <h4 class="text-center">On Time</h4>
+        {% for i in range(1, 5) %}
+            <p><strong>Chiller {{i}}:</strong> <span id="chillerOnTime{{ i }}">{{ data["actStream"][i]["timeStamp"] }}</span></p>
+        {% endfor %}
+    </div>
+{% endif %}

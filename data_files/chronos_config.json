@@ -16,7 +16,6 @@
         "out_id": "28-0000067841b0"
     },
     "files": {
-        "sys_devices_dir": "/sys/bus/w1/devices",
         "log_path": "/tmp/chronos.log"
     },
     "relay": {
@@ -33,9 +32,9 @@
         "led_blue": 10
     },
     "db": {
-        "host": "localhost",
-        "user": "root",
-        "password": "estrrado",
-        "name": "Chronos"
+        "path": "/home/pi/chronos_db/chronos.sql"
+    },
+    "efficiency": {
+        "hours": 12
     }
 }
