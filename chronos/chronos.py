@@ -1,6 +1,7 @@
 import os
 from .lib import Chronos
 from .lib import db_queries
+from .lib.config_parser import cfg
 from flask import (Flask, render_template, Response, jsonify, request,
                    make_response)
 
@@ -29,6 +30,7 @@ def get_data():
     }
     efficiency = db_queries.calculate_efficiency()
     efficiency["cascade_fire_rate_avg"] = chronos.cascade_fire_rate_avg
+    efficiency["hours"] = cfg.efficiency.hours
     actStream = [{
         "timeStamp": device.timestamp.strftime("%B %d, %I:%M %p"),
         "status": device.status,
