@@ -70,7 +70,7 @@ class Device(object):
         logger.debug("Db has been updated. {} {}: {}. Backup: {}".format(
             self.device, name, value, to_backup
         ))
-        if not to_backup:
+        if not to_backup and name != "switched_timestamp":
             if name == "timestamp":
                 value = value.strftime("%B %d, %I:%M %p")
             websocket_client.send_message({
@@ -83,13 +83,19 @@ class Device(object):
         self._update_value_in_db(
             "manual_override", self.manual_override, to_backup=True
         )
+        self._update_value_in_db(
+            "switched_timestamp", self.switched_timestamp, to_backup=True
+        )
 
     def restore_status(self):
         status = self._get_property_from_db(from_backup=True).status
         manual_override = self._get_property_from_db(
             from_backup=True).manual_override
+        switched_timestamp = self._get_property_from_db(
+            from_backup=True).switched_timestamp
         self._update_value_in_db("status", status)
         self._update_value_in_db("manual_override", manual_override)
+        self._update_value_in_db("switched_timestamp", switched_timestamp)
 
     @property
     def status(self):
@@ -127,10 +133,21 @@ class Chiller(Device):
     def timestamp(self):
         return self._get_property_from_db().timestamp
 
+    @property
+    def switched_timestamp(self):
+        return self._get_property_from_db().switched_timestamp
+
+    def turn_off(self, relay_only=False):
+        super(Chiller, self).turn_off(relay_only=relay_only)
+        if not relay_only:
+            self._update_value_in_db("switched_timestamp", datetime.now())
+
     def turn_on(self, relay_only=False):
         super(Chiller, self).turn_on(relay_only=relay_only)
         if not relay_only:
-            self._update_value_in_db("timestamp", datetime.now())
+            now = datetime.now()
+            self._update_value_in_db("timestamp", now)
+            self._update_value_in_db("switched_timestamp", now)
 
 
 class Boiler(Device):
@@ -154,20 +171,21 @@ class Boiler(Device):
 
     def set_boiler_setpoint(self, effective_setpoint):
         setpoint = int(-101.4856 + 1.7363171 * int(effective_setpoint))
-        assert(setpoint > 0 and setpoint < 100)
-        for i in range(3):
-            try:
-                with modbus_session() as modbus:
-                    modbus.write_register(0, 4, unit=cfg.modbus.unit)
-                    modbus.write_register(2, setpoint, unit=cfg.modbus.unit)
-            except (ModbusException, serial.SerialException) as e:
-                logger.exception(e)
-                time.sleep(0.5)
-            else:
-                logger.info(
-                    "Setpoint {} has been sent to boiler".format(setpoint)
-                )
-                break
+        if not (setpoint > 0 and setpoint < 100):
+            for i in range(3):
+                try:
+                    with modbus_session() as modbus:
+                        modbus.write_register(0, 4, unit=cfg.modbus.unit)
+                        modbus.write_register(
+                            2, setpoint, unit=cfg.modbus.unit)
+                except (ModbusException, serial.SerialException, OSError):
+                    logger.exception("Modbus error")
+                    time.sleep(0.5)
+                else:
+                    logger.info(
+                        "Setpoint {} has been sent to boiler".format(setpoint)
+                    )
+                    break
 
     def send_stats(self):
         def c_to_f(t):
@@ -540,18 +558,17 @@ class Chronos(object):
         return current_delta
 
     @property
-    def _max_chillers_timestap(self):
-        max_timestamp = 0
+    def _max_chillers_timestamp(self):
+        max_timestamp = datetime.min
         for chiller in self.devices[1:]:
-            chiller_timestamp = (chiller.timestamp - datetime(
-                1970, 1, 1)).total_seconds()
-            if chiller_timestamp > max_timestamp:
-                max_timestamp = chiller_timestamp
+            if chiller.switched_timestamp > max_timestamp:
+                max_timestamp = chiller.switched_timestamp
         return max_timestamp
 
     def chillers_cascade_switcher(self):
         logger.debug("Chiller cascade switcher")
-        time_gap = time.time() - self._max_chillers_timestap
+        time_gap = (datetime.now() -
+                    self._max_chillers_timestamp).total_seconds()
         turn_off_index = self._find_chiller_index_to_switch(1)
         turn_on_index = self._find_chiller_index_to_switch(0)
         logger.debug("; ".join(

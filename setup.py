@@ -22,7 +22,7 @@ class install(_install):
 
 setup(
     name="chronos",
-    version="0.3",
+    version="0.3.1",
     description="Boiling/cooling water system.",
     url="https://bitbucket.org/quarck/chronos/",
     author="Dmitry Misharov",
@@ -40,7 +40,8 @@ setup(
         "websocket-client==0.37.0",
         "SimpleWebSocketServer"],
     dependency_links=[
-        "git+https://github.com/dpallot/simple-websocket-server.git#egg=SimpleWebSocketServer"
+        ("git+https://github.com/dpallot/simple-websocket-server.git"
+         "#egg=SimpleWebSocketServer")
     ],
     include_package_data=True,
     entry_points={

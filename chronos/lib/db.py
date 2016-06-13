@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from contextlib import contextmanager
 from sqlalchemy.orm import sessionmaker
 from chronos.lib.config_parser import cfg
@@ -18,7 +18,8 @@ class Boiler(Base):
 
     id = Column(INTEGER, primary_key=True)
     backup = Column(BOOLEAN, default=False, nullable=False)
-    timestamp = Column(DateTime, default=datetime.datetime.now, nullable=False)
+    timestamp = Column(DateTime, default=datetime.now, nullable=False)
+    switched_timestamp = Column(DateTime, nullable=False)
     status = Column(INTEGER, default=0, nullable=False)
     manual_override = Column(INTEGER, default=0, nullable=False)
     system_supply_temp = Column(REAL, default=0, nullable=False)
@@ -35,7 +36,8 @@ class Chiller1(Base):
 
     id = Column(INTEGER, primary_key=True)
     backup = Column(BOOLEAN, default=False, nullable=False)
-    timestamp = Column(DateTime, default=datetime.datetime.now, nullable=False)
+    timestamp = Column(DateTime, default=datetime.now, nullable=False)
+    switched_timestamp = Column(DateTime, nullable=False)
     status = Column(INTEGER, default=0, nullable=False)
     manual_override = Column(INTEGER, default=0, nullable=False)
 
@@ -46,7 +48,8 @@ class Chiller2(Base):
 
     id = Column(INTEGER, primary_key=True)
     backup = Column(BOOLEAN, default=False, nullable=False)
-    timestamp = Column(DateTime, default=datetime.datetime.now, nullable=False)
+    timestamp = Column(DateTime, default=datetime.now, nullable=False)
+    switched_timestamp = Column(DateTime, nullable=False)
     status = Column(INTEGER, default=0, nullable=False)
     manual_override = Column(INTEGER, default=0, nullable=False)
 
@@ -57,7 +60,8 @@ class Chiller3(Base):
 
     id = Column(INTEGER, primary_key=True)
     backup = Column(BOOLEAN, default=False, nullable=False)
-    timestamp = Column(DateTime, default=datetime.datetime.now, nullable=False)
+    timestamp = Column(DateTime, default=datetime.now, nullable=False)
+    switched_timestamp = Column(DateTime, nullable=False)
     status = Column(INTEGER, default=0, nullable=False)
     manual_override = Column(INTEGER, default=0, nullable=False)
 
@@ -68,7 +72,8 @@ class Chiller4(Base):
 
     id = Column(INTEGER, primary_key=True)
     backup = Column(BOOLEAN, default=False, nullable=False)
-    timestamp = Column(DateTime, default=datetime.datetime.now, nullable=False)
+    timestamp = Column(DateTime, default=datetime.now, nullable=False)
+    switched_timestamp = Column(DateTime, nullable=False)
     status = Column(INTEGER, default=0, nullable=False)
     manual_override = Column(INTEGER, default=0, nullable=False)
 
@@ -78,7 +83,7 @@ class History(Base):
     __tablename__ = "history"
 
     id = Column(INTEGER, primary_key=True)
-    timestamp = Column(DateTime, default=datetime.datetime.now, nullable=False)
+    timestamp = Column(DateTime, default=datetime.now, nullable=False)
     outside_temp = Column(REAL, default=0, nullable=False)
     effective_setpoint = Column(REAL, default=0, nullable=False)
     water_out_temp = Column(REAL, default=0, nullable=False)
