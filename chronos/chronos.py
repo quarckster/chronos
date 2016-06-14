@@ -54,10 +54,9 @@ def get_chronos_status():
     return chronos_status
 
 
-@app.route("/season_templates/<mode>")
+@app.route("/season_templates")
 def get_rendered_season_templates(mode):
     data = get_data()
-    mode = int(mode)
     form = render_template("form.html", data=data)
     stats = render_template("stats.html", data=data)
     system_map = render_template("system_map.html", data=data)
@@ -90,18 +89,18 @@ def update_settings():
 def switch_mode():
     mode = int(request.form["mode"])
     if mode == 2:
-        if not chronos.is_time_to_switch_season_on_summer:
+        if not chronos.is_time_to_switch_season_to_summer:
             chronos.switch_season("to_winter")
-            data = {"error": False}
+            error = False
         else:
-            data = {"error": True}
+            error = True
     elif mode == 3:
-        if not chronos.is_time_to_switch_season_on_winter:
+        if not chronos.is_time_to_switch_season_to_winter:
             chronos.switch_season("to_summer")
-            data = {"error": False}
+            error = False
         else:
-            data = {"error": True}
-    return jsonify(data=data)
+            error = True
+    return jsonify(data=error)
 
 
 @app.route("/")

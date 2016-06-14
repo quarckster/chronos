@@ -4,7 +4,7 @@ $(document).ready(function() {
         var mode = parseInt(mode);
         switch (mode) {
             case 0:
-                $.get("season_templates/" + mode, function(data) {
+                $.get("season_templates", function(data) {
                     $("#mode-header").text("Winter mode");
                     $("#timer").text("");
                     $("#chillers-on-time").replaceWith(data.stats);
@@ -19,7 +19,7 @@ $(document).ready(function() {
                 });
                 break;
             case 1:
-                $.get("season_templates/" + mode, function(data) {
+                $.get("season_templates", function(data) {
                     $("#mode-header").text("Summer mode");
                     $("#timer").text("");
                     $("#modbus").replaceWith(data.stats);
@@ -59,12 +59,14 @@ $(document).ready(function() {
         var mode = $(this).data("mode");
         var post_data = {"mode": mode};
         $.post("switch_mode", post_data).done(function(data) {
-            console.log(data);
-            if (!data.error) {
+            if (!data) {
                 $.unblockUI();
-            } else if (data.error) {
+            } else if (data) {
                 $.unblockUI();
-                alert("Season won't be switched, because it will be switched back. Change \"Mode Change Delta Temp\".");
+                $("#season-warning").append("<div class=\"alert center-block alert-warning alert-dismissible\" role=\"alert\">\
+                                                <button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button>\
+                                                <strong>Warning!</strong> Season won't be switched with current parameters because it will be switched back immediately.\
+                                            </div>");
             }
         });
     });

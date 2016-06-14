@@ -62,7 +62,9 @@
                     <h3><b>CHRONOS</b></h3>
                     <h4>SYSTEM - <span id="chronosStatus">{{ "ONLINE" if data["chronos_status"] else "OFFLINE" }}</span></h4>
                 </div>
-                <div class="col-md-3 col-md-offset-6 block-margin-top">
+                <div class="col-md-6" id="season-warning">
+                </div>
+                <div class="col-md-3 block-margin-top">
                     {% block switches %}{% endblock %}
                 </div>
             </div>

@@ -42,11 +42,11 @@ def main():
                         chronos.effective_setpoint
                     )
                     chronos.boiler_switcher()
-                if chronos.is_time_to_switch_season_on_summer:
+                if chronos.is_time_to_switch_season_to_summer:
                     chronos.switch_season("to_summer")
             elif chronos_mode == 1:
                 chronos.chillers_cascade_switcher()
-                if chronos.is_time_to_switch_season_on_winter:
+                if chronos.is_time_to_switch_season_to_winter:
                     chronos.switch_season("to_winter")
     except KeyboardInterrupt:
         destructor()

@@ -712,11 +712,23 @@ class Chronos(object):
                 chiller.restore_status()
 
     @property
-    def is_time_to_switch_season_on_winter(self):
-        return (self.return_temp > (self.effective_setpoint +
+    def is_time_to_switch_season_to_winter(self):
+        effective_setpoint = (self.tha_setpoint + self.setpoint_offset_summer)
+        # constrain effective setpoint
+        if effective_setpoint > self.setpoint_max:
+            effective_setpoint = self.setpoint_max
+        elif effective_setpoint < self.setpoint_min:
+            effective_setpoint = self.setpoint_min
+        return (self.return_temp > (effective_setpoint +
                                     self.mode_change_delta_temp))
 
     @property
-    def is_time_to_switch_season_on_summer(self):
-        return (self.return_temp < (self.effective_setpoint -
+    def is_time_to_switch_season_to_summer(self):
+        effective_setpoint = (self.tha_setpoint + self.setpoint_offset_winter)
+        # constrain effective setpoint
+        if effective_setpoint > self.setpoint_max:
+            effective_setpoint = self.setpoint_max
+        elif effective_setpoint < self.setpoint_min:
+            effective_setpoint = self.setpoint_min
+        return (self.return_temp < (effective_setpoint -
                                     self.mode_change_delta_temp))
