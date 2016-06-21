@@ -25,7 +25,7 @@ test -f $DAEMON || exit 0
 
 case "$1" in
     start)
-        start-stop-daemon --start --pidfile $PIDFILE --make-pidfile --background --startas $DAEMON
+        start-stop-daemon --start --user pi --chuid pi --pidfile $PIDFILE --make-pidfile --background --startas $DAEMON
         log_end_msg $?
         ;;
     stop)

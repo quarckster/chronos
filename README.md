@@ -32,9 +32,39 @@ TODO
 
 Ensure modbus is working otherwise the web interface doesn't load in winter mode.
 
-www-data user have to be added in dialout group for managing serial port via web interface.
+www-data and pi users have to be added in dialout group for managing serial port via web interface.
 
 `# usermod -a -G dialout www-data`
+
+To work with shared log file www-data and pi users have to be added in one group.
+
+1. Create a new group `loggroup`:
+
+    `# addgroup loggroup`  
+
+2. Make a directory where the logs will be stored:
+
+    `$ mkdir /tmp/chronos_logs`  
+
+3. Make the containing directory group-writable:
+
+    `$ chgrp loggroup /tmp/chronos_logs`
+
+    `$ chmod g+w /tmp/chronos_logs`  
+
+4. Set the setgid bit on logdir. That makes new files in logdir always owned by the group. Otherwise, new files are owned by the creator's group:
+
+    `# chmod g+s /tmp/chronos_logs`  
+
+5. Ensure all logging users belong to `loggroup`:
+
+    `# usermod -a -G loggroup pi`  
+
+    `# usermod -a -G loggroup www-data`  
+
+6. Ensure all writing processes have the right umask so they can make newly created files group-writable:
+
+    `$ umask 0002`
 
 Chronos has a daemon which controlled by the following command:
 
