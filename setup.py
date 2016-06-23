@@ -1,24 +1,12 @@
-import os
-import pwd
-import grp
+import subprocess
 from setuptools import setup
 from setuptools.command.install import install as _install
-
-pi_home = os.path.expanduser("~pi")
-
-
-def post_install():
-    os.chmod("/etc/init.d/chronos", 0755)
-    user = pwd.getpwnam("pi").pw_uid
-    group = grp.getgrnam("pi").gr_gid
-    path = os.path.join(pi_home, "chronos_config.json")
-    os.chown(path, user, group)
 
 
 class install(_install):
     def run(self):
         _install.run(self)
-        post_install()
+        subprocess.call(["bash", "post_install"])
 
 setup(
     name="chronos",
@@ -48,7 +36,7 @@ setup(
         "console_scripts": [
             "chronosd = chronos.bin.chronosd:main"]},
     data_files=[
-        (pi_home, ["data_files/chronos_config.json"]),
+        ("/etc", ["data_files/chronos_config.json"]),
         ("/etc/init.d", ["data_files/chronos"]),
         ("/etc/apache2/sites-enabled", ["data_files/chronos.conf"]),
         ("/var/www", ["data_files/chronos.wsgi"])],
