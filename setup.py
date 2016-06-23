@@ -32,7 +32,7 @@ setup(
         "chronos.lib",
         "chronos.bin"],
     install_requires=[
-        "apscheduler==3.1.0"
+        "apscheduler==3.1.0",
         "sqlalchemy==1.0.13",
         "Flask==0.10.1",
         "pyserial==2.7",
@@ -41,7 +41,7 @@ setup(
         "SimpleWebSocketServer"],
     dependency_links=[
         ("git+https://github.com/dpallot/simple-websocket-server.git"
-         "#egg=SimpleWebSocketServer")
+         "#egg=SimpleWebSocketServer-0.1")
     ],
     include_package_data=True,
     entry_points={
