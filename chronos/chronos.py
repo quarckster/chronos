@@ -55,7 +55,7 @@ def get_chronos_status():
 
 
 @app.route("/season_templates")
-def get_rendered_season_templates(mode):
+def get_rendered_season_templates():
     data = get_data()
     form = render_template("form.html", data=data)
     stats = render_template("stats.html", data=data)

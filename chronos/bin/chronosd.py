@@ -2,8 +2,9 @@
 
 import sys
 import signal
-from datetime import datetime
 from chronos.lib import Chronos
+from datetime import datetime, timedelta
+from chronos.lib.config_parser import cfg
 from SimpleWebSocketServer import SimpleWebSocketServer
 from chronos.lib.websocket_server import WebSocketServer
 from chronos.lib.root_logger import root_logger as logger
@@ -32,8 +33,11 @@ def main():
     chronos.scheduler.add_job(chronos.update_history, "cron", minute="*")
     chronos.scheduler.add_job(chronos.get_data_from_web, "cron", minute="*")
     chronos.scheduler.start()
+    now = datetime.now()
+    delayed_run = now + timedelta(minutes=cfg.mode_switch_lockout_time.minutes)
     try:
         while True:
+            now = datetime.now()
             chronos_mode = chronos.mode
             if chronos_mode == 0:
                 chronos.boiler.send_stats()
@@ -42,12 +46,20 @@ def main():
                         chronos.effective_setpoint
                     )
                     chronos.boiler_switcher()
-                if chronos.is_time_to_switch_season_to_summer:
-                    chronos.switch_season("to_summer")
+                if now > delayed_run:
+                    delayed_run = now + timedelta(
+                        minutes=cfg.mode_switch_lockout_time.minutes + 2
+                    )
+                    if chronos.is_time_to_switch_season_to_summer:
+                        chronos.switch_season("to_summer")
             elif chronos_mode == 1:
                 chronos.chillers_cascade_switcher()
-                if chronos.is_time_to_switch_season_to_winter:
-                    chronos.switch_season("to_winter")
+                if now > delayed_run:
+                    delayed_run = now + timedelta(
+                        minutes=cfg.mode_switch_lockout_time.minutes + 2
+                    )
+                    if chronos.is_time_to_switch_season_to_winter:
+                        chronos.switch_season("to_winter")
     except KeyboardInterrupt:
         destructor()
     except Exception as e:

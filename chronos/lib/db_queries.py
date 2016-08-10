@@ -107,6 +107,8 @@ def calculate_efficiency():
         ).order_by(desc(db.History.id)).filter(
             db.History.timestamp > timespan
         ).first()
+    effective_setpoint_avg = effective_setpoint_avg or 0
+    inlet_temp_avg = inlet_temp_avg or 0
     average_temperature_difference = round(
         inlet_temp_avg - effective_setpoint_avg, 1
     )
