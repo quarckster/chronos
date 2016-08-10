@@ -1,0 +1,29 @@
+.no-gutter > [class*="col-"] {
+    padding-right: 0;
+    padding-left: 0;
+    margin-right: 0;
+    margin-left: 0;
+}
+.form-horizontal .form-group-no-gutter {
+    margin: 0;
+}
+.dl-horizontal-text-left dt,
+.form-horizontal-text-left .control-label {
+    text-align: left;
+}
+.boiler-caption {
+    position: absolute;
+    right: 20px;
+}
+.boiler-thumbnail {
+    position: relative;
+    box-shadow: none;
+    padding: 0;
+    border: none;
+}
+.row-margin {
+    margin-bottom: 50px;
+}
+.block-margin-top {
+    margin-top: 25px;
+}
