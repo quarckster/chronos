@@ -24,16 +24,16 @@ signal.signal(signal.SIGTERM, destructor)
 
 def main():
     logger.info("Starting chronos")
+    now = datetime.now()
     chronos.initialize_state()
     chronos.scheduler.add_job(
         websocket_server.serveforever,
         "date",
-        run_date=datetime.now()
+        run_date=now
     )
     chronos.scheduler.add_job(chronos.update_history, "cron", minute="*")
     chronos.scheduler.add_job(chronos.get_data_from_web, "cron", minute="*")
     chronos.scheduler.start()
-    now = datetime.now()
     delayed_run = now + timedelta(minutes=cfg.mode_switch_lockout_time.minutes)
     try:
         while True:

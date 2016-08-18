@@ -347,18 +347,18 @@ class Chronos(object):
         self._wind_speed = wind_speed
         self.data["outside_temp"] = outside_temp
         websocket_client.send_message({"outside_temp": outside_temp})
+        return {
+            "outside_temp": outside_temp,
+            "wind_speed": wind_speed
+        }
 
     @property
     def outside_temp(self):
-        if self._outside_temp is None:
-            self.get_data_from_web()
-        return self._outside_temp
+        return self._outside_temp or self.get_data_from_web()["outside_temp"]
 
     @property
     def wind_speed(self):
-        if self._wind_speed is None:
-            self.get_data_from_web()
-        return self._wind_speed
+        return self._wind_speed or self.get_data_from_web()["wind_speed"]
 
     def _get_settings_from_db(self):
         with db.session_scope() as session:
@@ -440,18 +440,21 @@ class Chronos(object):
     def mode_change_delta_temp(self, mode_change_delta_temp):
         self._update_settings("mode_change_delta_temp", mode_change_delta_temp)
 
-    @property
-    def wind_chill_avg(self):
-        mode_map = {0: 0, 1: 1, 2: 0, 3: 1}
+    def get_wind_chill_avg(self, mode=None):
+        mode = mode or self.mode
+        mode_map = {0: 0, 1: 1, 2: 0, 3: 1, "winter": 0, "summer": 1}
         with db.session_scope() as session:
             wind_chill_avg = session.query(
                 func.avg(db.History.outside_temp)).filter(
-                db.History.mode == mode_map[self.mode],
+                db.History.mode == mode_map[mode],
                 db.History.timestamp > (datetime.now() - timedelta(days=4))
             ).first()[0]
-        if wind_chill_avg is None:
-            wind_chill_avg = self.outside_temp
+        wind_chill_avg = wind_chill_avg or self.outside_temp
         return int(round(wind_chill_avg))
+
+    @property
+    def wind_chill_avg(self):
+        return self.get_wind_chill_avg()
 
     @property
     def cascade_fire_rate_avg(self):
@@ -478,9 +481,8 @@ class Chronos(object):
         websocket_client.send_message({"baseline_setpoint": baseline_setpoint})
         return baseline_setpoint
 
-    @property
-    def tha_setpoint(self):
-        if self.wind_chill_avg < 71:
+    def get_tha_setpoint(self, mode=None):
+        if self.get_wind_chill_avg(mode) < 71:
             temperature_history_adjsutment = 0
         else:
             with db.session_scope() as session:
@@ -491,6 +493,10 @@ class Chronos(object):
         tha_setpoint = self.baseline_setpoint - temperature_history_adjsutment
         websocket_client.send_message({"tha_setpoint": tha_setpoint})
         return tha_setpoint
+
+    @property
+    def tha_setpoint(self):
+        return self.get_tha_setpoint()
 
     @property
     def effective_setpoint(self):
@@ -713,7 +719,8 @@ class Chronos(object):
 
     @property
     def is_time_to_switch_season_to_summer(self):
-        effective_setpoint = (self.tha_setpoint + self.setpoint_offset_winter)
+        effective_setpoint = (self.get_tha_setpoint("summer") +
+                              self.setpoint_offset_winter)
         # constrain effective setpoint
         if effective_setpoint > self.setpoint_max:
             effective_setpoint = self.setpoint_max
@@ -724,7 +731,8 @@ class Chronos(object):
 
     @property
     def is_time_to_switch_season_to_winter(self):
-        effective_setpoint = (self.tha_setpoint + self.setpoint_offset_summer)
+        effective_setpoint = (self.get_tha_setpoint("winter") +
+                              self.setpoint_offset_summer)
         # constrain effective setpoint
         if effective_setpoint > self.setpoint_max:
             effective_setpoint = self.setpoint_max
