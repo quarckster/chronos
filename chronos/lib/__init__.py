@@ -162,6 +162,10 @@ class Boiler(Device):
         return self._get_property_from_db().timestamp
 
     @property
+    def switched_timestamp(self):
+        return self._get_property_from_db().switched_timestamp
+
+    @property
     def cascade_current_power(self):
         return self._get_property_from_db().cascade_current_power
 
