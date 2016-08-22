@@ -723,7 +723,7 @@ class Chronos(object):
 
     @property
     def is_time_to_switch_season_to_summer(self):
-        effective_setpoint = (self.get_tha_setpoint("summer") +
+        effective_setpoint = (self.get_tha_setpoint("winter") +
                               self.setpoint_offset_winter)
         # constrain effective setpoint
         if effective_setpoint > self.setpoint_max:
@@ -735,7 +735,7 @@ class Chronos(object):
 
     @property
     def is_time_to_switch_season_to_winter(self):
-        effective_setpoint = (self.get_tha_setpoint("winter") +
+        effective_setpoint = (self.get_tha_setpoint("summer") +
                               self.setpoint_offset_summer)
         # constrain effective setpoint
         if effective_setpoint > self.setpoint_max:
