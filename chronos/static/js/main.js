@@ -59,14 +59,9 @@ $(document).ready(function() {
         var mode = $(this).data("mode");
         var post_data = {"mode": mode};
         $.post("switch_mode", post_data).done(function(data) {
-            if (!data) {
-                $.unblockUI();
-            } else if (data) {
-                $.unblockUI();
-                $("#season-warning").append("<div class=\"alert center-block alert-warning alert-dismissible\" role=\"alert\">\
-                                                <button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button>\
-                                                <strong>Warning!</strong> Season won't be switched with current parameters because it will be switched back immediately.\
-                                            </div>");
+            $.unblockUI();
+            if (data.data.error) {
+                $("#season-warning").append("<div class=\"alert center-block alert-warning alert-dismissible\" role=\"alert\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\" aria-label=\"Close\"><span aria-hidden=\"true\">&times;</span></button><strong>Warning!</strong> With current parameters Chronos will automatically switch back to current season in " + data.data.mode_switch_lockout_time + " minutes</div>");
             }
         });
     });

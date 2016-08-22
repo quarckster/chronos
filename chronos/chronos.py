@@ -88,19 +88,17 @@ def update_settings():
 @app.route("/switch_mode", methods=["POST"])
 def switch_mode():
     mode = int(request.form["mode"])
+    mode_switch_lockout_time = cfg.mode_switch_lockout_time.minutes
     if mode == 2:
-        if not chronos.is_time_to_switch_season_to_summer:
-            chronos.switch_season("to_winter")
-            error = False
-        else:
-            error = True
+        error = chronos.is_time_to_switch_season_to_summer
+        chronos.switch_season("to_winter")
     elif mode == 3:
-        if not chronos.is_time_to_switch_season_to_winter:
-            chronos.switch_season("to_summer")
-            error = False
-        else:
-            error = True
-    return jsonify(data=error)
+        error = chronos.is_time_to_switch_season_to_winter
+        chronos.switch_season("to_summer")
+    return jsonify(data={
+        "error": error,
+        "mode_switch_lockout_time": mode_switch_lockout_time
+    })
 
 
 @app.route("/")
