@@ -29,7 +29,7 @@ def main():
     chronos.scheduler.add_job(
         websocket_server.serveforever,
         "date",
-        run_date=now
+        run_date=datetime.now()
     )
     chronos.scheduler.add_job(chronos.update_history, "cron", minute="*")
     chronos.scheduler.add_job(chronos.get_data_from_web, "cron", minute="*")
