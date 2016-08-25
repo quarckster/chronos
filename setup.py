@@ -10,7 +10,7 @@ class install(_install):
 
 setup(
     name="chronos",
-    version="0.3.1",
+    version="0.3.2",
     description="Boiling/cooling water system.",
     url="https://bitbucket.org/quarck/chronos/",
     author="Dmitry Misharov",

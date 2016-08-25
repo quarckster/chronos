@@ -145,9 +145,8 @@ def session_scope():
     try:
         yield session
         session.commit()
-    except Exception:
-        logger.exception("Failed to write the db.")
+    except Exception, e:
+        logger.error("Failed to write the db: {}".format(e))
         session.rollback()
-        raise
     finally:
         session.close()

@@ -34,7 +34,7 @@ class Device(object):
                     command, self.relay_number
                 ))
         except serial.SerialException as e:
-            logger.exception("Serial port error: {}".format(e))
+            logger.error("Serial port error: {}".format(e))
             sys.exit(1)
         else:
             logger.debug("Relay {} has been turned {}. Relay only: {}".format(
@@ -183,13 +183,17 @@ class Boiler(Device):
                         modbus.write_register(
                             2, setpoint, unit=cfg.modbus.unit)
                 except (ModbusException, serial.SerialException, OSError):
-                    logger.exception("Modbus error")
+                    logger.error("Modbus error")
                     time.sleep(0.5)
                 else:
                     logger.info(
-                        "Setpoint {} has been sent to boiler".format(setpoint)
+                        "Setpoint {} has been sent to the boiler".format(
+                            setpoint
+                        )
                     )
                     break
+            else:
+                logger.error("Couldn't sent setpoint to the boiler.")
 
     def send_stats(self):
         def c_to_f(t):
@@ -202,57 +206,59 @@ class Boiler(Device):
             "cascade_current_power": 0,
             "lead_firing_rate": 0
         }
-        for i in range(1, 4):
-            try:
-                with modbus_session() as modbus:
-                    # Read one register from 40006 address
-                    # to get System Supply Temperature
-                    # Memory map for the boiler is here on page 8:
-                    # http://www.lochinvar.com/_linefiles/SYNC-MODB%20REV%20H.pdf
-                    hregs = modbus.read_holding_registers(
-                        6, count=1, unit=cfg.modbus.unit
-                    )
-                    # Read 9 registers from 30003 address
-                    iregs = modbus.read_input_registers(
-                        3, count=9, unit=cfg.modbus.unit
-                    )
-                    boiler_stats = {
-                        "system_supply_temp": c_to_f(
-                            hregs.getRegister(0) / 10.0),
-                        "outlet_temp": c_to_f(iregs.getRegister(5) / 10.0),
-                        "inlet_temp": c_to_f(iregs.getRegister(6) / 10.0),
-                        "flue_temp": c_to_f(iregs.getRegister(7) / 10.0),
-                        "cascade_current_power": float(iregs.getRegister(3)),
-                        "lead_firing_rate": float(iregs.getRegister(8))
-                    }
-            except (AttributeError, IndexError):
-                logger.exception("Attempt {}. Modbus answer is empty, "
+        if self.status == 1:
+            for i in range(1, 4):
+                try:
+                    with modbus_session() as modbus:
+                        # Read one register from 40006 address
+                        # to get System Supply Temperature
+                        # Memory map for the boiler is here on page 8:
+                        # http://www.lochinvar.com/_linefiles/SYNC-MODB%20REV%20H.pdf
+                        hregs = modbus.read_holding_registers(
+                            6, count=1, unit=cfg.modbus.unit
+                        )
+                        # Read 9 registers from 30003 address
+                        iregs = modbus.read_input_registers(
+                            3, count=9, unit=cfg.modbus.unit
+                        )
+                        boiler_stats = {
+                            "system_supply_temp": c_to_f(
+                                hregs.getRegister(0) / 10.0),
+                            "outlet_temp": c_to_f(iregs.getRegister(5) / 10.0),
+                            "inlet_temp": c_to_f(iregs.getRegister(6) / 10.0),
+                            "flue_temp": c_to_f(iregs.getRegister(7) / 10.0),
+                            "cascade_current_power": float(iregs.getRegister(3)),
+                            "lead_firing_rate": float(iregs.getRegister(8))
+                        }
+                except (AttributeError, IndexError):
+                    logger.error("Attempt {}. Modbus answer is empty, "
                                  "retrying.".format(i))
-                time.sleep(1)
-            except (OSError, ModbusException, serial.SerialException):
-                logger.exception("Cannot to connect to modbus")
-                break
+                    time.sleep(1)
+                except (OSError, ModbusException, serial.SerialException):
+                    logger.exception("Cannot to connect to modbus")
+                    break
+                else:
+                    logger.info("Attempt {}. {}".format(i, boiler_stats))
+                    break
             else:
-                logger.info("Attempt {}. {}".format(i, boiler_stats))
-                break
-        for key, value in boiler_stats.items():
-            self._update_value_in_db(key, value)
-            websocket_client.send_message({key: value})
+                logger.error("Couldn't read modbus stats")
+            for key, value in boiler_stats.items():
+                self._update_value_in_db(key, value)
+                websocket_client.send_message({key: value})
 
 
 class Valve(Device):
 
-    def __init__(self, number):
-        if number not in (1, 2):
-            raise ValueError("Valve number must be in range from 1 to 2")
+    def __init__(self, season):
+        if season not in ("winter", "summer"):
+            raise ValueError("Valve must be winter or summer")
         else:
-            self.number = number
-            self.relay_number = getattr(cfg.relay, "valve{}".format(number))
-            self.device = "Valve{}".format(number)
+            self.relay_number = getattr(cfg.relay, "{}_valve".format(season))
+            self.device = "{}_valve".format(season)
 
     def __getattr__(self, name):
         if name in ("status", "timestamp", "save_status", "restore_status"):
-            raise AttributeError("There is no such atrribute")
+            raise AttributeError("There is no such attribute")
         super(Valve, self).__getattr__(name)
 
     def turn_on(self):
@@ -270,8 +276,8 @@ class Chronos(object):
         self.chiller2 = Chiller(2)
         self.chiller3 = Chiller(3)
         self.chiller4 = Chiller(4)
-        self.valve1 = Valve(1)
-        self.valve2 = Valve(2)
+        self.winter_valve = Valve("winter")
+        self.summer_valve = Valve("summer")
         self.devices = (
             self.boiler,
             self.chiller1,
@@ -293,7 +299,7 @@ class Chronos(object):
                 with open(device_file) as content:
                     lines = content.readlines()
             except IOError as e:
-                logger.exception("Temp sensor error: {}".format(e))
+                logger.error("Temp sensor error: {}".format(e))
                 sys.exit(1)
             else:
                 if lines[0].strip()[-3:] == "YES":
@@ -332,8 +338,8 @@ class Chronos(object):
                 "http://wx.thomaslivestock.com/downld02.txt"
             )
         except (IOError, urllib2.HTTPError, urllib2.URLError):
-            logger.exception("""Unable to get data from website.
-                                Reading previous value from DB.""")
+            logger.error("""Unable to get data from website.
+                            Reading previous value from DB.""")
             with db.session_scope() as session:
                 wind_speed, outside_temp = session.query(
                     db.History.wind_speed, db.History.outside_temp
@@ -665,8 +671,8 @@ class Chronos(object):
             self.mode = 3
             self._save_devices_states(mode)
             self.turn_off_devices()
-            self.valve1.turn_on()
-            self.valve2.turn_off()
+            self.summer_valve.turn_on()
+            self.winter_valve.turn_off()
             self.scheduler.add_job(
                 self.switch_season,
                 "date",
@@ -683,8 +689,8 @@ class Chronos(object):
             self.mode = 2
             self._save_devices_states(mode)
             self.turn_off_devices()
-            self.valve1.turn_off()
-            self.valve2.turn_on()
+            self.summer_valve.turn_off()
+            self.winter_valve.turn_on()
             self.scheduler.add_job(
                 self.switch_season,
                 "date",

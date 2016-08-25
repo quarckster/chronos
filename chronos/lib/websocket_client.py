@@ -16,7 +16,11 @@ def send_message(data):
             websocket_client.send(unicode(json.dumps(data)))
         except Exception:
             time.sleep(1)
-            logger.exception("Reconnecting to websocket server")
+            logger.error("Reconnecting to websocket server")
             websocket_client = websocket.WebSocket()
             websocket_client.connect("ws://127.0.0.1:8000/")
             websocket_client.send(unicode(json.dumps(data)))
+        else:
+            break
+    else:
+        logger.error("Couldn't connect to webscoket server")
