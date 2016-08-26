@@ -86,7 +86,7 @@ $(document).ready(function() {
                     case 1:
                         $("#chillerStatus" + data.device).attr("src", "static/images/Icons/Boiler/Chiller-ON.png");
                 }
-                $("#chillerOnTime" + data.device).text(data.timestamp);
+                $("#chillerOnTime" + data.device).text(data.switched_timestamp);
             } else if (parseInt(data.device) == 0) {
                 switch (parseInt(data.status)) {
                     case 0:

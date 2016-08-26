@@ -70,8 +70,8 @@ class Device(object):
         logger.debug("Db has been updated. {} {}: {}. Backup: {}".format(
             self.device, name, value, to_backup
         ))
-        if not to_backup and name != "switched_timestamp":
-            if name == "timestamp":
+        if not to_backup and name != "timestamp":
+            if name == "switched_timestamp":
                 value = value.strftime("%B %d, %I:%M %p")
             websocket_client.send_message({
                 "device": self.number,

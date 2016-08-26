@@ -32,7 +32,7 @@ def get_data():
     efficiency["cascade_fire_rate_avg"] = chronos.cascade_fire_rate_avg
     efficiency["hours"] = cfg.efficiency.hours
     actStream = [{
-        "timeStamp": device.timestamp.strftime("%B %d, %I:%M %p"),
+        "timeStamp": device.switched_timestamp.strftime("%B %d, %I:%M %p"),
         "status": device.status,
         "MO": device.manual_override} for device in chronos.devices
     ]
