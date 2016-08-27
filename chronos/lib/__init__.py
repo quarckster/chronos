@@ -13,6 +13,7 @@ from pymodbus.exceptions import ModbusException
 from chronos.lib.modbus_client import modbus_session
 from chronos.lib.root_logger import root_logger as logger
 from apscheduler.schedulers.background import BackgroundScheduler
+from chronos.lib.db_queries import three_minute_avg_delta, last_return_temp
 
 
 def timer():
@@ -587,26 +588,30 @@ class Chronos(object):
                     self._max_chillers_timestamp).total_seconds()
         turn_off_index = self._find_chiller_index_to_switch(1)
         turn_on_index = self._find_chiller_index_to_switch(0)
+        db_delta = three_minute_avg_delta()
+        db_return_temp = last_return_temp()
         logger.debug("; ".join(
             "{}: {}".format(k, v) for k, v in self.data.items())
         )
         logger.debug(
-            "time_gap: {}; turn_on_index: {}; turn_off_index: {}".format(
-                time_gap, turn_on_index, turn_off_index
+            ("time_gap: {}; turn_on_index: {}; turn_off_index: {};"
+             "three_minute_avg_delta: {}, last_return_temp: {}").format(
+                time_gap, turn_on_index, turn_off_index, db_delta,
+                db_return_temp
             )
         )
         # Turn on chillers
         if (self.return_temp >= (self.effective_setpoint +
                                  self.tolerance) and
-                self.current_delta == 1 and
+                db_delta > 0.1 and
                 time_gap >= self.cascade_time * 60 and
                 turn_on_index is not None):
             self.devices[turn_on_index].turn_on()
         # Turn off chillers
-        elif (self.return_temp < (self.effective_setpoint -
-                                  self.tolerance) and
-                self.current_delta in (-1, 0) and
-                time_gap >= self.cascade_time * 60 and
+        elif (db_return_temp < (self.effective_setpoint -
+                                self.tolerance) and
+                self.current_delta < 0 and
+                time_gap >= self.cascade_time * 60 / 1.5 and
                 turn_off_index is not None):
             self.devices[turn_off_index].turn_off()
 

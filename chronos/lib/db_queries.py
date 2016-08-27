@@ -1,7 +1,7 @@
 import json
 from chronos.lib import db
-from sqlalchemy import desc, or_
 from sqlalchemy.sql import func
+from sqlalchemy import desc, or_
 from datetime import datetime, timedelta
 from chronos.lib.config_parser import cfg
 
@@ -19,6 +19,23 @@ def get_chart_data():
             "date": row.timestamp.strftime("%Y-%m-%d %H:%M")
         } for row in reversed(rows)]
     return json.dumps(data)
+
+
+def three_minute_avg_delta():
+    with db.session_scope() as session:
+        result = session.query(
+            db.History.delta
+        ).order_by(desc(db.History.id)).limit(3).subquery()
+        avg_result, = session.query(func.avg(result.c.delta)).first()
+    return avg_result
+
+
+def last_return_temp():
+    with db.session_scope() as session:
+        result, = session.query(
+            db.History.return_temp
+        ).order_by(desc(db.History.id)).limit(1).first()
+    return result
 
 
 def log_generator():
@@ -100,15 +117,16 @@ def calculate_efficiency():
                 db.History.chiller4_status == 1
             )
         ).count()
-        (effective_setpoint_avg,
-         inlet_temp_avg) = session.query(
-            func.avg(db.History.return_temp),
-            func.avg(db.History.effective_setpoint)
+        rows = session.query(
+            db.History.return_temp,
+            db.History.effective_setpoint
         ).order_by(desc(db.History.id)).filter(
             db.History.timestamp > timespan
-        ).first()
-    effective_setpoint_avg = effective_setpoint_avg or 0
-    inlet_temp_avg = inlet_temp_avg or 0
+        ).subquery()
+        (effective_setpoint_avg,
+         inlet_temp_avg) = session.query(
+            func.avg(rows.c.effective_setpoint),
+            func.avg(rows.c.return_temp)).first()
     average_temperature_difference = round(
         inlet_temp_avg - effective_setpoint_avg, 1
     )
