@@ -18,9 +18,7 @@ def modbus_session():
     try:
         modbus.connect()
     except (OSError, ModbusException, serial.SerialException) as e:
-        logger.error(
-            "Unable connect to the boiler via modbus: {}".format(e)
-        )
+        logger.error("Unable connect to the boiler via modbus: {}".format(e))
         raise
     else:
         yield modbus

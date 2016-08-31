@@ -42,22 +42,16 @@ def main():
             if chronos_mode == 0:
                 chronos.boiler.send_stats()
                 if chronos.boiler.manual_override != 2:
-                    chronos.boiler.set_boiler_setpoint(
-                        chronos.effective_setpoint
-                    )
+                    chronos.boiler.set_boiler_setpoint(chronos.effective_setpoint)
                     chronos.boiler_switcher()
                 if now > delayed_run:
-                    delayed_run = now + timedelta(
-                        minutes=cfg.mode_switch_lockout_time.minutes + 2
-                    )
+                    delayed_run = now + timedelta(minutes=cfg.mode_switch_lockout_time.minutes + 2)
                     if chronos.is_time_to_switch_season_to_summer:
                         chronos.switch_season("to_summer")
             elif chronos_mode == 1:
                 chronos.chillers_cascade_switcher()
                 if now > delayed_run:
-                    delayed_run = now + timedelta(
-                        minutes=cfg.mode_switch_lockout_time.minutes + 2
-                    )
+                    delayed_run = now + timedelta(minutes=cfg.mode_switch_lockout_time.minutes + 2)
                     if chronos.is_time_to_switch_season_to_winter:
                         chronos.switch_season("to_winter")
     except KeyboardInterrupt:
