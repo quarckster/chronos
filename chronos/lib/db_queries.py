@@ -30,14 +30,6 @@ def three_minute_avg_delta():
     return avg_result
 
 
-def last_return_temp():
-    with db.session_scope() as session:
-        result, = session.query(
-            db.History.return_temp
-        ).order_by(desc(db.History.id)).limit(1).first()
-    return result
-
-
 def last_outside_temp():
     with db.session_scope() as session:
         result, = session.query(
@@ -135,12 +127,8 @@ def calculate_efficiency():
          inlet_temp_avg) = session.query(
             func.avg(rows.c.effective_setpoint),
             func.avg(rows.c.return_temp)).first()
-    average_temperature_difference = round(
-        inlet_temp_avg - effective_setpoint_avg, 1
-    )
-    chiller_efficiency = round(
-        amount_minutes / float(4 * 60 * hours), 1
-    )
+    average_temperature_difference = round(inlet_temp_avg - effective_setpoint_avg, 1)
+    chiller_efficiency = round(amount_minutes / float(4 * 60 * hours), 1)
     return {
         "average_temperature_difference": average_temperature_difference,
         "chillers_efficiency": chiller_efficiency

@@ -11,9 +11,9 @@ from chronos.lib import websocket_client
 from chronos.lib.config_parser import cfg
 from pymodbus.exceptions import ModbusException
 from chronos.lib.modbus_client import modbus_session
+from chronos.lib.db_queries import three_minute_avg_delta
 from chronos.lib.root_logger import root_logger as logger
 from apscheduler.schedulers.background import BackgroundScheduler
-from chronos.lib.db_queries import three_minute_avg_delta, last_return_temp
 
 
 def timer():
@@ -26,14 +26,8 @@ class Device(object):
 
     def _switch_state(self, command, relay_only=False):
         try:
-            with serial.Serial(
-                cfg.serial.portname,
-                cfg.serial.baudr,
-                timeout=1
-            ) as ser_port:
-                ser_port.write("relay {} {}\n\r".format(
-                    command, self.relay_number
-                ))
+            with serial.Serial(cfg.serial.portname, cfg.serial.baudr, timeout=1) as ser_port:
+                ser_port.write("relay {} {}\n\r".format(command, self.relay_number))
         except serial.SerialException as e:
             logger.error("Serial port error: {}".format(e))
             sys.exit(1)
@@ -52,21 +46,17 @@ class Device(object):
     def turn_off(self, relay_only=False):
         self._switch_state("off", relay_only=relay_only)
 
-    def _get_property_from_db(self, from_backup=False):
+    def _get_property_from_db(self, param, from_backup=False):
         device = getattr(db, self.device)
+        param = getattr(device, param)
         with db.session_scope() as session:
-            property_ = session.query(device).filter(
-                device.backup == from_backup
-            ).first()
-            session.expunge(property_)
-        return property_
+            value, = session.query(param).filter(device.backup == from_backup).first()
+        return value
 
     def _update_value_in_db(self, name, value, to_backup=False):
         device = getattr(db, self.device)
         with db.session_scope() as session:
-            property_ = session.query(device).filter(
-                device.backup == to_backup
-            ).first()
+            property_ = session.query(device).filter(device.backup == to_backup).first()
             setattr(property_, name, value)
         logger.debug("Db has been updated. {} {}: {}. Backup: {}".format(
             self.device, name, value, to_backup
@@ -81,30 +71,32 @@ class Device(object):
 
     def save_status(self):
         self._update_value_in_db("status", self.status, to_backup=True)
-        self._update_value_in_db(
-            "manual_override", self.manual_override, to_backup=True
-        )
-        self._update_value_in_db(
-            "switched_timestamp", self.switched_timestamp, to_backup=True
-        )
+        self._update_value_in_db("manual_override", self.manual_override, to_backup=True)
+        self._update_value_in_db("switched_timestamp", self.switched_timestamp, to_backup=True)
 
     def restore_status(self):
-        status = self._get_property_from_db(from_backup=True).status
-        manual_override = self._get_property_from_db(
-            from_backup=True).manual_override
-        switched_timestamp = self._get_property_from_db(
-            from_backup=True).switched_timestamp
+        status = self._get_property_from_db("status", from_backup=True)
+        manual_override = self._get_property_from_db("manual_override", from_backup=True)
+        switched_timestamp = self._get_property_from_db("switched_timestamp", from_backup=True)
         self._update_value_in_db("status", status)
         self._update_value_in_db("manual_override", manual_override)
         self._update_value_in_db("switched_timestamp", switched_timestamp)
 
     @property
+    def timestamp(self):
+        return self._get_property_from_db("timestamp")
+
+    @property
+    def switched_timestamp(self):
+        return self._get_property_from_db("switched_timestamp")
+
+    @property
     def status(self):
-        return self._get_property_from_db().status
+        return self._get_property_from_db("status")
 
     @property
     def manual_override(self):
-        return self._get_property_from_db().manual_override
+        return self._get_property_from_db("manual_override")
 
     @manual_override.setter
     def manual_override(self, manual_override):
@@ -130,14 +122,6 @@ class Chiller(Device):
             self.relay_number = getattr(cfg.relay, "chiller{}".format(number))
             self.device = "Chiller{}".format(number)
 
-    @property
-    def timestamp(self):
-        return self._get_property_from_db().timestamp
-
-    @property
-    def switched_timestamp(self):
-        return self._get_property_from_db().switched_timestamp
-
     def turn_off(self, relay_only=False):
         super(Chiller, self).turn_off(relay_only=relay_only)
         if not relay_only:
@@ -159,20 +143,12 @@ class Boiler(Device):
         self.device = "Boiler"
 
     @property
-    def timestamp(self):
-        return self._get_property_from_db().timestamp
-
-    @property
-    def switched_timestamp(self):
-        return self._get_property_from_db().switched_timestamp
-
-    @property
     def cascade_current_power(self):
-        return self._get_property_from_db().cascade_current_power
+        return self._get_property_from_db("cascade_current_power")
 
     @property
     def lead_firing_rate(self):
-        return self._get_property_from_db().lead_firing_rate
+        return self._get_property_from_db("lead_firing_rate")
 
     def set_boiler_setpoint(self, effective_setpoint):
         setpoint = int(-101.4856 + 1.7363171 * int(effective_setpoint))
@@ -181,17 +157,12 @@ class Boiler(Device):
                 try:
                     with modbus_session() as modbus:
                         modbus.write_register(0, 4, unit=cfg.modbus.unit)
-                        modbus.write_register(
-                            2, setpoint, unit=cfg.modbus.unit)
+                        modbus.write_register(2, setpoint, unit=cfg.modbus.unit)
                 except (ModbusException, serial.SerialException, OSError):
                     logger.error("Modbus error")
                     time.sleep(0.5)
                 else:
-                    logger.info(
-                        "Setpoint {} has been sent to the boiler".format(
-                            setpoint
-                        )
-                    )
+                    logger.info("Setpoint {} has been sent to the boiler".format(setpoint))
                     break
             else:
                 logger.error("Couldn't sent setpoint to the boiler.")
@@ -215,16 +186,11 @@ class Boiler(Device):
                         # to get System Supply Temperature
                         # Memory map for the boiler is here on page 8:
                         # http://www.lochinvar.com/_linefiles/SYNC-MODB%20REV%20H.pdf
-                        hregs = modbus.read_holding_registers(
-                            6, count=1, unit=cfg.modbus.unit
-                        )
+                        hregs = modbus.read_holding_registers(6, count=1, unit=cfg.modbus.unit)
                         # Read 9 registers from 30003 address
-                        iregs = modbus.read_input_registers(
-                            3, count=9, unit=cfg.modbus.unit
-                        )
+                        iregs = modbus.read_input_registers(3, count=9, unit=cfg.modbus.unit)
                         boiler_stats = {
-                            "system_supply_temp": c_to_f(
-                                hregs.getRegister(0) / 10.0),
+                            "system_supply_temp": c_to_f(hregs.getRegister(0) / 10.0),
                             "outlet_temp": c_to_f(iregs.getRegister(5) / 10.0),
                             "inlet_temp": c_to_f(iregs.getRegister(6) / 10.0),
                             "flue_temp": c_to_f(iregs.getRegister(7) / 10.0),
@@ -232,8 +198,7 @@ class Boiler(Device):
                             "lead_firing_rate": float(iregs.getRegister(8))
                         }
                 except (AttributeError, IndexError):
-                    logger.error("Attempt {}. Modbus answer is empty, "
-                                 "retrying.".format(i))
+                    logger.error("Attempt {}. Modbus answer is empty, retrying.".format(i))
                     time.sleep(1)
                 except (OSError, ModbusException, serial.SerialException):
                     logger.exception("Cannot to connect to modbus")
@@ -292,9 +257,7 @@ class Chronos(object):
         self.scheduler = BackgroundScheduler()
 
     def _read_temperature_sensor(self, sensor_id):
-        device_file = os.path.join(
-            "/sys/bus/w1/devices", sensor_id, "w1_slave"
-        )
+        device_file = os.path.join("/sys/bus/w1/devices", sensor_id, "w1_slave")
         while True:
             try:
                 with open(device_file) as content:
@@ -335,12 +298,9 @@ class Chronos(object):
     def get_data_from_web(self):
         logger.debug("Retrieve data from web.")
         try:
-            content = urllib2.urlopen(
-                "http://wx.thomaslivestock.com/downld02.txt"
-            )
+            content = urllib2.urlopen("http://wx.thomaslivestock.com/downld02.txt")
         except (IOError, urllib2.HTTPError, urllib2.URLError):
-            logger.error("""Unable to get data from website.
-                            Reading previous value from DB.""")
+            logger.error("Unable to get data from the website. Reading previous value from the DB.")
             with db.session_scope() as session:
                 wind_speed, outside_temp = session.query(
                     db.History.wind_speed, db.History.outside_temp
@@ -371,11 +331,11 @@ class Chronos(object):
     def wind_speed(self):
         return self._wind_speed or self.get_data_from_web()["wind_speed"]
 
-    def _get_settings_from_db(self):
+    def _get_settings_from_db(self, param):
+        param = getattr(db.Settings, param)
         with db.session_scope() as session:
-            property_ = session.query(db.Settings).first()
-            session.expunge(property_)
-        return property_
+            value, = session.query(param).first()
+        return value
 
     def _update_settings(self, name, value):
         with db.session_scope() as session:
@@ -387,7 +347,7 @@ class Chronos(object):
 
     @property
     def setpoint_offset_summer(self):
-        return self._get_settings_from_db().setpoint_offset_summer
+        return self._get_settings_from_db("setpoint_offset_summer")
 
     @setpoint_offset_summer.setter
     def setpoint_offset_summer(self, setpoint_offset):
@@ -395,7 +355,7 @@ class Chronos(object):
 
     @property
     def setpoint_offset_winter(self):
-        return self._get_settings_from_db().setpoint_offset_winter
+        return self._get_settings_from_db("setpoint_offset_winter")
 
     @setpoint_offset_winter.setter
     def setpoint_offset_winter(self, setpoint_offset):
@@ -403,7 +363,7 @@ class Chronos(object):
 
     @property
     def mode(self):
-        mode = self._get_settings_from_db().mode
+        mode = self._get_settings_from_db("mode")
         self.data["mode"] = mode
         return mode
 
@@ -413,7 +373,7 @@ class Chronos(object):
 
     @property
     def setpoint_min(self):
-        return self._get_settings_from_db().setpoint_min
+        return self._get_settings_from_db("setpoint_min")
 
     @setpoint_min.setter
     def setpoint_min(self, setpoint):
@@ -421,7 +381,7 @@ class Chronos(object):
 
     @property
     def setpoint_max(self):
-        return self._get_settings_from_db().setpoint_max
+        return self._get_settings_from_db("setpoint_max")
 
     @setpoint_max.setter
     def setpoint_max(self, setpoint):
@@ -429,7 +389,7 @@ class Chronos(object):
 
     @property
     def tolerance(self):
-        return self._get_settings_from_db().tolerance
+        return self._get_settings_from_db("tolerance")
 
     @tolerance.setter
     def tolerance(self, tolerance):
@@ -437,7 +397,7 @@ class Chronos(object):
 
     @property
     def cascade_time(self):
-        return self._get_settings_from_db().cascade_time / 60
+        return self._get_settings_from_db("cascade_time") / 60
 
     @cascade_time.setter
     def cascade_time(self, cascade_time):
@@ -445,7 +405,7 @@ class Chronos(object):
 
     @property
     def mode_change_delta_temp(self):
-        return self._get_settings_from_db().mode_change_delta_temp
+        return self._get_settings_from_db("mode_change_delta_temp")
 
     @mode_change_delta_temp.setter
     def mode_change_delta_temp(self, mode_change_delta_temp):
@@ -499,8 +459,7 @@ class Chronos(object):
             with db.session_scope() as session:
                 temperature_history_adjsutment = session.query(
                     db.SetpointLookup.setpoint_offset
-                ).filter(db.SetpointLookup.avg_wind_chill ==
-                         self.wind_chill_avg).first()[0]
+                ).filter(db.SetpointLookup.avg_wind_chill == self.wind_chill_avg).first()[0]
         tha_setpoint = self.baseline_setpoint - temperature_history_adjsutment
         websocket_client.send_message({"tha_setpoint": tha_setpoint})
         return tha_setpoint
@@ -509,23 +468,22 @@ class Chronos(object):
     def tha_setpoint(self):
         return self.get_tha_setpoint()
 
-    @property
-    def effective_setpoint(self):
-        "Calculate setpoint from wind_chill."
-        if self.mode in (0, 2):
-            effective_setpoint = (self.tha_setpoint +
-                                  self.setpoint_offset_winter)
-        elif self.mode in (1, 3):
-            effective_setpoint = (self.tha_setpoint +
-                                  self.setpoint_offset_summer)
-        # constrain effective setpoint
+    def _constrain_effective_setpoint(self, effective_setpoint):
         if effective_setpoint > self.setpoint_max:
             effective_setpoint = self.setpoint_max
         elif effective_setpoint < self.setpoint_min:
             effective_setpoint = self.setpoint_min
-        websocket_client.send_message({
-            "effective_setpoint": effective_setpoint
-        })
+        return effective_setpoint
+
+    @property
+    def effective_setpoint(self):
+        "Calculate setpoint from wind_chill."
+        if self.mode in (0, 2):
+            effective_setpoint = (self.tha_setpoint + self.setpoint_offset_winter)
+        elif self.mode in (1, 3):
+            effective_setpoint = (self.tha_setpoint + self.setpoint_offset_summer)
+        effective_setpoint = self._constrain_effective_setpoint(effective_setpoint)
+        websocket_client.send_message({"effective_setpoint": effective_setpoint})
         self.data["effective_setpoint"] = effective_setpoint
         return effective_setpoint
 
@@ -533,15 +491,12 @@ class Chronos(object):
         logger.debug("Starting boiler switcher")
         if self.boiler.manual_override == 0:
             if ((self.boiler.status == 0 and
-                 self.return_temp) <= (self.effective_setpoint -
-                                       self.tolerance)):
+                 self.return_temp) <= (self.effective_setpoint - self.tolerance)):
                 self.boiler.turn_on()
             elif ((self.boiler.status == 1 and
-                   self.return_temp) > (self.effective_setpoint +
-                                        self.tolerance)):
+                   self.return_temp) > (self.effective_setpoint + self.tolerance)):
                 self.boiler.turn_off()
-        logger.debug("Boiler: {}; mode: {}".format(
-            self.boiler.status, self.mode))
+        logger.debug("Boiler: {}; mode: {}".format(self.boiler.status, self.mode))
 
     def _find_chiller_index_to_switch(self, status):
         min_date = datetime.now()
@@ -584,32 +539,26 @@ class Chronos(object):
 
     def chillers_cascade_switcher(self):
         logger.debug("Chiller cascade switcher")
-        time_gap = (datetime.now() -
-                    self._max_chillers_timestamp).total_seconds()
+        time_gap = (datetime.now() - self._max_chillers_timestamp).total_seconds()
         turn_off_index = self._find_chiller_index_to_switch(1)
         turn_on_index = self._find_chiller_index_to_switch(0)
         db_delta = three_minute_avg_delta()
-        db_return_temp = last_return_temp()
-        logger.debug("; ".join(
-            "{}: {}".format(k, v) for k, v in self.data.items())
-        )
+        db_return_temp = self.previous_return_temp
+        logger.debug("; ".join("{}: {}".format(k, v) for k, v in self.data.items()))
         logger.debug(
             ("time_gap: {}; turn_on_index: {}; turn_off_index: {};"
              "three_minute_avg_delta: {}, last_return_temp: {}").format(
-                time_gap, turn_on_index, turn_off_index, db_delta,
-                db_return_temp
+                time_gap, turn_on_index, turn_off_index, db_delta, db_return_temp
             )
         )
         # Turn on chillers
-        if (self.return_temp >= (self.effective_setpoint +
-                                 self.tolerance) and
+        if (self.return_temp >= (self.effective_setpoint + self.tolerance) and
                 db_delta > 0.1 and
                 time_gap >= self.cascade_time * 60 and
                 turn_on_index is not None):
             self.devices[turn_on_index].turn_on()
         # Turn off chillers
-        elif (db_return_temp < (self.effective_setpoint -
-                                self.tolerance) and
+        elif (db_return_temp < (self.effective_setpoint - self.tolerance) and
                 self.current_delta < 0 and
                 time_gap >= self.cascade_time * 60 / 1.5 and
                 turn_off_index is not None):
@@ -734,24 +683,12 @@ class Chronos(object):
 
     @property
     def is_time_to_switch_season_to_summer(self):
-        effective_setpoint = (self.get_tha_setpoint("winter") +
-                              self.setpoint_offset_winter)
-        # constrain effective setpoint
-        if effective_setpoint > self.setpoint_max:
-            effective_setpoint = self.setpoint_max
-        elif effective_setpoint < self.setpoint_min:
-            effective_setpoint = self.setpoint_min
-        return (self.return_temp > (effective_setpoint +
-                                    self.mode_change_delta_temp))
+        effective_setpoint = (self.get_tha_setpoint("winter") + self.setpoint_offset_winter)
+        effective_setpoint = self._constrain_effective_setpoint(effective_setpoint)
+        return (self.return_temp > (effective_setpoint + self.mode_change_delta_temp))
 
     @property
     def is_time_to_switch_season_to_winter(self):
-        effective_setpoint = (self.get_tha_setpoint("summer") +
-                              self.setpoint_offset_summer)
-        # constrain effective setpoint
-        if effective_setpoint > self.setpoint_max:
-            effective_setpoint = self.setpoint_max
-        elif effective_setpoint < self.setpoint_min:
-            effective_setpoint = self.setpoint_min
-        return (self.return_temp < (effective_setpoint -
-                                    self.mode_change_delta_temp))
+        effective_setpoint = (self.get_tha_setpoint("summer") + self.setpoint_offset_summer)
+        effective_setpoint = self._constrain_effective_setpoint(effective_setpoint)
+        return (self.return_temp < (effective_setpoint - self.mode_change_delta_temp))

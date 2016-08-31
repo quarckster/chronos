@@ -36,10 +36,12 @@ def get_data():
         "status": device.status,
         "MO": device.manual_override} for device in chronos.devices
     ]
-    return {"results": results,
-            "actStream": actStream,
-            "chronos_status": get_chronos_status(),
-            "efficiency": efficiency}
+    return {
+        "results": results,
+        "actStream": actStream,
+        "chronos_status": get_chronos_status(),
+        "efficiency": efficiency
+    }
 
 
 def get_chronos_status():
@@ -71,9 +73,7 @@ def get_rendered_season_templates():
 @app.route("/download_log")
 def dump_log():
     resp = Response(db_queries.log_generator(), mimetype="text/csv")
-    resp.headers[
-        "Content-Disposition"
-    ] = "attachment; filename=exported-data.csv"
+    resp.headers["Content-Disposition"] = "attachment; filename=exported-data.csv"
     return resp
 
 
@@ -140,9 +140,11 @@ def summer():
 @app.route("/chart_data")
 def chart_data():
     data = db_queries.get_chart_data()
-    resp = Response(response=data,
-                    status=200,
-                    mimetype="application/json")
+    resp = Response(
+        response=data,
+        status=200,
+        mimetype="application/json"
+    )
     return resp
 
 

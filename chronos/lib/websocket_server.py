@@ -8,9 +8,7 @@ websocket_clients = []
 class WebSocketServer(WebSocket):
 
     def handleConnected(self):
-        logger.debug("{}:{} connected".format(
-            self.address[0], self.address[1])
-        )
+        logger.debug("{}:{} connected".format(self.address[0], self.address[1]))
         websocket_clients.append(self)
 
     def handleClose(self):
@@ -21,9 +19,7 @@ class WebSocketServer(WebSocket):
             logger.debug("{}, {}".format(self, e))
         else:
             pass
-        logger.debug("{}:{} closed".format(
-            self.address[0], self.address[1])
-        )
+        logger.debug("{}:{} closed".format(self.address[0], self.address[1]))
 
     def handleMessage(self):
         for client in websocket_clients:
