@@ -33,6 +33,7 @@ def main():
     )
     chronos.scheduler.add_job(chronos.update_history, "cron", minute="*")
     chronos.scheduler.add_job(chronos.get_data_from_web, "cron", minute="*")
+    chronos.scheduler.add_job(chronos.emergency_shutdown, "cron", minute="*/2")
     chronos.scheduler.start()
     delayed_run = now + timedelta(minutes=cfg.mode_switch_lockout_time.minutes)
     try:
