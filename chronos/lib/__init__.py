@@ -475,6 +475,13 @@ class Chronos(object):
     def tha_setpoint(self):
         return self.get_tha_setpoint()
 
+    def _constrain_effective_setpoint(self, effective_setpoint):
+        if effective_setpoint > self.setpoint_max:
+            effective_setpoint = self.setpoint_max
+        elif effective_setpoint < self.setpoint_min:
+            effective_setpoint = self.setpoint_min
+        return effective_setpoint
+
     @property
     def effective_setpoint(self):
         "Calculate setpoint from wind_chill."
@@ -482,11 +489,7 @@ class Chronos(object):
             effective_setpoint = (self.tha_setpoint + self.setpoint_offset_winter)
         elif self.mode in (1, 3):
             effective_setpoint = (self.tha_setpoint + self.setpoint_offset_summer)
-        # constrain effective setpoint
-        if effective_setpoint > self.setpoint_max:
-            effective_setpoint = self.setpoint_max
-        elif effective_setpoint < self.setpoint_min:
-            effective_setpoint = self.setpoint_min
+        effective_setpoint = self._constrain_effective_setpoint(effective_setpoint)
         websocket_client.send_message({"effective_setpoint": effective_setpoint})
         self.data["effective_setpoint"] = effective_setpoint
         return effective_setpoint
@@ -688,19 +691,11 @@ class Chronos(object):
     @property
     def is_time_to_switch_season_to_summer(self):
         effective_setpoint = (self.get_tha_setpoint("winter") + self.setpoint_offset_winter)
-        # constrain effective setpoint
-        if effective_setpoint > self.setpoint_max:
-            effective_setpoint = self.setpoint_max
-        elif effective_setpoint < self.setpoint_min:
-            effective_setpoint = self.setpoint_min
+        effective_setpoint = self._constrain_effective_setpoint(effective_setpoint)
         return (self.return_temp > (effective_setpoint + self.mode_change_delta_temp))
 
     @property
     def is_time_to_switch_season_to_winter(self):
         effective_setpoint = (self.get_tha_setpoint("summer") + self.setpoint_offset_summer)
-        # constrain effective setpoint
-        if effective_setpoint > self.setpoint_max:
-            effective_setpoint = self.setpoint_max
-        elif effective_setpoint < self.setpoint_min:
-            effective_setpoint = self.setpoint_min
+        effective_setpoint = self._constrain_effective_setpoint(effective_setpoint)
         return (self.return_temp < (effective_setpoint - self.mode_change_delta_temp))
