@@ -50,14 +50,14 @@ class Device(object):
     def turn_off(self, relay_only=False):
         self._switch_state("off", relay_only=relay_only)
 
-    def _get_property_from_db(self, from_backup=False):
+    def _get_property_from_db(self, param, from_backup=False):
         device = getattr(db, self.device)
+        param = getattr(device, param)
         with db.session_scope() as session:
-            property_ = session.query(device).filter(
+            value, = session.query(param).filter(
                 device.backup == from_backup
             ).first()
-            session.expunge(property_)
-        return property_
+        return value
 
     def _update_value_in_db(self, name, value, to_backup=False):
         device = getattr(db, self.device)
@@ -81,28 +81,28 @@ class Device(object):
         self._update_value_in_db("switched_timestamp", self.switched_timestamp, to_backup=True)
 
     def restore_status(self):
-        status = self._get_property_from_db(from_backup=True).status
-        manual_override = self._get_property_from_db(from_backup=True).manual_override
-        switched_timestamp = self._get_property_from_db(from_backup=True).switched_timestamp
+        status = self._get_property_from_db("status", from_backup=True)
+        manual_override = self._get_property_from_db("manual_override", from_backup=True)
+        switched_timestamp = self._get_property_from_db("switched_timestamp", from_backup=True)
         self._update_value_in_db("status", status)
         self._update_value_in_db("manual_override", manual_override)
         self._update_value_in_db("switched_timestamp", switched_timestamp)
 
     @property
     def timestamp(self):
-        return self._get_property_from_db().timestamp
+        return self._get_property_from_db("timestamp")
 
     @property
     def switched_timestamp(self):
-        return self._get_property_from_db().switched_timestamp
+        return self._get_property_from_db("switched_timestamp")
 
     @property
     def status(self):
-        return self._get_property_from_db().status
+        return self._get_property_from_db("status")
 
     @property
     def manual_override(self):
-        return self._get_property_from_db().manual_override
+        return self._get_property_from_db("manual_override")
 
     @manual_override.setter
     def manual_override(self, manual_override):
@@ -149,20 +149,12 @@ class Boiler(Device):
         self.device = "Boiler"
 
     @property
-    def timestamp(self):
-        return self._get_property_from_db().timestamp
-
-    @property
-    def switched_timestamp(self):
-        return self._get_property_from_db().switched_timestamp
-
-    @property
     def cascade_current_power(self):
-        return self._get_property_from_db().cascade_current_power
+        return self._get_property_from_db("cascade_current_power")
 
     @property
     def lead_firing_rate(self):
-        return self._get_property_from_db().lead_firing_rate
+        return self._get_property_from_db("lead_firing_rate")
 
     def set_boiler_setpoint(self, effective_setpoint):
         setpoint = int(-101.4856 + 1.7363171 * int(effective_setpoint))
@@ -346,11 +338,11 @@ class Chronos(object):
     def wind_speed(self):
         return self._wind_speed or self.get_data_from_web()["wind_speed"]
 
-    def _get_settings_from_db(self):
+    def _get_settings_from_db(self, param):
+        param = getattr(db.Settings, param)
         with db.session_scope() as session:
-            property_ = session.query(db.Settings).first()
-            session.expunge(property_)
-        return property_
+            value, = session.query(param).first()
+        return value
 
     def _update_settings(self, name, value):
         with db.session_scope() as session:
@@ -362,7 +354,7 @@ class Chronos(object):
 
     @property
     def setpoint_offset_summer(self):
-        return self._get_settings_from_db().setpoint_offset_summer
+        return self._get_settings_from_db("setpoint_offset_summer")
 
     @setpoint_offset_summer.setter
     def setpoint_offset_summer(self, setpoint_offset):
@@ -370,7 +362,7 @@ class Chronos(object):
 
     @property
     def setpoint_offset_winter(self):
-        return self._get_settings_from_db().setpoint_offset_winter
+        return self._get_settings_from_db("setpoint_offset_winter")
 
     @setpoint_offset_winter.setter
     def setpoint_offset_winter(self, setpoint_offset):
@@ -378,7 +370,7 @@ class Chronos(object):
 
     @property
     def mode(self):
-        mode = self._get_settings_from_db().mode
+        mode = self._get_settings_from_db("mode")
         self.data["mode"] = mode
         return mode
 
@@ -388,7 +380,7 @@ class Chronos(object):
 
     @property
     def setpoint_min(self):
-        return self._get_settings_from_db().setpoint_min
+        return self._get_settings_from_db("setpoint_min")
 
     @setpoint_min.setter
     def setpoint_min(self, setpoint):
@@ -396,7 +388,7 @@ class Chronos(object):
 
     @property
     def setpoint_max(self):
-        return self._get_settings_from_db().setpoint_max
+        return self._get_settings_from_db("setpoint_max")
 
     @setpoint_max.setter
     def setpoint_max(self, setpoint):
@@ -404,7 +396,7 @@ class Chronos(object):
 
     @property
     def tolerance(self):
-        return self._get_settings_from_db().tolerance
+        return self._get_settings_from_db("tolerance")
 
     @tolerance.setter
     def tolerance(self, tolerance):
@@ -412,7 +404,7 @@ class Chronos(object):
 
     @property
     def cascade_time(self):
-        return self._get_settings_from_db().cascade_time / 60
+        return self._get_settings_from_db("cascade_time") / 60
 
     @cascade_time.setter
     def cascade_time(self, cascade_time):
@@ -420,7 +412,7 @@ class Chronos(object):
 
     @property
     def mode_change_delta_temp(self):
-        return self._get_settings_from_db().mode_change_delta_temp
+        return self._get_settings_from_db("mode_change_delta_temp")
 
     @mode_change_delta_temp.setter
     def mode_change_delta_temp(self, mode_change_delta_temp):
