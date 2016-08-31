@@ -46,6 +46,22 @@ class Device(object):
             elif command == "off" and not relay_only:
                 self._update_value_in_db("status", 0)
 
+    @property
+    def relay_state(self):
+        try:
+            with serial.Serial(cfg.serial.portname, cfg.serial.baudr, timeout=1) as ser_port:
+                ser_port.write("relay read {}\n\r").format(self.relay_number)
+                response = ser_port.read(25)
+        except serial.SerialException as e:
+            logger.error("Serial port error: {}".format(e))
+            sys.exit(1)
+        else:
+            if "on" in response:
+                state = True
+            elif "off" in response:
+                state = False
+            return state
+
     def turn_on(self, relay_only=False):
         self._switch_state("on", relay_only=relay_only)
 
@@ -128,7 +144,7 @@ class Chiller(Device):
         else:
             self.number = number
             self.relay_number = getattr(cfg.relay, "chiller{}".format(number))
-            self.device = "Chiller{}".format(number)
+            self.name = "Chiller{}".format(number)
 
     @property
     def timestamp(self):
@@ -156,7 +172,7 @@ class Boiler(Device):
     def __init__(self):
         self.number = 0
         self.relay_number = cfg.relay.boiler
-        self.device = "Boiler"
+        self.name = "Boiler"
 
     @property
     def timestamp(self):
@@ -255,7 +271,7 @@ class Valve(Device):
             raise ValueError("Valve must be winter or summer")
         else:
             self.relay_number = getattr(cfg.relay, "{}_valve".format(season))
-            self.device = "{}_valve".format(season)
+            self.name = "{}_valve".format(season)
 
     def __getattr__(self, name):
         if name in ("status", "timestamp", "save_status", "restore_status"):
@@ -285,6 +301,10 @@ class Chronos(object):
             self.chiller2,
             self.chiller3,
             self.chiller4
+        )
+        self.valves = (
+            self.winter_valve,
+            self.summer_valve
         )
         self._outside_temp = None
         self._wind_speed = None
@@ -627,13 +647,16 @@ class Chronos(object):
                 elif device.status == 0:
                     device.turn_off(relay_only=True)
 
-    def turn_off_devices(self, relay_only=False):
+    def turn_off_devices(self, with_valves=False, relay_only=False):
         if relay_only:
             for device in self.devices:
                 device.turn_off(relay_only=relay_only)
         else:
             for device in self.devices:
                 device.manual_override = 2
+            if with_valves:
+                self.winter_valve.turn_off()
+                self.summer_valve.turn_off()
 
     def update_history(self):
         logger.debug("Updating history")
@@ -755,3 +778,20 @@ class Chronos(object):
             effective_setpoint = self.setpoint_min
         return (self.return_temp < (effective_setpoint -
                                     self.mode_change_delta_temp))
+
+    def emergency_shutdown(self):
+        mode = self.mode
+        devices = (device.relay_state for device in self.devices)
+        devices_ = zip(self.devices, devices)
+        valves = (self.winter_valve.relay_state, self.summer_valve.relay_state)
+        valves_ = zip(self.valves, valves_)
+        all_devices = devices_ + valves_
+        return_temp = self.return_temp
+        if (all(valves) or
+            devices[0] and mode == 1 or
+            any(devices[1:]) and mode == 0 or
+            return_temp < 36 or return_temp > 110):
+            log.error("EMERGENCY SHUTDOWN. Relays states: {}".format("; ".join(
+                "{}: {}".format(device[0].name, device[1]) for device in all_devices)))
+            self.turn_off_devices(with_valves=True)
+            sys.exit(1)
