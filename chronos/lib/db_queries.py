@@ -30,14 +30,6 @@ def three_minute_avg_delta():
     return avg_result
 
 
-def last_return_temp():
-    with db.session_scope() as session:
-        result, = session.query(
-            db.History.return_temp
-        ).order_by(desc(db.History.id)).limit(1).first()
-    return result
-
-
 def log_generator():
     slice_ = 256
     offset = 0

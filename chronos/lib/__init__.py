@@ -11,9 +11,9 @@ from chronos.lib import websocket_client
 from chronos.lib.config_parser import cfg
 from pymodbus.exceptions import ModbusException
 from chronos.lib.modbus_client import modbus_session
+from chronos.lib.db_queries import three_minute_avg_delta
 from chronos.lib.root_logger import root_logger as logger
 from apscheduler.schedulers.background import BackgroundScheduler
-from chronos.lib.db_queries import three_minute_avg_delta, last_return_temp
 
 
 def timer():
@@ -550,7 +550,7 @@ class Chronos(object):
         turn_off_index = self._find_chiller_index_to_switch(1)
         turn_on_index = self._find_chiller_index_to_switch(0)
         db_delta = three_minute_avg_delta()
-        db_return_temp = last_return_temp()
+        db_return_temp = self.previous_return_temp
         logger.debug("; ".join("{}: {}".format(k, v) for k, v in self.data.items()))
         logger.debug(
             ("time_gap: {}; turn_on_index: {}; turn_off_index: {};"
