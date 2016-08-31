@@ -38,6 +38,14 @@ def last_return_temp():
     return result
 
 
+def last_outside_temp():
+    with db.session_scope() as session:
+        result, = session.query(
+            db.History.outside_temp
+        ).order_by(desc(db.History.id)).first()
+    return result
+
+
 def log_generator():
     slice_ = 256
     offset = 0

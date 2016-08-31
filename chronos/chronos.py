@@ -12,7 +12,7 @@ chronos.scheduler.start()
 
 def get_data():
     results = {
-        "outside_temp": chronos.outside_temp,
+        "outside_temp": db_queries.last_outside_temp(),
         "baseline_setpoint": chronos.baseline_setpoint,
         "tha_setpoint": chronos.tha_setpoint,
         "effective_setpoint": chronos.effective_setpoint,
