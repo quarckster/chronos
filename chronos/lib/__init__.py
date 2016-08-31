@@ -306,8 +306,7 @@ class Chronos(object):
         try:
             content = urllib2.urlopen("http://wx.thomaslivestock.com/downld02.txt")
         except (IOError, urllib2.HTTPError, urllib2.URLError):
-            logger.error("""Unable to get data from website.
-                            Reading previous value from DB.""")
+            logger.error("Unable to get data from the website. Reading previous value from the DB.")
             with db.session_scope() as session:
                 wind_speed, outside_temp = session.query(
                     db.History.wind_speed, db.History.outside_temp
