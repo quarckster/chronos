@@ -10,7 +10,7 @@ class install(_install):
 
 setup(
     name="chronos",
-    version="0.3.4",
+    version="0.3.5",
     description="Boiling/cooling water system.",
     url="https://bitbucket.org/quarck/chronos/",
     author="Dmitry Misharov",
@@ -18,7 +18,8 @@ setup(
     packages=[
         "chronos",
         "chronos.lib",
-        "chronos.bin"],
+        "chronos.bin",
+        "chronos.utils"],
     install_requires=[
         "apscheduler==3.1.0",
         "sqlalchemy==1.0.13",
@@ -34,7 +35,8 @@ setup(
     include_package_data=True,
     entry_points={
         "console_scripts": [
-            "chronosd = chronos.bin.chronosd:main"]},
+            "chronosd = chronos.bin.chronosd:main",
+            "chronos_debug = chronos.utils.chronos_hardware_debug:main"]},
     data_files=[
         ("/etc", ["data_files/chronos_config.json"]),
         ("/etc/init.d", ["data_files/chronos"]),

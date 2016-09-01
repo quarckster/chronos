@@ -298,8 +298,7 @@ class Chronos(object):
             # Divide by 1000 for proper decimal point
             temp = float(temp_string) / 1000.0
             # Convert to degF
-            temp = round(c_to_f(temp), 1)
-            return temp
+            return c_to_f(temp)
 
     @property
     def water_out_temp(self):
