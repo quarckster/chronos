@@ -22,6 +22,10 @@ def timer():
         time.sleep(1)
 
 
+def c_to_f(t):
+    return round(((9.0 / 5.0) * t + 32.0), 1)
+
+
 class Device(object):
 
     def _switch_state(self, command, relay_only=False):
@@ -184,8 +188,6 @@ class Boiler(Device):
                 logger.error("Couldn't sent setpoint to the boiler.")
 
     def send_stats(self):
-        def c_to_f(t):
-            return round(((9.0 / 5.0) * t + 32.0), 1)
         boiler_stats = {
             "system_supply_temp": 0,
             "outlet_temp": 0,
@@ -296,9 +298,7 @@ class Chronos(object):
             # Divide by 1000 for proper decimal point
             temp = float(temp_string) / 1000.0
             # Convert to degF
-            temp = temp * 9.0 / 5.0 + 32.0
-            # Round temp to 2 decimal points
-            temp = round(temp, 1)
+            temp = round(c_to_f(temp), 1)
             return temp
 
     @property
