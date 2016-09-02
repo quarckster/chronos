@@ -75,7 +75,7 @@ def main():
     relays_dict = {device: [relay_read(relay_number), relay_number] for device, relay_number in
                    cfg.relay.__dict__.items()}
     sorted_relays_dict = OrderedDict(sorted(relays_dict.items(), key=lambda t: t[0]))
-    for device,(relay_state, relay_number) in sorted_relays_dict.items():
+    for device, (relay_state, relay_number) in sorted_relays_dict.items():
         print("{}: {}; relay number: {}".format(device, relay_state, relay_number))
     for param, value in get_settings().items():
         print("{}: {}".format(param, value))

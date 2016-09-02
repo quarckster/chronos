@@ -26,11 +26,7 @@ def main():
     logger.info("Starting chronos")
     now = datetime.now()
     chronos.initialize_state()
-    chronos.scheduler.add_job(
-        websocket_server.serveforever,
-        "date",
-        run_date=datetime.now()
-    )
+    chronos.scheduler.add_job(websocket_server.serveforever, "date", run_date=datetime.now())
     chronos.scheduler.add_job(chronos.update_history, "cron", minute="*")
     chronos.scheduler.add_job(chronos.get_data_from_web, "cron", minute="*")
     chronos.scheduler.add_job(chronos.emergency_shutdown, "cron", minute="*/2")
@@ -57,7 +53,7 @@ def main():
                         chronos.switch_season("to_winter")
     except KeyboardInterrupt:
         destructor()
-    except Exception as e:
+    except (Exception, SystemExit) as e:
         logger.exception(e)
         destructor(status=1)
 
