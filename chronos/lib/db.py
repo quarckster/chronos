@@ -136,6 +136,8 @@ class Settings(Base):
     mode_change_delta_temp = Column(INTEGER, default=0, nullable=False)
     cascade_time = Column(INTEGER, default=0, nullable=False)
     mode = Column(INTEGER, default=1, nullable=False)
+    mode_switch_timestamp = Column(DateTime, default=datetime.now, nullable=False)
+    mode_switch_lockout_time = Column(INTEGER, default=2, nullable=False)
 
 
 @contextmanager
@@ -146,7 +148,7 @@ def session_scope():
         yield session
         session.commit()
     except Exception, e:
-        logger.error("Failed to write the db: {}".format(e))
+        logger.exception("Failed during interaction with the db: {}".format(e))
         session.rollback()
     finally:
         session.close()

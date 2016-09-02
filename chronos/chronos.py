@@ -20,6 +20,7 @@ def get_data():
         "setpoint_min": chronos.setpoint_min,
         "setpoint_max": chronos.setpoint_max,
         "mode_change_delta_temp": chronos.mode_change_delta_temp,
+        "mode_switch_lockout_time": chronos.mode_switch_lockout_time,
         "return_temp": chronos.return_temp,
         "water_out_temp": chronos.water_out_temp,
         "mode": chronos.mode,
@@ -88,7 +89,6 @@ def update_settings():
 @app.route("/switch_mode", methods=["POST"])
 def switch_mode():
     mode = int(request.form["mode"])
-    mode_switch_lockout_time = cfg.mode_switch_lockout_time.minutes
     if mode == 2:
         error = chronos.is_time_to_switch_season_to_summer
         chronos.switch_season("to_winter")
@@ -97,7 +97,7 @@ def switch_mode():
         chronos.switch_season("to_summer")
     return jsonify(data={
         "error": error,
-        "mode_switch_lockout_time": mode_switch_lockout_time
+        "mode_switch_lockout_time": chronos.mode_switch_lockout_time
     })
 
 
