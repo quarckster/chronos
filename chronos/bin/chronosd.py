@@ -46,7 +46,7 @@ def main():
                     chronos.switch_season("to_winter")
     except KeyboardInterrupt:
         destructor()
-    except (Exception, SystemExit) as e:
+    except Exception as e:
         logger.exception(e)
         destructor(status=1)
 

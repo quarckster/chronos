@@ -737,7 +737,10 @@ class Chronos(object):
         sum_switch_lockout_time = timedelta(
             minutes=(self.mode_switch_lockout_time + VALVES_SWITCH_TIME))
         return (self.return_temp > (effective_setpoint + self.mode_change_delta_temp) and
-                timespan > sum_switch_lockout_time)
+                timespan > sum_switch_lockout_time and
+                # this check needs if mode_switch_lockout_time less than 0.
+                # https://bitbucket.org/quarck/chronos/issues/37/make-the-chronos-switch-between-season#comment-29724948
+                sum_switch_lockout_time > VALVES_SWITCH_TIME)
 
     @property
     def is_time_to_switch_season_to_winter(self):
@@ -747,7 +750,8 @@ class Chronos(object):
         sum_switch_lockout_time = timedelta(
             minutes=(self.mode_switch_lockout_time + VALVES_SWITCH_TIME))
         return (self.return_temp < (effective_setpoint - self.mode_change_delta_temp) and
-                timespan > sum_switch_lockout_time)
+                timespan > sum_switch_lockout_time and
+                sum_switch_lockout_time > VALVES_SWITCH_TIME)
 
     def emergency_shutdown(self):
         mode = self.mode

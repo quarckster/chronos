@@ -1,4 +1,5 @@
 $(document).ready(function() {
+    $("label[for=mode_switch_lockout_time]").tooltip();
     var websocket = new ReconnectingWebSocket("ws://" + window.location.hostname + ":8000/");
     function switch_season(mode) {
         var mode = parseInt(mode);
