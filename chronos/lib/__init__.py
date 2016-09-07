@@ -16,7 +16,8 @@ from chronos.lib.root_logger import root_logger as logger
 from apscheduler.schedulers.background import BackgroundScheduler
 
 WEATHER_URL = "http://wx.thomaslivestock.com/downld02.txt"
-WINTER, SUMMER, TO_WINTER, TO_SUMMER = 0, 1, 2, 3
+WINTER, SUMMER, TO_WINTER, TO_SUMMER, FROM_WINTER, FROM_SUMMER = 0, 1, 2, 3, 4, 5
+OFF, ON = 0, 1
 VALVES_SWITCH_TIME = 2
 
 
@@ -44,9 +45,9 @@ class Device(object):
                 self.relay_number, command, relay_only
             ))
             if command == "on" and not relay_only:
-                self._update_value_in_db("status", 1)
+                self._update_value_in_db("status", ON)
             elif command == "off" and not relay_only:
-                self._update_value_in_db("status", 0)
+                self._update_value_in_db("status", OFF)
 
     @property
     def relay_state(self):
@@ -125,11 +126,11 @@ class Device(object):
     @manual_override.setter
     def manual_override(self, manual_override):
         if manual_override == 1:
-            if self.status != 1:
+            if self.status != ON:
                 self.turn_on()
             self._update_value_in_db("manual_override", 1)
         elif manual_override == 2:
-            if self.status != 0:
+            if self.status != OFF:
                 self.turn_off()
             self._update_value_in_db("manual_override", 2)
         elif manual_override == 0:
@@ -189,11 +190,11 @@ class Boiler(Device):
                     logger.info("Setpoint {} has been sent to the boiler".format(setpoint))
                     break
             else:
-                logger.error("Couldn't sent setpoint to the boiler.")
+                logger.error("Couldn't send setpoint to the boiler.")
         else:
             logger.error("Incorrect setpoint")
 
-    def send_stats(self):
+    def read_modbus_data(self):
         boiler_stats = {
             "system_supply_temp": 0,
             "outlet_temp": 0,
@@ -283,7 +284,8 @@ class Chronos(object):
         self.data = {}
         self.scheduler = BackgroundScheduler()
 
-    def _read_temperature_sensor(self, sensor_id):
+    @staticmethod
+    def _read_temperature_sensor(sensor_id):
         device_file = os.path.join("/sys/bus/w1/devices", sensor_id, "w1_slave")
         while True:
             try:
@@ -533,10 +535,10 @@ class Chronos(object):
     def boiler_switcher(self):
         logger.debug("Starting boiler switcher")
         if self.boiler.manual_override == 0:
-            if ((self.boiler.status == 0 and
+            if ((self.boiler.status == OFF and
                  self.return_temp) <= (self.effective_setpoint - self.tolerance)):
                 self.boiler.turn_on()
-            elif ((self.boiler.status == 1 and
+            elif ((self.boiler.status == ON and
                    self.return_temp) > (self.effective_setpoint + self.tolerance)):
                 self.boiler.turn_off()
         logger.debug("Boiler: {}; mode: {}".format(self.boiler.status, self.mode))
@@ -583,8 +585,8 @@ class Chronos(object):
     def chillers_cascade_switcher(self):
         logger.debug("Chiller cascade switcher")
         time_gap = (datetime.now() - self._max_chillers_timestamp).total_seconds()
-        turn_off_index = self._find_chiller_index_to_switch(1)
-        turn_on_index = self._find_chiller_index_to_switch(0)
+        turn_off_index = self._find_chiller_index_to_switch(ON)
+        turn_on_index = self._find_chiller_index_to_switch(OFF)
         db_delta = db_queries.three_minute_avg_delta()
         db_return_temp = self.previous_return_temp
         logger.debug("; ".join("{}: {}".format(k, v) for k, v in self.data.items()))
@@ -614,9 +616,9 @@ class Chronos(object):
             elif device.manual_override == 2:
                 device.turn_off(relay_only=True)
             elif device.manual_override == 0:
-                if device.status == 1:
+                if device.status == ON:
                     device.turn_on(relay_only=True)
-                elif device.status == 0:
+                elif device.status == OFF:
                     device.turn_off(relay_only=True)
 
     def turn_off_devices(self, with_valves=False, relay_only=False):
@@ -666,7 +668,7 @@ class Chronos(object):
                 session.add(parameters)
 
     def switch_season(self, mode):
-        if mode == "to_summer":
+        if mode == TO_SUMMER:
             logger.debug("Switching to summer mode")
             self.mode = TO_SUMMER
             self._save_devices_states(mode)
@@ -677,14 +679,14 @@ class Chronos(object):
                 self.switch_season,
                 "date",
                 run_date=datetime.now() + timedelta(minutes=VALVES_SWITCH_TIME),
-                args=["from_winter"]
+                args=[FROM_WINTER]
             )
             self.scheduler.add_job(
                 timer,
                 "date",
                 run_date=datetime.now()
             )
-        elif mode == "to_winter":
+        elif mode == TO_WINTER:
             logger.debug("Switching to winter mode")
             self.mode = TO_WINTER
             self._save_devices_states(mode)
@@ -695,20 +697,20 @@ class Chronos(object):
                 self.switch_season,
                 "date",
                 run_date=datetime.now() + timedelta(minutes=VALVES_SWITCH_TIME),
-                args=["from_summer"]
+                args=[FROM_SUMMER]
             )
             self.scheduler.add_job(
                 timer,
                 "date",
                 run_date=datetime.now()
             )
-        elif mode == "from_summer":
+        elif mode == FROM_SUMMER:
             logger.debug("Switched to winter mode")
             self._restore_devices_states(mode)
             self.initialize_state()
             self.mode = WINTER
             self.mode_switch_timestamp = datetime.now()
-        elif mode == "from_winter":
+        elif mode == FROM_WINTER:
             logger.debug("Switched to summer mode")
             self._restore_devices_states(mode)
             self.initialize_state()
@@ -716,22 +718,22 @@ class Chronos(object):
             self.mode_switch_timestamp = datetime.now()
 
     def _save_devices_states(self, mode):
-        if mode == "to_summer":
+        if mode == TO_SUMMER:
             self.boiler.save_status()
-        elif mode == "to_winter":
+        elif mode == TO_WINTER:
             for chiller in self.devices[1:]:
                 chiller.save_status()
 
     def _restore_devices_states(self, mode):
-        if mode == "from_summer":
+        if mode == FROM_SUMMER:
             self.boiler.restore_status()
-        elif mode == "from_winter":
+        elif mode == FROM_WINTER:
             for chiller in self.devices[1:]:
                 chiller.restore_status()
 
     @property
     def is_time_to_switch_season_to_summer(self):
-        effective_setpoint = (self.get_tha_setpoint("winter") + self.setpoint_offset_winter)
+        effective_setpoint = (self.get_tha_setpoint(WINTER) + self.setpoint_offset_winter)
         effective_setpoint = self._constrain_effective_setpoint(effective_setpoint)
         timespan = datetime.now() - self.mode_switch_timestamp
         sum_switch_lockout_time = timedelta(
@@ -744,7 +746,7 @@ class Chronos(object):
 
     @property
     def is_time_to_switch_season_to_winter(self):
-        effective_setpoint = (self.get_tha_setpoint("summer") + self.setpoint_offset_summer)
+        effective_setpoint = (self.get_tha_setpoint(SUMMER) + self.setpoint_offset_summer)
         effective_setpoint = self._constrain_effective_setpoint(effective_setpoint)
         timespan = datetime.now() - self.mode_switch_timestamp
         sum_switch_lockout_time = timedelta(

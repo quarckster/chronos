@@ -1,11 +1,8 @@
-import os
-import sys
-import time
 import serial
 import urllib2
-from chronos.lib import db
 from collections import OrderedDict
 from chronos.lib.config_parser import cfg
+from chronos.lib import db, Chronos, WEATHER_URL
 
 
 def relay_read(relay_number):
@@ -20,36 +17,11 @@ def relay_read(relay_number):
 
 
 def get_data_from_web():
-    content = urllib2.urlopen("http://wx.thomaslivestock.com/downld02.txt")
+    content = urllib2.urlopen(WEATHER_URL)
     last_line = content.readlines()[-1].split()
     wind_chill = float(last_line[12])
     temp_out = float(last_line[2])
     return wind_chill, temp_out
-
-
-def read_temperature_sensor(sensor_id):
-    device_file = os.path.join("/sys/bus/w1/devices", sensor_id, "w1_slave")
-    while True:
-        try:
-            with open(device_file) as content:
-                lines = content.readlines()
-        except IOError:
-            sys.exit("Couldn't read data from sensors")
-        else:
-            if lines[0].strip()[-3:] == "YES":
-                break
-            else:
-                time.sleep(0.2)
-    equals_pos = lines[1].find("t=")
-    if equals_pos != -1:
-        temp_string = lines[1][equals_pos + 2:]
-        # Divide by 1000 for proper decimal point
-        temp = float(temp_string) / 1000.0
-        # Convert to degF
-        temp = temp * 9.0 / 5.0 + 32.0
-        # Round temp to 2 decimal points
-        temp = round(temp, 1)
-        return temp
 
 
 def get_settings():
@@ -57,6 +29,7 @@ def get_settings():
         result = session.query(db.Settings).first()
         settings = {
             "Mode change delta temp": result.mode_change_delta_temp,
+            "Mode switch lockout time": result.mode_switch_lockout_time,
             "Setpoint max": result.setpoint_max,
             "Setpoint min": result.setpoint_min,
             "Cascade time": result.cascade_time,
@@ -69,8 +42,8 @@ def get_settings():
 
 
 def main():
-    water_out_temp = read_temperature_sensor(cfg.sensors.out_id)
-    return_temp = read_temperature_sensor(cfg.sensors.in_id)
+    water_out_temp = Chronos._read_temperature_sensor(cfg.sensors.out_id)
+    return_temp = Chronos._read_temperature_sensor(cfg.sensors.in_id)
     wind_chill, temp_out = get_data_from_web()
     relays_dict = {device: [relay_read(relay_number), relay_number] for device, relay_number in
                    cfg.relay.__dict__.items()}

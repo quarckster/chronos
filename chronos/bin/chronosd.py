@@ -3,7 +3,7 @@
 import sys
 import signal
 from datetime import datetime
-from chronos.lib import Chronos, WINTER, SUMMER
+from chronos.lib import Chronos, WINTER, SUMMER, TO_WINTER, TO_SUMMER, ON
 from SimpleWebSocketServer import SimpleWebSocketServer
 from chronos.lib.websocket_server import WebSocketServer
 from chronos.lib.root_logger import root_logger as logger
@@ -33,17 +33,17 @@ def main():
         while True:
             chronos_mode = chronos.mode
             if chronos_mode == WINTER:
-                if chronos.boiler.status == 1:
-                    chronos.boiler.send_stats()
+                if chronos.boiler.status == ON:
+                    chronos.boiler.read_modbus_data()
                 if chronos.boiler.manual_override != 2:
                     chronos.boiler.set_boiler_setpoint(chronos.effective_setpoint)
                     chronos.boiler_switcher()
                 if chronos.is_time_to_switch_season_to_summer:
-                    chronos.switch_season("to_summer")
+                    chronos.switch_season(TO_SUMMER)
             elif chronos_mode == SUMMER:
                 chronos.chillers_cascade_switcher()
                 if chronos.is_time_to_switch_season_to_winter:
-                    chronos.switch_season("to_winter")
+                    chronos.switch_season(TO_WINTER)
     except KeyboardInterrupt:
         destructor()
     except Exception as e:

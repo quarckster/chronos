@@ -117,8 +117,7 @@ $(document).ready(function() {
         var post_data = {device: parseInt($(this)[0].id.split(/device(On|Off|Auto)/)[2]),
                          manual_override: parseInt($(this)[0].value)};
         $.blockUI();
-        $.post("update_state", post_data)
-               .done(function(data) {
+        $.post("update_state", post_data).done(function(data) {
                     if (data.error == true) {
                         $("#relay-alert").html("<div class=\"alert alert-danger\"> <a href=\"#\" class=\"close\" data-dismiss=\"alert\" aria-label=\"close\">&times;</a><strong>Error!</strong> Relay switching has been failed.</div>");
                     }

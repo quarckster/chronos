@@ -1,7 +1,7 @@
 import os
-from .lib import Chronos
 from .lib import db_queries
 from .lib.config_parser import cfg
+from .lib import Chronos, WINTER, SUMMER, TO_WINTER, TO_SUMMER
 from flask import (Flask, render_template, Response, jsonify, request,
                    make_response)
 
@@ -89,12 +89,12 @@ def update_settings():
 @app.route("/switch_mode", methods=["POST"])
 def switch_mode():
     mode = int(request.form["mode"])
-    if mode == 2:
+    if mode == TO_WINTER:
         error = chronos.is_time_to_switch_season_to_summer
-        chronos.switch_season("to_winter")
-    elif mode == 3:
+        chronos.switch_season(TO_WINTER)
+    elif mode == TO_SUMMER:
         error = chronos.is_time_to_switch_season_to_winter
-        chronos.switch_season("to_summer")
+        chronos.switch_season(TO_SUMMER)
     return jsonify(data={
         "error": error,
         "mode_switch_lockout_time": chronos.mode_switch_lockout_time
@@ -105,13 +105,13 @@ def switch_mode():
 def index():
     data = get_data()
     mode = int(data["results"]["mode"])
-    if mode == 0:
+    if mode == WINTER:
         resp = render_template("winter.html", data=data)
-    elif mode == 1:
+    elif mode == SUMMER:
         resp = render_template("summer.html", data=data)
-    elif mode == 2:
+    elif mode == TO_WINTER:
         resp = render_template("to_winter.html", data=data)
-    elif mode == 3:
+    elif mode == TO_SUMMER:
         resp = render_template("to_summer.html", data=data)
     return resp
 
