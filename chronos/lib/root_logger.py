@@ -3,9 +3,7 @@ import logging
 from chronos.lib.config_parser import cfg
 from logging.handlers import TimedRotatingFileHandler
 
-log_formatter = logging.Formatter(
-    "%(asctime)s %(levelname)s:%(message)s", "%Y-%m-%d %H:%M:%S"
-)
+log_formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s", "%Y-%m-%d %H:%M:%S")
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
 console_handler = logging.StreamHandler(sys.stdout)

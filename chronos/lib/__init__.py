@@ -576,11 +576,7 @@ class Chronos(object):
 
     @property
     def _max_chillers_timestamp(self):
-        max_timestamp = datetime.min
-        for chiller in self.devices[1:]:
-            if chiller.switched_timestamp > max_timestamp:
-                max_timestamp = chiller.switched_timestamp
-        return max_timestamp
+        return max(chiller.switched_timestamp for chiller in self.devices[1:])
 
     def chillers_cascade_switcher(self):
         logger.debug("Chiller cascade switcher")
@@ -742,7 +738,7 @@ class Chronos(object):
                 timespan > sum_switch_lockout_time and
                 # this check needs if mode_switch_lockout_time less than 0.
                 # https://bitbucket.org/quarck/chronos/issues/37/make-the-chronos-switch-between-season#comment-29724948
-                sum_switch_lockout_time > VALVES_SWITCH_TIME)
+                sum_switch_lockout_time > timedelta(minutes=VALVES_SWITCH_TIME))
 
     @property
     def is_time_to_switch_season_to_winter(self):
@@ -753,7 +749,7 @@ class Chronos(object):
             minutes=(self.mode_switch_lockout_time + VALVES_SWITCH_TIME))
         return (self.return_temp < (effective_setpoint - self.mode_change_delta_temp) and
                 timespan > sum_switch_lockout_time and
-                sum_switch_lockout_time > VALVES_SWITCH_TIME)
+                sum_switch_lockout_time > timedelta(minutes=VALVES_SWITCH_TIME))
 
     def emergency_shutdown(self):
         mode = self.mode
