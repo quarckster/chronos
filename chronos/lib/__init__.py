@@ -574,13 +574,10 @@ class Chronos(object):
         self.data["current_delta"] = current_delta
         return current_delta
 
-    @property
-    def _max_chillers_timestamp(self):
-        return max(chiller.switched_timestamp for chiller in self.devices[1:])
-
     def chillers_cascade_switcher(self):
         logger.debug("Chiller cascade switcher")
-        time_gap = (datetime.now() - self._max_chillers_timestamp).total_seconds()
+        max_chillers_timestamp = max(chiller.switched_timestamp for chiller in self.devices[1:])
+        time_gap = (datetime.now() - max_chillers_timestamp).total_seconds()
         turn_off_index = self._find_chiller_index_to_switch(ON)
         turn_on_index = self._find_chiller_index_to_switch(OFF)
         db_delta = db_queries.three_minute_avg_delta()
