@@ -2,8 +2,7 @@ import os
 from .lib import db_queries
 from .lib.config_parser import cfg
 from .lib import Chronos, WINTER, SUMMER, TO_WINTER, TO_SUMMER
-from flask import (Flask, render_template, Response, jsonify, request,
-                   make_response)
+from flask import Flask, render_template, Response, jsonify, request, make_response
 
 app = Flask(__name__)
 chronos = Chronos()

@@ -18,6 +18,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 WEATHER_URL = "http://wx.thomaslivestock.com/downld02.txt"
 WINTER, SUMMER, TO_WINTER, TO_SUMMER, FROM_WINTER, FROM_SUMMER = 0, 1, 2, 3, 4, 5
 OFF, ON = 0, 1
+MANUAL_OFF, MANUAL_ON, MANUAL_AUTO = 2, 1, 0
 VALVES_SWITCH_TIME = 2
 
 
@@ -87,8 +88,6 @@ class Device(object):
             self.name, name, value, to_backup
         ))
         if not to_backup and name != "timestamp":
-            if name == "switched_timestamp":
-                value = value.strftime("%B %d, %I:%M %p")
             websocket_client.send_message({
                 "device": self.number,
                 name: value
@@ -125,16 +124,16 @@ class Device(object):
 
     @manual_override.setter
     def manual_override(self, manual_override):
-        if manual_override == 1:
+        if manual_override == MANUAL_ON:
             if self.status != ON:
                 self.turn_on()
-            self._update_value_in_db("manual_override", 1)
-        elif manual_override == 2:
+            self._update_value_in_db("manual_override", MANUAL_ON)
+        elif manual_override == MANUAL_OFF:
             if self.status != OFF:
                 self.turn_off()
-            self._update_value_in_db("manual_override", 2)
-        elif manual_override == 0:
-            self._update_value_in_db("manual_override", 0)
+            self._update_value_in_db("manual_override", MANUAL_OFF)
+        elif manual_override == MANUAL_AUTO:
+            self._update_value_in_db("manual_override", MANUAL_AUTO)
 
 
 class Chiller(Device):
@@ -177,7 +176,7 @@ class Boiler(Device):
 
     def set_boiler_setpoint(self, effective_setpoint):
         setpoint = int(-101.4856 + 1.7363171 * int(effective_setpoint))
-        if not (setpoint > 0 and setpoint < 100):
+        if setpoint > 0 and setpoint < 100:
             for i in range(3):
                 try:
                     with modbus_session() as modbus:
@@ -367,8 +366,6 @@ class Chronos(object):
         with db.session_scope() as session:
             property_ = session.query(db.Settings).first()
             setattr(property_, name, value)
-        if name == "cascade_time":
-            value /= 60
         if name != "mode_switch_lockout_time":
             websocket_client.send_message({name: value})
 
@@ -534,7 +531,7 @@ class Chronos(object):
 
     def boiler_switcher(self):
         logger.debug("Starting boiler switcher")
-        if self.boiler.manual_override == 0:
+        if self.boiler.manual_override == MANUAL_AUTO:
             if ((self.boiler.status == OFF and
                  self.return_temp) <= (self.effective_setpoint - self.tolerance)):
                 self.boiler.turn_on()
@@ -548,7 +545,7 @@ class Chronos(object):
         switch_index = None
         for i, chiller in enumerate(self.devices[1:], 1):
             if (chiller.timestamp < min_date and
-                    chiller.manual_override == 0 and
+                    chiller.manual_override == MANUAL_AUTO and
                     chiller.status == status):
                 min_date = chiller.timestamp
                 switch_index = i
@@ -602,17 +599,25 @@ class Chronos(object):
                 turn_off_index is not None):
             self.devices[turn_off_index].turn_off()
 
-    def initialize_state(self):
+    def initialize_state(self, with_valves=False):
         for device in self.devices:
-            if device.manual_override == 1:
+            if device.manual_override == MANUAL_ON:
                 device.turn_on(relay_only=True)
-            elif device.manual_override == 2:
+            elif device.manual_override == MANUAL_OFF:
                 device.turn_off(relay_only=True)
-            elif device.manual_override == 0:
+            elif device.manual_override == MANUAL_AUTO:
                 if device.status == ON:
                     device.turn_on(relay_only=True)
                 elif device.status == OFF:
                     device.turn_off(relay_only=True)
+        if with_valves:
+            mode = self.mode
+            if mode == WINTER:
+                self.winter_valve.turn_on()
+                self.summer_valve.turn_off()
+            if mode == SUMMER:
+                self.winter_valve.turn_off()
+                self.summer_valve.turn_on()
 
     def turn_off_devices(self, with_valves=False, relay_only=False):
         if relay_only:
@@ -620,7 +625,7 @@ class Chronos(object):
                 device.turn_off(relay_only=relay_only)
         else:
             for device in self.devices:
-                device.manual_override = 2
+                device.manual_override = MANUAL_OFF
             if with_valves:
                 self.winter_valve.turn_off()
                 self.summer_valve.turn_off()
