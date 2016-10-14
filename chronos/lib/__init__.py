@@ -748,7 +748,8 @@ class Chronos(object):
         effective_setpoint = self._constrain_effective_setpoint(effective_setpoint)
         timespan = datetime.now() - self.mode_switch_timestamp
         sum_switch_lockout_time = timedelta(
-            minutes=(self.mode_switch_lockout_time + VALVES_SWITCH_TIME))
+            minutes=(self.mode_switch_lockout_time + VALVES_SWITCH_TIME)
+        )
         return (self.return_temp < (effective_setpoint - self.mode_change_delta_temp) and
                 timespan > sum_switch_lockout_time and
                 sum_switch_lockout_time > timedelta(minutes=VALVES_SWITCH_TIME))
@@ -766,5 +767,5 @@ class Chronos(object):
                 return_temp < 36 or return_temp > 110):
             logger.error("EMERGENCY SHUTDOWN. Relays states: {}".format("; ".join(
                 "{}: {}".format(device[0].name, device[1]) for device in all_devices)))
-            self.turn_off_devices(with_valves=True)
+            self.turn_off_devices()
             sys.exit(1)

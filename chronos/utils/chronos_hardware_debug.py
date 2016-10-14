@@ -57,5 +57,6 @@ def main():
     print("Wind Chill: {}".format(wind_chill))
     print("Temp Out: {}".format(temp_out))
 
+
 if __name__ == '__main__':
     main()
