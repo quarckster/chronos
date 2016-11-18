@@ -10,23 +10,24 @@ chronos.scheduler.start()
 
 
 def get_data():
+    history, settings = db_queries.get_last_data()
     results = {
-        "outside_temp": db_queries.last_outside_temp(),
+        "outside_temp": history.outside_temp,
         "baseline_setpoint": chronos.baseline_setpoint,
-        "tha_setpoint": chronos.tha_setpoint,
-        "effective_setpoint": chronos.effective_setpoint,
-        "tolerance": chronos.tolerance,
-        "setpoint_min": chronos.setpoint_min,
-        "setpoint_max": chronos.setpoint_max,
-        "mode_change_delta_temp": chronos.mode_change_delta_temp,
-        "mode_switch_lockout_time": chronos.mode_switch_lockout_time,
+        "tha_setpoint": history.tha_setpoint,
+        "effective_setpoint": history.effective_setpoint,
+        "tolerance": settings.tolerance,
+        "setpoint_min": settings.setpoint_min,
+        "setpoint_max": settings.setpoint_max,
+        "mode_change_delta_temp": settings.mode_change_delta_temp,
+        "mode_switch_lockout_time": settings.mode_switch_lockout_time,
         "return_temp": chronos.return_temp,
         "water_out_temp": chronos.water_out_temp,
-        "mode": chronos.mode,
-        "setpoint_offset_summer": chronos.setpoint_offset_summer,
-        "setpoint_offset_winter": chronos.setpoint_offset_winter,
-        "cascade_time": chronos.cascade_time,
-        "wind_chill_avg": chronos.wind_chill_avg
+        "mode": settings.mode,
+        "setpoint_offset_summer": settings.setpoint_offset_summer,
+        "setpoint_offset_winter": settings.setpoint_offset_winter,
+        "cascade_time": settings.cascade_time / 60,
+        "wind_chill_avg": history.avg_outside_temp
     }
     efficiency = db_queries.calculate_efficiency()
     efficiency["cascade_fire_rate_avg"] = chronos.cascade_fire_rate_avg

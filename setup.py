@@ -11,7 +11,7 @@ class install(_install):
 
 setup(
     name="chronos",
-    version="0.3.6",
+    version="0.4",
     description="Boiling/cooling water system.",
     url="https://bitbucket.org/quarck/chronos/",
     author="Dmitry Misharov",
@@ -20,30 +20,32 @@ setup(
         "chronos",
         "chronos.lib",
         "chronos.bin",
-        "chronos.utils"],
+        "chronos.utils"
+    ],
     install_requires=[
         "apscheduler",
         "sqlalchemy",
         "Flask",
         "pymodbus",
-        "websocket-client",
-        "SimpleWebSocketServer"],
-    dependency_links=[
-        ("git+https://github.com/dpallot/simple-websocket-server.git"
-         "#egg=SimpleWebSocketServer-0.1")
+        "python-socketio",
+        "socketIO_client",
+        "uwsgi",
+        "gevent-websocket"
     ],
     include_package_data=True,
     entry_points={
         "console_scripts": [
             "chronosd = chronos.bin.chronosd:main",
-            "chronos_debug = chronos.utils.chronos_hardware_debug:main"]},
+            "chronos_debug = chronos.utils.chronos_hardware_debug:main"
+        ]
+    },
     data_files=[
         ("/etc", ["data_files/chronos_config.json"]),
         ("/etc/init.d", ["data_files/chronos"]),
-        ("/etc/apache2/sites-enabled", ["data_files/chronos.conf"]),
-        ("/var/www", ["data_files/chronos.wsgi"])],
-    cmdclass={
-        "install": install},
-    classifiers=[
-        "Private :: Do Not Upload"]
+        ("/var/www", ["data_files/chronos.wsgi"]),
+        ("/etc/nginx/sites-enabled/", ["data_files/chronos.conf"]),
+        ("/etc/uwsgi/apps-enabled/", ["data_files/chronos.ini", "data_files/socketio_server.ini"])
+    ],
+    cmdclass={"install": install},
+    classifiers=["Private :: Do Not Upload"]
 )

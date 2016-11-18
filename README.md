@@ -9,27 +9,29 @@ Chronos is a boiling/cooling water system working on Raspberry Pi. Chronos has a
 ### Summary of set up ###
 #### Installation ####
 To install the latest version Chronos from Bitbucket repo enter the following command:
-`# pip install --process-dependency-links git+https://bitbucket.org/quarck/chronos.git`
+`# pip install git+https://bitbucket.org/quarck/chronos.git`
 
 To install a certain version from a tag, commit or branch enter this:
-`# pip install --process-dependency-links git+https://bitbucket.org/quarck/chronos.git@commit|tag|branch`
-#### Dependencies ####
+`# pip install git+https://bitbucket.org/quarck/chronos.git@commit|tag|branch`
+#### Python packages dependencies ####
 
 * Flask
 * pyserial
 * apscheduler
 * pymodbus
 * sqlalchemy
-* websocket-client
-* SimpleWebSocketServer
+* python-socketio
+* socketIO_client
+* uwsgi
+
+#### System dependencies ####
+
+* nginx
+
 #### Database configuration ####
 
 TODO
 #### Deployment instructions ####
-
-www-data and pi users have to be added in dialout group for managing serial port via web interface.
-
-`# usermod -a -G dialout www-data`
 
 To work with shared log and access to the db file www-data and pi users have to be added in one group.
 Installation script does all required actions.
@@ -45,3 +47,11 @@ chronos config path: `/etc/chronos_config.json`
 Chronos has a daemon which controlled by the following command:
 
 `# service chronos start|stop|restart`
+
+Web UI managed by uwsgi app server:
+
+`# service uwsgi start|stop|restart|reload chronos`
+
+SocketIO server managing:
+
+`# service uwsgi start|stop|restart|reload socketio_server`

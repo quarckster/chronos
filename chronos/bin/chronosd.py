@@ -2,18 +2,13 @@
 
 import sys
 import signal
-from datetime import datetime
-from SimpleWebSocketServer import SimpleWebSocketServer
-from chronos.lib.websocket_server import WebSocketServer
 from chronos.lib.root_logger import root_logger as logger
 from chronos.lib import Chronos, WINTER, SUMMER, TO_WINTER, TO_SUMMER, ON, MANUAL_OFF
 
 chronos = Chronos()
-websocket_server = SimpleWebSocketServer("0.0.0.0", 8000, WebSocketServer)
 
 
 def destructor(signum=None, frame=None, status=0):
-    websocket_server.close()
     chronos.scheduler.shutdown(wait=False)
     chronos.turn_off_devices(relay_only=True)
     sys.exit(status)
@@ -25,7 +20,6 @@ signal.signal(signal.SIGTERM, destructor)
 def main():
     logger.info("Starting chronos")
     chronos.initialize_state()
-    chronos.scheduler.add_job(websocket_server.serveforever, "date", run_date=datetime.now())
     chronos.scheduler.add_job(chronos.update_history, "cron", minute="*")
     chronos.scheduler.add_job(chronos.get_data_from_web, "cron", minute="*")
     chronos.scheduler.add_job(chronos.emergency_shutdown, "cron", minute="*/2")

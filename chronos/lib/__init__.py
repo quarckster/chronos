@@ -7,8 +7,8 @@ from chronos.lib import db
 from sqlalchemy import desc
 from sqlalchemy.sql import func
 from chronos.lib import db_queries
+from chronos.lib import socketio_client
 from datetime import datetime, timedelta
-from chronos.lib import websocket_client
 from chronos.lib.config_parser import cfg
 from pymodbus.exceptions import ModbusException
 from chronos.lib.modbus_client import modbus_session
@@ -20,12 +20,6 @@ WINTER, SUMMER, TO_WINTER, TO_SUMMER, FROM_WINTER, FROM_SUMMER = 0, 1, 2, 3, 4, 
 OFF, ON = 0, 1
 MANUAL_OFF, MANUAL_ON, MANUAL_AUTO = 2, 1, 0
 VALVES_SWITCH_TIME = 2
-
-
-def timer():
-    for i in reversed(xrange(VALVES_SWITCH_TIME * 60)):
-        websocket_client.send_message({"timer": i})
-        time.sleep(1)
 
 
 def c_to_f(t):
@@ -46,9 +40,9 @@ class Device(object):
                 self.relay_number, command, relay_only
             ))
             if command == "on" and not relay_only:
-                self._update_value_in_db("status", ON)
+                self._update_value_in_db(status=ON)
             elif command == "off" and not relay_only:
-                self._update_value_in_db("status", OFF)
+                self._update_value_in_db(status=OFF)
 
     @property
     def relay_state(self):
@@ -66,45 +60,75 @@ class Device(object):
                 state = False
             return state
 
+    def _send_socketio_message(self, event=None, status=None, switched_timestamp=None,
+                               manual_override=None):
+        if switched_timestamp:
+            switched_timestamp = switched_timestamp.strftime("%B %d, %I:%M %p")
+        socketio_client.send({
+            "event": event,
+            "message": {
+                "status": status,
+                "device": self.number,
+                "switched_timestamp": switched_timestamp,
+                "manual_override": manual_override
+            }
+        })
+
     def turn_on(self, relay_only=False):
         self._switch_state("on", relay_only=relay_only)
+        switched_timestamp = False
+        if not (relay_only and isinstance(self, Boiler)):
+            switched_timestamp = datetime.now()
+            self._update_value_in_db(switched_timestamp=switched_timestamp)
+        self._send_socketio_message(
+            event=self.TYPE, status=ON, switched_timestamp=switched_timestamp
+        )
 
     def turn_off(self, relay_only=False):
         self._switch_state("off", relay_only=relay_only)
+        now = False
+        if not relay_only and not isinstance(self, Boiler):
+            now = datetime.now()
+            self._update_value_in_db(timestamp=now, switched_timestamp=now)
+        self._send_socketio_message(
+            event=self.TYPE, status=OFF, switched_timestamp=now
+        )
 
-    def _get_property_from_db(self, param, from_backup=False):
+    def _get_property_from_db(self, *args, **kwargs):
         device = getattr(db, self.name)
-        param = getattr(device, param)
+        from_backup = kwargs.pop("from_backup", False)
         with db.session_scope() as session:
-            value, = session.query(param).filter(device.backup == from_backup).first()
-        return value
+            instance = session.query(device).filter(device.backup == from_backup).first()
+            result = [getattr(instance, arg) for arg in args]
+        if len(result) == 1:
+            result = result[0]
+        return result
 
-    def _update_value_in_db(self, name, value, to_backup=False):
+    def _update_value_in_db(self, **kwargs):
         device = getattr(db, self.name)
+        to_backup = kwargs.pop("to_backup", False)
         with db.session_scope() as session:
             property_ = session.query(device).filter(device.backup == to_backup).first()
-            setattr(property_, name, value)
-        logger.debug("Db has been updated. {} {}: {}. Backup: {}".format(
-            self.name, name, value, to_backup
-        ))
-        if not to_backup and name != "timestamp":
-            websocket_client.send_message({
-                "device": self.number,
-                name: value
-            })
+            for key, value in kwargs.items():
+                setattr(property_, key, value)
 
     def save_status(self):
-        self._update_value_in_db("status", self.status, to_backup=True)
-        self._update_value_in_db("manual_override", self.manual_override, to_backup=True)
-        self._update_value_in_db("switched_timestamp", self.switched_timestamp, to_backup=True)
+        self._update_value_in_db(
+            status=self.status,
+            manual_override=self.manual_override,
+            switched_timestamp=self.switched_timestamp,
+            to_backup=True
+        )
 
     def restore_status(self):
-        status = self._get_property_from_db("status", from_backup=True)
-        manual_override = self._get_property_from_db("manual_override", from_backup=True)
-        switched_timestamp = self._get_property_from_db("switched_timestamp", from_backup=True)
-        self._update_value_in_db("status", status)
-        self._update_value_in_db("manual_override", manual_override)
-        self._update_value_in_db("switched_timestamp", switched_timestamp)
+        status, manual_override, switched_timestamp = self._get_property_from_db(
+            "status", "manual_override", "switched_timestamp", from_backup=True)
+        self._update_value_in_db(
+            status=status,
+            manual_override=manual_override,
+            switched_timestamp=switched_timestamp,
+            to_backup=False
+        )
 
     @property
     def timestamp(self):
@@ -127,16 +151,19 @@ class Device(object):
         if manual_override == MANUAL_ON:
             if self.status != ON:
                 self.turn_on()
-            self._update_value_in_db("manual_override", MANUAL_ON)
+            self._update_value_in_db(manual_override=MANUAL_ON)
         elif manual_override == MANUAL_OFF:
             if self.status != OFF:
                 self.turn_off()
-            self._update_value_in_db("manual_override", MANUAL_OFF)
+            self._update_value_in_db(manual_override=MANUAL_OFF)
         elif manual_override == MANUAL_AUTO:
-            self._update_value_in_db("manual_override", MANUAL_AUTO)
+            self._update_value_in_db(manual_override=MANUAL_AUTO)
+        self._send_socketio_message(event="manual_override", manual_override=manual_override)
 
 
 class Chiller(Device):
+
+    TYPE = "chiller"
 
     def __init__(self, number):
         if number not in range(1, 5):
@@ -146,20 +173,10 @@ class Chiller(Device):
             self.relay_number = getattr(cfg.relay, "chiller{}".format(number))
             self.name = "Chiller{}".format(number)
 
-    def turn_off(self, relay_only=False):
-        super(Chiller, self).turn_off(relay_only=relay_only)
-        if not relay_only:
-            self._update_value_in_db("switched_timestamp", datetime.now())
-
-    def turn_on(self, relay_only=False):
-        super(Chiller, self).turn_on(relay_only=relay_only)
-        if not relay_only:
-            now = datetime.now()
-            self._update_value_in_db("timestamp", now)
-            self._update_value_in_db("switched_timestamp", now)
-
 
 class Boiler(Device):
+
+    TYPE = "boiler"
 
     def __init__(self):
         self.number = 0
@@ -231,9 +248,11 @@ class Boiler(Device):
                 break
         else:
             logger.error("Couldn't read modbus stats")
-        for key, value in boiler_stats.items():
-            self._update_value_in_db(key, value)
-            websocket_client.send_message({key: value})
+        self._update_value_in_db(**boiler_stats)
+        socketio_client.send({
+            "event": "misc",
+            "message": boiler_stats
+        })
 
 
 class Valve(Device):
@@ -251,10 +270,10 @@ class Valve(Device):
         super(Valve, self).__getattr__(name)
 
     def turn_on(self):
-        super(Valve, self).turn_on(relay_only=True)
+        self._switch_state("on", relay_only=True)
 
     def turn_off(self):
-        super(Valve, self).turn_off(relay_only=True)
+        self._switch_state("off", relay_only=True)
 
 
 class Chronos(object):
@@ -280,7 +299,11 @@ class Chronos(object):
         )
         self._outside_temp = None
         self._wind_speed = None
-        self.data = {}
+        self._baseline_setpoint = None
+        self._tha_setpoint = None
+        self._effective_setpoint = None
+        self._water_out_temp = None
+        self._return_temp = None
         self.scheduler = BackgroundScheduler()
 
     @staticmethod
@@ -309,15 +332,23 @@ class Chronos(object):
     @property
     def water_out_temp(self):
         water_out_temp = self._read_temperature_sensor(cfg.sensors.out_id)
-        websocket_client.send_message({"water_out_temp": water_out_temp})
-        self.data["water_out_temp"] = water_out_temp
+        if water_out_temp != self._water_out_temp:
+            socketio_client.send({
+                "event": "misc",
+                "message": {"water_out_temp": water_out_temp}
+            })
+            self._water_out_temp = water_out_temp
         return water_out_temp
 
     @property
     def return_temp(self):
         return_temp = self._read_temperature_sensor(cfg.sensors.in_id)
-        websocket_client.send_message({"return_temp": return_temp})
-        self.data["return_temp"] = return_temp
+        if return_temp != self._return_temp:
+            socketio_client.send({
+                "event": "misc",
+                "message": {"return_temp": return_temp}
+            })
+            self._return_temp = return_temp
         return return_temp
 
     def get_data_from_web(self):
@@ -339,10 +370,13 @@ class Chronos(object):
             # Temperature
             elif self.mode in (SUMMER, TO_SUMMER):
                 outside_temp = float(last_line[2])
-        self._outside_temp = outside_temp
-        self._wind_speed = wind_speed
-        self.data["outside_temp"] = outside_temp
-        websocket_client.send_message({"outside_temp": outside_temp})
+        if outside_temp != self._outside_temp:
+            socketio_client.send({
+                "event": "misc",
+                "message": {"outside_temp": outside_temp}
+            })
+            self._outside_temp = outside_temp
+            self._wind_speed = wind_speed
         return {
             "outside_temp": outside_temp,
             "wind_speed": wind_speed
@@ -366,8 +400,13 @@ class Chronos(object):
         with db.session_scope() as session:
             property_ = session.query(db.Settings).first()
             setattr(property_, name, value)
-        if name != "mode_switch_lockout_time":
-            websocket_client.send_message({name: value})
+        if name == "cascade_time":
+            value /= 60
+        if name != "mode_switch_timestamp":
+            socketio_client.send({
+                "event": "misc",
+                "message": {name: value}
+            })
 
     @property
     def setpoint_offset_summer(self):
@@ -403,9 +442,7 @@ class Chronos(object):
 
     @property
     def mode(self):
-        mode = self._get_settings_from_db("mode")
-        self.data["mode"] = mode
-        return mode
+        return self._get_settings_from_db("mode")
 
     @mode.setter
     def mode(self, mode):
@@ -491,7 +528,12 @@ class Chronos(object):
                 baseline_setpoint, = session.query(
                     db.SetpointLookup.setpoint
                 ).filter(db.SetpointLookup.wind_chill == wind_chill).first()
-        websocket_client.send_message({"baseline_setpoint": baseline_setpoint})
+        if baseline_setpoint != self._baseline_setpoint:
+            socketio_client.send({
+                "event": "misc",
+                "message": {"baseline_setpoint": baseline_setpoint}
+            })
+            self._baseline_setpoint = baseline_setpoint
         return baseline_setpoint
 
     def get_tha_setpoint(self, mode=None):
@@ -503,12 +545,18 @@ class Chronos(object):
                     db.SetpointLookup.setpoint_offset
                 ).filter(db.SetpointLookup.avg_wind_chill == self.wind_chill_avg).first()
         tha_setpoint = self.baseline_setpoint - temperature_history_adjsutment
-        websocket_client.send_message({"tha_setpoint": tha_setpoint})
         return tha_setpoint
 
     @property
     def tha_setpoint(self):
-        return self.get_tha_setpoint()
+        tha_setpoint = self.get_tha_setpoint()
+        if tha_setpoint != self._tha_setpoint:
+            socketio_client.send({
+                "event": "misc",
+                "message": {"tha_setpoint": tha_setpoint}
+            })
+            self._tha_setpoint = tha_setpoint
+        return tha_setpoint
 
     def _constrain_effective_setpoint(self, effective_setpoint):
         if effective_setpoint > self.setpoint_max:
@@ -525,8 +573,12 @@ class Chronos(object):
         elif self.mode in (SUMMER, TO_SUMMER):
             effective_setpoint = (self.tha_setpoint + self.setpoint_offset_summer)
         effective_setpoint = self._constrain_effective_setpoint(effective_setpoint)
-        websocket_client.send_message({"effective_setpoint": effective_setpoint})
-        self.data["effective_setpoint"] = effective_setpoint
+        if effective_setpoint != self._effective_setpoint:
+            socketio_client.send({
+                "event": "misc",
+                "message": {"effective_setpoint": effective_setpoint}
+            })
+            self._effective_setpoint = effective_setpoint
         return effective_setpoint
 
     def boiler_switcher(self):
@@ -568,36 +620,37 @@ class Chronos(object):
             current_delta = -1
         else:
             current_delta = 0
-        self.data["current_delta"] = current_delta
         return current_delta
 
     def chillers_cascade_switcher(self):
         logger.debug("Chiller cascade switcher")
         max_chillers_timestamp = max(chiller.switched_timestamp for chiller in self.devices[1:])
         time_gap = (datetime.now() - max_chillers_timestamp).total_seconds()
-        turn_off_index = self._find_chiller_index_to_switch(ON)
-        turn_on_index = self._find_chiller_index_to_switch(OFF)
         db_delta = db_queries.three_minute_avg_delta()
         db_return_temp = self.previous_return_temp
-        logger.debug("; ".join("{}: {}".format(k, v) for k, v in self.data.items()))
         logger.debug(
-            ("time_gap: {}; turn_on_index: {}; turn_off_index: {};"
-             "three_minute_avg_delta: {}, last_return_temp: {}").format(
-                time_gap, turn_on_index, turn_off_index, db_delta, db_return_temp
+            ("time_gap: {}; three_minute_avg_delta: {}, last_return_temp: {}").format(
+                time_gap, db_delta, db_return_temp
             )
         )
         # Turn on chillers
         if (self.return_temp >= (self.effective_setpoint + self.tolerance) and
                 db_delta > 0.1 and
-                time_gap >= self.cascade_time * 60 and
-                turn_on_index is not None):
-            self.devices[turn_on_index].turn_on()
+                time_gap >= self.cascade_time * 60):
+            turn_on_index = self._find_chiller_index_to_switch(OFF)
+            try:
+                self.devices[turn_on_index].turn_on()
+            except TypeError:
+                pass
         # Turn off chillers
         elif (db_return_temp < (self.effective_setpoint - self.tolerance) and
                 self.current_delta < 0 and
-                time_gap >= self.cascade_time * 60 / 1.5 and
-                turn_off_index is not None):
-            self.devices[turn_off_index].turn_off()
+                time_gap >= self.cascade_time * 60 / 1.5):
+            turn_off_index = self._find_chiller_index_to_switch(ON)
+            try:
+                self.devices[turn_off_index].turn_off()
+            except TypeError:
+                pass
 
     def initialize_state(self, with_valves=False):
         for device in self.devices:
@@ -679,11 +732,6 @@ class Chronos(object):
                 run_date=datetime.now() + timedelta(minutes=VALVES_SWITCH_TIME),
                 args=[FROM_WINTER]
             )
-            self.scheduler.add_job(
-                timer,
-                "date",
-                run_date=datetime.now()
-            )
         elif mode == TO_WINTER:
             logger.debug("Switching to winter mode")
             self.mode = TO_WINTER
@@ -696,11 +744,6 @@ class Chronos(object):
                 "date",
                 run_date=datetime.now() + timedelta(minutes=VALVES_SWITCH_TIME),
                 args=[FROM_SUMMER]
-            )
-            self.scheduler.add_job(
-                timer,
-                "date",
-                run_date=datetime.now()
             )
         elif mode == FROM_SUMMER:
             logger.debug("Switched to winter mode")
@@ -749,6 +792,7 @@ class Chronos(object):
         timespan = datetime.now() - self.mode_switch_timestamp
         sum_switch_lockout_time = timedelta(
             minutes=(self.mode_switch_lockout_time + VALVES_SWITCH_TIME)
+
         )
         return (self.return_temp < (effective_setpoint - self.mode_change_delta_temp) and
                 timespan > sum_switch_lockout_time and

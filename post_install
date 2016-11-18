@@ -28,7 +28,3 @@ umask 0002
 if [[ $pi_groups != *$chronos_group_name* ]]; then
     usermod -a -G $chronos_group_name pi
 fi
-
-if [[ $wwwdata_groups != *$chronos_group_name* ]]; then
-    usermod -a -G $chronos_group_name,dialout www-data
-fi
