@@ -488,21 +488,15 @@ class Chronos(object):
     def mode_change_delta_temp(self, mode_change_delta_temp):
         self._update_settings("mode_change_delta_temp", mode_change_delta_temp)
 
-    def get_wind_chill_avg(self, mode=None):
-        mode = mode or self.mode
-        mode_map = {0: 0, 1: 1, 2: 0, 3: 1, "winter": 0, "summer": 1}
+    @property
+    def wind_chill_avg(self):
         with db.session_scope() as session:
             result = session.query(db.History.outside_temp).filter(
-                db.History.mode == mode_map[mode],
                 db.History.timestamp > (datetime.now() - timedelta(days=4))
             ).subquery()
             wind_chill_avg, = session.query(func.avg(result.c.outside_temp)).first()
         wind_chill_avg = wind_chill_avg or self.outside_temp
         return int(round(wind_chill_avg))
-
-    @property
-    def wind_chill_avg(self):
-        return self.get_wind_chill_avg()
 
     @property
     def cascade_fire_rate_avg(self):
@@ -536,8 +530,9 @@ class Chronos(object):
             self._baseline_setpoint = baseline_setpoint
         return baseline_setpoint
 
-    def get_tha_setpoint(self, mode=None):
-        if self.get_wind_chill_avg(mode) < 71:
+    @property
+    def tha_setpoint(self):
+        if self.wind_chill_avg < 71:
             temperature_history_adjsutment = 0
         else:
             with db.session_scope() as session:
@@ -545,11 +540,6 @@ class Chronos(object):
                     db.SetpointLookup.setpoint_offset
                 ).filter(db.SetpointLookup.avg_wind_chill == self.wind_chill_avg).first()
         tha_setpoint = self.baseline_setpoint - temperature_history_adjsutment
-        return tha_setpoint
-
-    @property
-    def tha_setpoint(self):
-        tha_setpoint = self.get_tha_setpoint()
         if tha_setpoint != self._tha_setpoint:
             socketio_client.send({
                 "event": "misc",
@@ -774,7 +764,7 @@ class Chronos(object):
 
     @property
     def is_time_to_switch_season_to_summer(self):
-        effective_setpoint = (self.get_tha_setpoint(WINTER) + self.setpoint_offset_winter)
+        effective_setpoint = self.tha_setpoint + self.setpoint_offset_winter
         effective_setpoint = self._constrain_effective_setpoint(effective_setpoint)
         timespan = datetime.now() - self.mode_switch_timestamp
         sum_switch_lockout_time = timedelta(
@@ -787,12 +777,11 @@ class Chronos(object):
 
     @property
     def is_time_to_switch_season_to_winter(self):
-        effective_setpoint = (self.get_tha_setpoint(SUMMER) + self.setpoint_offset_summer)
+        effective_setpoint = self.tha_setpoint + self.setpoint_offset_summer
         effective_setpoint = self._constrain_effective_setpoint(effective_setpoint)
         timespan = datetime.now() - self.mode_switch_timestamp
         sum_switch_lockout_time = timedelta(
             minutes=(self.mode_switch_lockout_time + VALVES_SWITCH_TIME)
-
         )
         return (self.return_temp < (effective_setpoint - self.mode_change_delta_temp) and
                 timespan > sum_switch_lockout_time and

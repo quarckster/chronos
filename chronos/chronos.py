@@ -30,7 +30,7 @@ def get_data():
         "wind_chill_avg": history.avg_outside_temp
     }
     efficiency = db_queries.calculate_efficiency()
-    efficiency["cascade_fire_rate_avg"] = chronos.cascade_fire_rate_avg
+    efficiency["cascade_fire_rate_avg"] = round(chronos.cascade_fire_rate_avg, 1)
     efficiency["hours"] = cfg.efficiency.hours
     actStream = [{
         "timeStamp": device.switched_timestamp.strftime("%B %d, %I:%M %p"),

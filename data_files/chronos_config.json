@@ -36,8 +36,5 @@
     },
     "efficiency": {
         "hours": 12
-    },
-    "mode_switch_lockout_time": {
-        "minutes": 1
     }
 }

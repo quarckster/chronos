@@ -5,6 +5,7 @@ from logging.handlers import TimedRotatingFileHandler
 
 logging.getLogger("socketIO-client").setLevel(logging.ERROR)
 logging.getLogger("requests").setLevel(logging.ERROR)
+logging.getLogger("pymodbus").setLevel(logging.ERROR)
 log_formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s", "%Y-%m-%d %H:%M:%S")
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
