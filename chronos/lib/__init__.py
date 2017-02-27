@@ -355,13 +355,6 @@ class Chronos(object):
         logger.debug("Retrieve data from web.")
         try:
             content = urllib2.urlopen(WEATHER_URL)
-        except (IOError, urllib2.HTTPError, urllib2.URLError):
-            logger.error("Unable to get data from the website. Reading previous value from the DB.")
-            with db.session_scope() as session:
-                wind_speed, outside_temp = session.query(
-                    db.History.wind_speed, db.History.outside_temp
-                ).order_by(desc(db.History.id)).first()
-        else:
             last_line = content.readlines()[-1].split()
             wind_speed = float(last_line[7])
             # Wind chill
@@ -370,6 +363,12 @@ class Chronos(object):
             # Temperature
             elif self.mode in (SUMMER, TO_SUMMER):
                 outside_temp = float(last_line[2])
+        except (ValueError, IOError, urllib2.HTTPError, urllib2.URLError):
+            logger.error("Unable to get data from the website. Reading previous value from the DB.")
+            with db.session_scope() as session:
+                wind_speed, outside_temp = session.query(
+                    db.History.wind_speed, db.History.outside_temp
+                ).order_by(desc(db.History.id)).first()
         if outside_temp != self._outside_temp:
             socketio_client.send({
                 "event": "misc",
