@@ -1,13 +1,13 @@
 from datetime import datetime
 from contextlib import contextmanager
-from sqlalchemy.orm import sessionmaker
 from chronos.lib.config_parser import cfg
+from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
 from chronos.lib.root_logger import root_logger as logger
 from sqlalchemy import create_engine, Column, INTEGER, REAL, BOOLEAN, DateTime
 
 engine = create_engine("sqlite:///{}".format(cfg.db.path), echo=False)
-Session = sessionmaker(bind=engine)
+session_factory = sessionmaker(bind=engine)
 
 Base = declarative_base()
 
@@ -143,12 +143,13 @@ class Settings(Base):
 @contextmanager
 def session_scope():
     "Provide a transactional scope around a series of operations."
-    session = Session()
+    Session = scoped_session(session_factory)
+    Session()
     try:
-        yield session
-        session.commit()
+        yield Session
+        Session.commit()
     except Exception, e:
         logger.exception("Failed during interaction with the db: {}".format(e))
-        session.rollback()
+        Session.rollback()
     finally:
-        session.close()
+        Session.remove()
