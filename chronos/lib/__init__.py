@@ -2,16 +2,15 @@ import os
 import sys
 import time
 import serial
+import thread
 import urllib2
-from chronos.lib import db
 from sqlalchemy import desc
 from sqlalchemy.sql import func
-from chronos.lib import db_queries
-from chronos.lib import socketio_client
 from datetime import datetime, timedelta
 from chronos.lib.config_parser import cfg
 from pymodbus.exceptions import ModbusException
 from chronos.lib.modbus_client import modbus_session
+from chronos.lib import db, db_queries, socketio_client
 from chronos.lib.root_logger import root_logger as logger
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -238,7 +237,7 @@ class Boiler(Device):
                         "lead_firing_rate": float(iregs.getRegister(8))
                     }
             except (AttributeError, IndexError):
-                logger.error("Attempt {}. Modbus answer is empty, retrying.".format(i))
+                logger.warning("Attempt {}. Modbus answer is empty, retrying.".format(i))
                 time.sleep(1)
             except (OSError, ModbusException, serial.SerialException):
                 logger.exception("Cannot connect to modbus")
@@ -797,7 +796,7 @@ class Chronos(object):
         if (all(valves) or (devices[0] and mode == SUMMER) or
                 (any(devices[1:]) and mode == WINTER) or
                 return_temp < 36 or return_temp > 110):
-            logger.error("EMERGENCY SHUTDOWN. Relays states: {}".format("; ".join(
+            logger.warning("EMERGENCY SHUTDOWN. Relays states: {}".format("; ".join(
                 "{}: {}".format(device[0].name, device[1]) for device in all_devices)))
             self.turn_off_devices()
-            sys.exit(1)
+            thread.interrupt_main()

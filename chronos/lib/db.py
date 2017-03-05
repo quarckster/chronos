@@ -6,7 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from chronos.lib.root_logger import root_logger as logger
 from sqlalchemy import create_engine, Column, INTEGER, REAL, BOOLEAN, DateTime
 
-engine = create_engine("sqlite:///{}".format(cfg.db.path), echo=False)
+engine = create_engine("sqlite:///{}".format(cfg.db.path), echo=False, connect_args={"timeout": 15})
 session_factory = sessionmaker(bind=engine)
 
 Base = declarative_base()
