@@ -787,16 +787,32 @@ class Chronos(object):
 
     def emergency_shutdown(self):
         mode = self.mode
-        devices = [device.relay_state for device in self.devices]
+        devices = [bool(device.status) for device in self.devices]
         devices_ = zip(self.devices, devices)
         valves = [self.winter_valve.relay_state, self.summer_valve.relay_state]
         valves_ = zip(self.valves, valves)
         all_devices = devices_ + valves_
         return_temp = self.return_temp
-        if (all(valves) or (devices[0] and mode == SUMMER) or
-                (any(devices[1:]) and mode == WINTER) or
-                return_temp < 36 or return_temp > 110):
-            logger.warning("EMERGENCY SHUTDOWN. Relays states: {}".format("; ".join(
-                "{}: {}".format(device[0].name, device[1]) for device in all_devices)))
+        status_string = "; ".join("{}: {}".format(
+            device[0].name, device[1]) for device in all_devices)
+        shutdown = False
+        if all(valves):
+            logger.warning("EMERGENCY SHUTDOWN. All valves turned on. Relays states: {}".format(
+                status_string))
+            self.summer_valve.turn_off()
+            self.winter_valve.turn_off()
+            shutdown = True
+        elif devices[0] and mode == SUMMER:
+            logger.warning("EMERGENCY SHUTDOWN. The boiler is turned on in summer mode")
+            shutdown = True
+        elif any(devices[1:]) and mode == WINTER:
+            logger.warning("EMERGENCY SHUTDOWN. One of the chillers is turned on in winter mode. "
+                           "Relays states: {}".format(status_string))
+            shutdown = True
+        elif return_temp < 36 or return_temp > 110:
+            logger.warning("EMERGENCY SHUTDOWN. The temperature is not in safe range. Temperature: "
+                           "{}".format(return_temp))
+            shutdown = True
+        if shutdown:
             self.turn_off_devices()
             thread.interrupt_main()
