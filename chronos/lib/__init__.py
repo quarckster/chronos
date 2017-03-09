@@ -264,7 +264,7 @@ class Valve(Device):
             self.name = "{}_valve".format(season)
 
     def __getattr__(self, name):
-        if name in ("timestamp", "save_status", "restore_status"):
+        if name in ("save_status", "restore_status"):
             raise AttributeError("There is no such attribute")
         super(Valve, self).__getattr__(name)
 
@@ -273,9 +273,6 @@ class Valve(Device):
 
     def turn_off(self, relay_only=False):
         self._switch_state("off", relay_only=relay_only)
-
-    def status(self):
-        return self._get_property_from_db("status")
 
 
 class Chronos(object):
@@ -643,7 +640,7 @@ class Chronos(object):
             except TypeError:
                 pass
 
-    def initialize_state(self, with_valves=False):
+    def _switch_devices(self):
         for device in self.devices:
             if device.manual_override == MANUAL_ON:
                 device.turn_on(relay_only=True)
@@ -654,14 +651,21 @@ class Chronos(object):
                     device.turn_on(relay_only=True)
                 elif device.status == OFF:
                     device.turn_off(relay_only=True)
-        if with_valves:
-            mode = self.mode
-            if mode == WINTER:
-                self.winter_valve.turn_on()
-                self.summer_valve.turn_off()
-            if mode == SUMMER:
-                self.winter_valve.turn_off()
-                self.summer_valve.turn_on()
+
+    def initialize_state(self):
+        mode = self.mode
+        if mode == WINTER:
+            self.winter_valve.turn_on()
+            self.summer_valve.turn_off()
+            self._switch_devices()
+        elif mode == SUMMER:
+            self.winter_valve.turn_off()
+            self.summer_valve.turn_on()
+            self._switch_devices()
+        elif mode == TO_SUMMER:
+            self.switch_season(FROM_WINTER)
+        elif mode == TO_WINTER:
+            self.switch_season(FROM_SUMMER)
 
     def turn_off_devices(self, with_valves=False, relay_only=False):
         if relay_only:
@@ -739,13 +743,13 @@ class Chronos(object):
         elif mode == FROM_SUMMER:
             logger.debug("Switched to winter mode")
             self._restore_devices_states(mode)
-            self.initialize_state()
+            self._switch_devices()
             self.mode = WINTER
             self.mode_switch_timestamp = datetime.now()
         elif mode == FROM_WINTER:
             logger.debug("Switched to summer mode")
             self._restore_devices_states(mode)
-            self.initialize_state()
+            self._switch_devices()
             self.mode = SUMMER
             self.mode_switch_timestamp = datetime.now()
 
