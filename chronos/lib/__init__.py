@@ -264,15 +264,18 @@ class Valve(Device):
             self.name = "{}_valve".format(season)
 
     def __getattr__(self, name):
-        if name in ("status", "timestamp", "save_status", "restore_status"):
+        if name in ("timestamp", "save_status", "restore_status"):
             raise AttributeError("There is no such attribute")
         super(Valve, self).__getattr__(name)
 
-    def turn_on(self):
-        self._switch_state("on", relay_only=True)
+    def turn_on(self, relay_only=False):
+        self._switch_state("on", relay_only=relay_only)
 
-    def turn_off(self):
-        self._switch_state("off", relay_only=True)
+    def turn_off(self, relay_only=False):
+        self._switch_state("off", relay_only=relay_only)
+
+    def status(self):
+        return self._get_property_from_db("status")
 
 
 class Chronos(object):
@@ -789,7 +792,7 @@ class Chronos(object):
         mode = self.mode
         devices = [bool(device.status) for device in self.devices]
         devices_ = zip(self.devices, devices)
-        valves = [self.winter_valve.relay_state, self.summer_valve.relay_state]
+        valves = [bool(self.winter_valve.status), bool(self.summer_valve.status)]
         valves_ = zip(self.valves, valves)
         all_devices = devices_ + valves_
         return_temp = self.return_temp
