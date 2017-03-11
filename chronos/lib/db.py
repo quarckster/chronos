@@ -78,6 +78,24 @@ class Chiller4(Base):
     manual_override = Column(INTEGER, default=0, nullable=False)
 
 
+class SummerValve(Base):
+
+    __tablename__ = "summer_valve"
+
+    id = Column(INTEGER, primary_key=True)
+    backup = Column(BOOLEAN, default=False, nullable=False)
+    status = Column(INTEGER, default=0, nullable=False)
+
+
+class WinterValve(Base):
+
+    __tablename__ = "winter_valve"
+
+    id = Column(INTEGER, primary_key=True)
+    backup = Column(BOOLEAN, default=False, nullable=False)
+    status = Column(INTEGER, default=0, nullable=False)
+
+
 class History(Base):
 
     __tablename__ = "history"

@@ -57,6 +57,8 @@ class Device(object):
                 state = True
             elif "off" in response:
                 state = False
+            else:
+                logger.error("Unexpected response: {}".format(response))
             return state
 
     def _send_socketio_message(self, event=None, status=None, switched_timestamp=None,
@@ -94,7 +96,7 @@ class Device(object):
         )
 
     def _get_property_from_db(self, *args, **kwargs):
-        device = getattr(db, self.name)
+        device = getattr(db, self.table_class_name)
         from_backup = kwargs.pop("from_backup", False)
         with db.session_scope() as session:
             instance = session.query(device).filter(device.backup == from_backup).first()
@@ -104,7 +106,7 @@ class Device(object):
         return result
 
     def _update_value_in_db(self, **kwargs):
-        device = getattr(db, self.name)
+        device = getattr(db, self.table_class_name)
         to_backup = kwargs.pop("to_backup", False)
         with db.session_scope() as session:
             property_ = session.query(device).filter(device.backup == to_backup).first()
@@ -170,7 +172,7 @@ class Chiller(Device):
         else:
             self.number = number
             self.relay_number = getattr(cfg.relay, "chiller{}".format(number))
-            self.name = "Chiller{}".format(number)
+            self.table_class_name = "Chiller{}".format(number)
 
 
 class Boiler(Device):
@@ -180,7 +182,7 @@ class Boiler(Device):
     def __init__(self):
         self.number = 0
         self.relay_number = cfg.relay.boiler
-        self.name = "Boiler"
+        self.table_class_name = "Boiler"
 
     @property
     def cascade_current_power(self):
@@ -261,7 +263,7 @@ class Valve(Device):
             raise ValueError("Valve must be winter or summer")
         else:
             self.relay_number = getattr(cfg.relay, "{}_valve".format(season))
-            self.name = "{}_valve".format(season)
+            self.table_class_name = "{}Valve".format(season.capitalize())
 
     def __getattr__(self, name):
         if name in ("save_status", "restore_status"):
@@ -786,8 +788,7 @@ class Chronos(object):
         effective_setpoint = self._constrain_effective_setpoint(effective_setpoint)
         timespan = datetime.now() - self.mode_switch_timestamp
         sum_switch_lockout_time = timedelta(
-            minutes=(self.mode_switch_lockout_time + VALVES_SWITCH_TIME)
-        )
+            minutes=(self.mode_switch_lockout_time + VALVES_SWITCH_TIME))
         return (self.return_temp < (effective_setpoint - self.mode_change_delta_temp) and
                 timespan > sum_switch_lockout_time and
                 sum_switch_lockout_time > timedelta(minutes=VALVES_SWITCH_TIME))
