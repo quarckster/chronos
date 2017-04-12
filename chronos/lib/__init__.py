@@ -802,7 +802,7 @@ class Chronos(object):
         all_devices = devices_ + valves_
         return_temp = self.return_temp
         status_string = "; ".join("{}: {}".format(
-            device[0].name, device[1]) for device in all_devices)
+            device[0].table_class_name, device[1]) for device in all_devices)
         shutdown = False
         if all(valves):
             logger.warning("EMERGENCY SHUTDOWN. All valves turned on. Relays states: {}".format(
