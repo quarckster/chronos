@@ -136,3 +136,11 @@ def calculate_efficiency():
         "average_temperature_difference": average_temperature_difference,
         "chillers_efficiency": chiller_efficiency
     }
+
+
+def keep_history_for_last_week():
+    with db.session_scope() as session:
+        old_history = session.query(db.History).filter(
+            db.History.timestamp < (datetime.now() - timedelta(days=7))
+        )
+        old_history.delete()

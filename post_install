@@ -6,6 +6,7 @@ chronos_config_path="/etc/chronos_config.json"
 chronos_db_dir="/home/pi/chronos_db"
 pi_groups=`groups pi`
 wwwdata_groups=`groups www-data`
+crontab_command='0 0 * * * python -c "from chronos.lib.db_queries import keep_history_for_last_week; keep_history_for_last_week()"'
 
 chmod 0755 "/etc/init.d/chronos"
 groupadd -f $chronos_group_name
@@ -28,3 +29,5 @@ umask 0002
 if [[ $pi_groups != *$chronos_group_name* ]]; then
     usermod -a -G $chronos_group_name pi
 fi
+
+(crontab -u pi -l; echo $crontab_command) | sort - | uniq - | crontab -u pi -
