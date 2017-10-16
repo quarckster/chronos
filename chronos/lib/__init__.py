@@ -355,7 +355,7 @@ class Chronos(object):
     def get_data_from_web(self):
         logger.debug("Retrieve data from web.")
         try:
-            content = urllib2.urlopen(WEATHER_URL)
+            content = urllib2.urlopen(WEATHER_URL, timeout=5)
             last_line = content.readlines()[-1].split()
             wind_speed = float(last_line[7])
             # Wind chill
