@@ -358,12 +358,7 @@ class Chronos(object):
             content = urllib2.urlopen(WEATHER_URL, timeout=5)
             last_line = content.readlines()[-1].split()
             wind_speed = float(last_line[7])
-            # Wind chill
-            if self.mode in (WINTER, TO_WINTER):
-                outside_temp = float(last_line[12])
-            # Temperature
-            elif self.mode in (SUMMER, TO_SUMMER):
-                outside_temp = float(last_line[2])
+            outside_temp = float(last_line[2])
         except (ValueError, IOError, urllib2.HTTPError, urllib2.URLError):
             logger.error("Unable to get data from the website. Reading previous value from the DB.")
             with db.session_scope() as session:
